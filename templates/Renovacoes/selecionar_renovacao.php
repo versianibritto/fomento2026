@@ -1,17 +1,17 @@
 <div class="container mt-4">
     <div class="card">
         <div class="card-body">
-            <h4 class="mb-1">Inscricao - <?= h($edital->nome) ?></h4>
-            <div class="text-muted mb-3">O(a) sr(a) possui mais de uma inscricao neste programa. Indique qual deseja realizar a inscricao.</div>
+            <h4 class="mb-1">Inscrição - <?= h($edital->nome) ?></h4>
+            <div class="text-muted mb-3">O(a) sr(a) possui mais de uma inscrição neste programa. Indique qual deseja realizar a inscrição.</div>
 
             <div class="table-responsive">
                 <table class="table table-sm align-middle">
                     <thead>
                         <tr>
                             <th>Nome do bolsista</th>
-                            <th>Nº da inscricao</th>
+                            <th>Nº da inscrição</th>
                             <th>Nº do projeto</th>
-                            <th class="text-end">Acao</th>
+                            <th class="text-end">Ação</th>
                         </tr>
                     </thead>
                     <tbody>

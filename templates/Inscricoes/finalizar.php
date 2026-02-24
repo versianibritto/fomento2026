@@ -9,16 +9,16 @@
     <div class="card">
         <div class="card-body">
             <div class="p-3 mb-4 bg-light border rounded text-center">
-                <h3 class="mb-2">Finalizar inscricao</h3>
-                <div class="fw-semibold">Inscricao - <?= h($edital->nome) ?></div>
-                <div class="text-muted mt-1">Esta etapa finaliza sua inscricao.</div>
+                <h3 class="mb-2">Finalizar inscrição</h3>
+                <div class="fw-semibold">Inscrição - <?= h($edital->nome) ?></div>
+                <div class="text-muted mt-1">Esta etapa finaliza sua inscrição.</div>
             </div>
 
             <div class="alert alert-warning border border-warning-subtle mb-4 sumula-alerta">
                 <div class="fw-semibold mb-1">Atenção</div>
                 <div>
-                    O termo devidamente assinado, conforme edital, devera ser anexado para finalizar.
-                    Caso nao tenha o arquivo do termo, e possivel baixar clicando no botao abaixo.
+                    O termo devidamente assinado, conforme edital, deverá ser anexado para finalizar.
+                    Caso não tenha o arquivo do termo, é possível baixar clicando no botão abaixo.
                 </div>
                 <div class="mt-3">
                     <?= $this->Html->link('Baixar termo', ['controller' => 'Inscricoes', 'action' => 'baixarTermo', $edital->id, $inscricao->id], ['class' => 'btn btn-outline-primary js-loading-link']) ?>

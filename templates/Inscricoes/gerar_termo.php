@@ -10,19 +10,19 @@
         <div class="card-body">
             <div class="p-3 mb-4 bg-light border rounded text-center">
                 <h3 class="mb-2">Gerar termo</h3>
-                <div class="fw-semibold">Inscricao - <?= h($edital->nome) ?></div>
-                <div class="text-muted mt-1">Revise as informacoes antes de confirmar.</div>
+                <div class="fw-semibold">Inscrição - <?= h($edital->nome) ?></div>
+                <div class="text-muted mt-1">Revise as informações antes de confirmar.</div>
             </div>
 
             <div class="alert alert-warning border border-warning-subtle mb-4 sumula-alerta">
                 <div class="fw-semibold mb-1">Antes de gerar o termo revise:</div>
-                <div>Apos a geracao do termo, a inscricao nao podera ser alterada.</div>
+                <div>Após a geração do termo, a inscrição não poderá ser alterada.</div>
                 <ol class="mb-0 mt-2 ps-3">
                     <li>Bolsista: dados pessoais, anexos e cota afirmativa.</li>
                     <li>Coorientador: dados pessoais e termo de consentimento.</li>
-                    <li>Projeto: titulo, resumo, areas e anexo.</li>
+                    <li>Projeto: título, resumo, áreas e anexo.</li>
                     <li>Subprojeto: regras conforme o edital.</li>
-                    <li>Sumula: itens e quantidades, quando aplicavel.</li>
+                    <li>Súmula: itens e quantidades, quando aplicável.</li>
                 </ol>
             </div>
 

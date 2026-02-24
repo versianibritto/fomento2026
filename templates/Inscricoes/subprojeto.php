@@ -10,8 +10,8 @@
         <div class="card-body">
             <div class="p-3 mb-4 bg-light border rounded text-center">
                 <h3 class="mb-2">Subprojeto do bolsista</h3>
-                <div class="fw-semibold">Inscricao - <?= h($edital->nome) ?></div>
-                <div class="text-muted mt-1">Rascunho: nenhum campo e obrigatorio nesta etapa.</div>
+                <div class="fw-semibold">Inscrição - <?= h($edital->nome) ?></div>
+                <div class="text-muted mt-1">Rascunho: nenhum campo é obrigatório nesta etapa.</div>
             </div>
 
             <?= $this->Form->create(null, ['type' => 'file', 'class' => 'row g-3']) ?>
@@ -19,11 +19,11 @@
                 <?= $this->Form->hidden('anexo_acao', ['value' => '', 'id' => 'anexo-acao']) ?>
                 <?= $this->Form->hidden('anexo_tipo', ['value' => '', 'id' => 'anexo-tipo']) ?>
                 <div class="col-12">
-                    <h6 class="fw-semibold">Dados do Subprojeto</h6>
+                    <h6 class="fw-semibold">Dados do subprojeto</h6>
                 </div>
                 <div class="col-12">
                     <?= $this->Form->control('sp_titulo', [
-                        'label' => 'Titulo do subprojeto',
+                        'label' => 'Título do subprojeto',
                         'class' => 'form-control',
                         'maxlength' => 255,
                         'value' => $inscricao->sp_titulo ?? null,
@@ -42,7 +42,7 @@
                 <div class="col-12">
                     <h6 class="fw-semibold mb-1">Anexos</h6>
                     <p class="text-muted small mb-3">
-                        Envie o anexo do subprojeto. Itens com arquivo ja enviado podem ser baixados, alterados ou excluidos.
+                        Envie o anexo do subprojeto. Itens com arquivo já enviado podem ser baixados, alterados ou excluídos.
                     </p>
                     <div class="row g-3 anexos-areas">
                         <div class="col-md-6">

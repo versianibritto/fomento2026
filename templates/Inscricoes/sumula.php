@@ -9,9 +9,9 @@
     <div class="card">
         <div class="card-body">
             <div class="p-3 mb-4 bg-light border rounded text-center">
-                <h3 class="mb-2">Sumula do orientador</h3>
-                <div class="fw-semibold">Inscricao - <?= h($edital->nome) ?></div>
-                <div class="text-muted mt-1">Rascunho: nenhum campo e obrigatorio nesta etapa.</div>
+                <h3 class="mb-2">Súmula do orientador</h3>
+                <div class="fw-semibold">Inscrição - <?= h($edital->nome) ?></div>
+                <div class="text-muted mt-1">Rascunho: nenhum campo é obrigatório nesta etapa.</div>
             </div>
 
             <?= $this->Form->create(null, ['class' => 'row g-3']) ?>
@@ -33,8 +33,8 @@
                             'empty' => 'Selecione',
                             'value' => $inscricao->filhos_menor ?? null,
                             'options' => [
-                                '0' => 'Nao possuo filhos, ou sao maiores de 5 anos',
-                                '1' => 'Possuo um menor de 5 anos',
+                                '0' => 'Não possuo filhos, ou são maiores de 5 anos',
+                                '1' => 'Possuo um filho menor de 5 anos',
                                 '2' => 'Mais de um filho menor de 5 anos',
                             ],
                         ]) ?>

@@ -10,9 +10,9 @@
     <div class="card">
         <div class="card-body">
             <div class="p-3 mb-4 border rounded bg-light">
-                <h3 class="mb-2">Pendencias para gerar termo</h3>
+                <h3 class="mb-2">Pendências para gerar termo</h3>
                 <div class="text-muted">
-                    A inscricao possui inconsistencias. Corrija os blocos abaixo e tente novamente.
+                    A inscrição possui inconsistências. Corrija os blocos abaixo e tente novamente.
                 </div>
             </div>
 
@@ -26,7 +26,7 @@
                     </ul>
                     <div>
                         <?= $this->Html->link(
-                            'Ir para correcao deste bloco',
+                            'Ir para correção deste bloco',
                             (array)($falha['url'] ?? ['action' => 'gerarTermo', $edital->id, $inscricao->id]),
                             ['class' => 'btn btn-outline-primary btn-sm']
                         ) ?>

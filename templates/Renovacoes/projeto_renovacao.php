@@ -10,10 +10,10 @@
         <div class="card-body">
             <div class="p-3 mb-4 bg-light border rounded text-center">
                 <h3 class="mb-2">Dados do projeto do orientador</h3>
-                <div class="fw-semibold">Inscricao - <?= h($edital->nome) ?></div>
+                <div class="fw-semibold">Inscrição - <?= h($edital->nome) ?></div>
                 <div class="text-muted mt-1">
-                    O projeto do orientador nao pode ser alterado na renovacao.<br>
-                    Se houver alguma atualizacao dos documentos, podem ser inseridos neste formulario.
+                    O projeto do orientador não pode ser alterado na renovação.<br>
+                    Se houver alguma atualização dos documentos, podem ser inseridos neste formulário.
                 </div>
             </div>
 
@@ -22,7 +22,7 @@
                 <?= $this->Form->hidden('anexo_acao', ['value' => '', 'id' => 'anexo-acao']) ?>
                 <?= $this->Form->hidden('anexo_tipo', ['value' => '', 'id' => 'anexo-tipo']) ?>
                 <?php
-                    $naoInformado = 'Nao informado';
+                    $naoInformado = 'Não informado';
                     $valorTitulo = trim((string)($projetoSelecionado->titulo ?? ''));
                     $valorGrandeArea = $grandeAreaSelecionada !== null && isset($grandesAreas[$grandeAreaSelecionada])
                         ? (string)$grandesAreas[$grandeAreaSelecionada]
@@ -49,19 +49,19 @@
                 ?>
                 <div class="col-12">
                     <div class="card border mb-2">
-                        <div class="card-header bg-light fw-semibold">Informacoes do projeto</div>
+                        <div class="card-header bg-light fw-semibold">Informações do projeto</div>
                         <div class="card-body">
                             <div class="row g-3">
                         <div class="col-12">
                             <div class="border rounded p-2 bg-light h-100">
-                                <div class="small text-muted">Titulo do projeto</div>
+                                <div class="small text-muted">Título do projeto</div>
                                 <div><?= h($valorTitulo !== '' ? $valorTitulo : $naoInformado) ?></div>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <?php if (!empty($podePreencherAreaCnpq)) : ?>
                                 <?= $this->Form->control('grande_area_id_aux', [
-                                    'label' => 'Grande area CNPQ',
+                                    'label' => 'Grande área CNPQ',
                                     'type' => 'select',
                                     'options' => $grandesAreas,
                                     'empty' => ' - Selecione - ',
@@ -70,7 +70,7 @@
                                 ]) ?>
                             <?php else : ?>
                                 <div class="border rounded p-2 bg-light h-100">
-                                    <div class="small text-muted">Grande area CNPQ</div>
+                                    <div class="small text-muted">Grande área CNPQ</div>
                                     <div><?= h($valorGrandeArea !== '' ? $valorGrandeArea : $naoInformado) ?></div>
                                 </div>
                             <?php endif; ?>
@@ -78,16 +78,16 @@
                         <div class="col-md-6">
                             <?php if (!empty($podePreencherAreaCnpq)) : ?>
                                 <?= $this->Form->control('area_id', [
-                                    'label' => 'Area CNPQ',
+                                    'label' => 'Área CNPQ',
                                     'type' => 'select',
                                     'options' => [],
-                                    'empty' => ' - Selecione a grande area - ',
+                                    'empty' => ' - Selecione a grande área - ',
                                     'class' => 'form-select campo-vazio',
                                     'id' => 'area-id',
                                 ]) ?>
                             <?php else : ?>
                                 <div class="border rounded p-2 bg-light h-100">
-                                    <div class="small text-muted">Area CNPQ</div>
+                                    <div class="small text-muted">Área CNPQ</div>
                                     <div><?= h($valorAreaCnpq !== '' ? $valorAreaCnpq : $naoInformado) ?></div>
                                 </div>
                             <?php endif; ?>
@@ -95,7 +95,7 @@
                         <div class="col-md-6">
                             <?php if (!empty($podePreencherLinhaFiocruz)) : ?>
                                 <?= $this->Form->control('area_fiocruz_id_aux', [
-                                    'label' => 'Area de pesquisa FIOCRUZ',
+                                    'label' => 'Área de pesquisa FIOCRUZ',
                                     'type' => 'select',
                                     'options' => $areasFiocruz,
                                     'empty' => ' - Selecione - ',
@@ -104,7 +104,7 @@
                                 ]) ?>
                             <?php else : ?>
                                 <div class="border rounded p-2 bg-light h-100">
-                                    <div class="small text-muted">Area de pesquisa FIOCRUZ</div>
+                                    <div class="small text-muted">Área de pesquisa FIOCRUZ</div>
                                     <div><?= h($valorAreaFiocruz !== '' ? $valorAreaFiocruz : $naoInformado) ?></div>
                                 </div>
                             <?php endif; ?>
@@ -115,7 +115,7 @@
                                     'label' => 'Linha de pesquisa FIOCRUZ',
                                     'type' => 'select',
                                     'options' => [],
-                                    'empty' => ' - Selecione a area - ',
+                                    'empty' => ' - Selecione a área - ',
                                     'class' => 'form-select campo-vazio',
                                     'id' => 'linha-id',
                                 ]) ?>
@@ -128,7 +128,7 @@
                         </div>
                         <div class="col-md-6">
                             <div class="border rounded p-2 bg-light h-100">
-                                <div class="small text-muted">Instituicoes financiadoras</div>
+                                <div class="small text-muted">Instituições financiadoras</div>
                                 <div><?= h($valorFinanciadores !== '' ? $valorFinanciadores : $naoInformado) ?></div>
                             </div>
                         </div>
@@ -141,7 +141,7 @@
                         <div class="col-12">
                             <?php if (!empty($podePreencherResumoProjeto)) : ?>
                                 <?= $this->Form->control('resumo', [
-                                    'label' => 'Resumo do projeto (max 4mil caracteres)',
+                                    'label' => 'Resumo do projeto (máx. 4 mil caracteres)',
                                     'type' => 'textarea',
                                     'class' => 'form-control campo-vazio',
                                     'rows' => 5,
@@ -183,9 +183,9 @@
                         <div class="col-md-6">
                             <div class="alert alert-info border h-100 mb-0">
                                 <?php if (!empty($anexos[5])) : ?>
-                                    O arquivo existente nao pode ser alterado, mas pode ser baixado clicando no icone.
+                                    O arquivo existente não pode ser alterado, mas pode ser baixado clicando no ícone.
                                 <?php else : ?>
-                                    Este anexo sera exigido e este campo nao podera ser alterado, mesmo na fase de Rascunho. Apos inserido, nao podera ser alterado.
+                                    Este anexo será exigido e este campo não poderá ser alterado, mesmo na fase de Rascunho. Após inserido, não poderá ser alterado.
                                 <?php endif; ?>
                             </div>
                         </div>
@@ -196,11 +196,11 @@
                 <div class="col-12 mt-3">
                     <h6 class="fw-semibold mb-1">Anexos</h6>
                     <p class="text-muted small mb-3">
-                        Os anexos abaixo nao sao obrigatorios para concluir a inscricao no sistema, mas serao analisados na avaliacao.
-                        Se o seu projeto exigir algum desses documentos e ele nao for apresentado, o avaliador podera registrar ausencia documental, com impacto no resultado (inclusive reprovacao).
-                        Como essa necessidade depende do conteudo do projeto, a verificacao e feita na avaliacao humana.
+                        Os anexos abaixo não são obrigatórios para concluir a inscrição no sistema, mas serão analisados na avaliação.
+                        Se o seu projeto exigir algum desses documentos e ele não for apresentado, o avaliador poderá registrar ausência documental, com impacto no resultado (inclusive reprovação).
+                        Como essa necessidade depende do conteúdo do projeto, a verificação é feita na avaliação humana.
                         <br>
-                        Quando houver anexos mais recentes de inscricoes anteriores, eles ja sao carregados nesta tela e podem ser baixados, atualizados ou excluidos.
+                        Quando houver anexos mais recentes de inscrições anteriores, eles já são carregados nesta tela e podem ser baixados, atualizados ou excluídos.
                     </p>
                     <div class="row g-3 anexos-areas">
                         <?php foreach ($anexosTiposProjeto as $tipo) : ?>
@@ -301,7 +301,7 @@ document.addEventListener('DOMContentLoaded', function () {
         areaCnpqSelect.innerHTML = '';
         var optionDefault = document.createElement('option');
         optionDefault.value = '';
-        optionDefault.textContent = ' - Selecione a grande area - ';
+        optionDefault.textContent = ' - Selecione a grande área - ';
         areaCnpqSelect.appendChild(optionDefault);
 
         opcoes.forEach(function (item) {
@@ -326,7 +326,7 @@ document.addEventListener('DOMContentLoaded', function () {
         linhaSelect.innerHTML = '';
         var optionDefault = document.createElement('option');
         optionDefault.value = '';
-        optionDefault.textContent = ' - Selecione a area - ';
+        optionDefault.textContent = ' - Selecione a área - ';
         linhaSelect.appendChild(optionDefault);
 
         opcoes.forEach(function (item) {

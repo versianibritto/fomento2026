@@ -10,8 +10,8 @@
         <div class="card-body">
             <div class="p-3 mb-4 bg-light border rounded text-center">
                 <h3 class="mb-2">Subprojeto do bolsista</h3>
-                <div class="fw-semibold">Inscricao - <?= h($edital->nome) ?></div>
-                <div class="text-muted mt-1">Rascunho: nenhum campo e obrigatorio nesta etapa.</div>
+                <div class="fw-semibold">Inscrição - <?= h($edital->nome) ?></div>
+                <div class="text-muted mt-1">Rascunho: nenhum campo é obrigatório nesta etapa.</div>
             </div>
 
             <?= $this->Form->create(null, ['type' => 'file', 'class' => 'row g-3']) ?>
@@ -35,18 +35,33 @@
                     $valorResumoSubprojeto = trim((string)($inscricao->sp_resumo ?? ''));
                 ?>
                 <div class="col-12">
-                    <h6 class="fw-semibold mb-1">Relatorio parcial</h6>
+                    <h6 class="fw-semibold mb-1">Relatório parcial</h6>
+                </div>
+                <div class="col-12">
+                    <div class="alert alert-info border">
+                        <div class="fw-semibold mb-2">Modelo de relatório do bolsista</div>
+                        <div class="small mb-2">
+                            Baixe o modelo oficial do edital, preencha e utilize este arquivo como referência para o relatório parcial.
+                        </div>
+                        <?php if (!empty($edital->modelo_relat_bols)) : ?>
+                            <a href="/uploads/editais/<?= h($edital->modelo_relat_bols) ?>" target="_blank" class="btn btn-sm btn-outline-primary">
+                                <i class="fa fa-download me-1"></i>Baixar modelo do relatório do bolsista
+                            </a>
+                        <?php else : ?>
+                            <div class="small text-danger fw-semibold">Modelo de relatório do bolsista não cadastrado para este edital.</div>
+                        <?php endif; ?>
+                    </div>
                 </div>
                 <div class="col-md-6">
                     <div class="anexos-areas">
                         <?php if (empty($anexos[13])) : ?>
                             <?= $this->Form->control('anexos[13]', [
-                                'label' => 'Anexo do relatorio parcial (PDF)',
+                                'label' => 'Anexo do relatório parcial (PDF)',
                                 'type' => 'file',
                                 'class' => 'form-control',
                             ]) ?>
                         <?php else : ?>
-                            <label class="form-label d-block">Anexo do relatorio parcial (PDF)</label>
+                            <label class="form-label d-block">Anexo do relatório parcial (PDF)</label>
                             <div class="anexo-arquivo-atual">
                                 <div class="d-flex align-items-center justify-content-between gap-2 flex-nowrap">
                                     <div class="small text-muted text-truncate">
@@ -82,11 +97,11 @@
                 </div>
                 <div class="col-md-6">
                     <?= $this->Form->control('autorizacao', [
-                        'label' => 'Deseja autorizar publicacao em revista?',
+                        'label' => 'Deseja autorizar publicação em revista?',
                         'type' => 'select',
                         'options' => [
                             '1' => 'Sim',
-                            '0' => 'Nao',
+                            '0' => 'Não',
                         ],
                         'empty' => 'Selecione',
                         'class' => 'form-control' . ($valorAutorizacao === '' ? ' campo-vazio' : ''),
@@ -95,7 +110,7 @@
                 </div>
                 <div class="col-12">
                     <?= $this->Form->control('resumo_relatorio', [
-                        'label' => 'Resumo do relatorio (maximo de 4.000 caracteres)',
+                        'label' => 'Resumo do relatório (máximo de 4.000 caracteres)',
                         'type' => 'textarea',
                         'class' => 'form-control' . ($valorResumoRelatorio === '' ? ' campo-vazio' : ''),
                         'rows' => 4,
@@ -123,16 +138,16 @@
 
                 <div class="col-12 modo-subprojeto-I">
                     <div class="card border">
-                        <div class="card-header bg-light fw-semibold">Subprojeto da inscricao de referencia</div>
+                        <div class="card-header bg-light fw-semibold">Subprojeto da inscrição de referência</div>
                         <div class="card-body">
                             <div class="row g-3">
                                 <div class="col-12">
-                                    <div class="small text-muted">Titulo</div>
-                                    <div><?= h($referenciaTitulo !== '' ? $referenciaTitulo : 'Nao informado') ?></div>
+                                    <div class="small text-muted">Título</div>
+                                    <div><?= h($referenciaTitulo !== '' ? $referenciaTitulo : 'Não informado') ?></div>
                                 </div>
                                 <div class="col-12">
                                     <div class="small text-muted">Resumo</div>
-                                    <div style="white-space: pre-line;"><?= h($referenciaResumo !== '' ? $referenciaResumo : 'Nao informado') ?></div>
+                                    <div style="white-space: pre-line;"><?= h($referenciaResumo !== '' ? $referenciaResumo : 'Não informado') ?></div>
                                 </div>
                                 <div class="col-12">
                                     <div class="small text-muted">Anexo do subprojeto</div>
@@ -146,7 +161,7 @@
                                             </div>
                                         </div>
                                     <?php else : ?>
-                                        <div>Nao informado</div>
+                                        <div>Não informado</div>
                                     <?php endif; ?>
                                 </div>
                             </div>
@@ -159,7 +174,7 @@
                 </div>
                 <div class="col-12 modo-subprojeto-D">
                     <?= $this->Form->control('justificativa_alteracao', [
-                        'label' => 'Justificativa da alteracao',
+                        'label' => 'Justificativa da alteração',
                         'type' => 'textarea',
                         'class' => 'form-control' . ($valorJustificativaAlteracao === '' ? ' campo-vazio' : ''),
                         'rows' => 3,
@@ -169,7 +184,7 @@
                 </div>
                 <div class="col-12 modo-subprojeto-D">
                     <?= $this->Form->control('sp_titulo', [
-                        'label' => 'Titulo do subprojeto',
+                        'label' => 'Título do subprojeto',
                         'class' => 'form-control' . ($valorTituloSubprojeto === '' ? ' campo-vazio' : ''),
                         'maxlength' => 255,
                         'value' => $inscricao->sp_titulo ?? null,
@@ -188,7 +203,7 @@
                 <div class="col-12 modo-subprojeto-D">
                     <h6 class="fw-semibold mb-1">Anexos</h6>
                     <p class="text-muted small mb-3">
-                        Envie o anexo do subprojeto. Itens com arquivo ja enviado podem ser baixados, alterados ou excluidos.
+                        Envie o anexo do subprojeto. Itens com arquivo já enviado podem ser baixados, alterados ou excluídos.
                     </p>
                     <div class="row g-3 anexos-areas">
                         <div class="col-md-6">

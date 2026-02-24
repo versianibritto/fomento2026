@@ -10,8 +10,8 @@
         <div class="card-body">
             <div class="p-3 mb-4 bg-light border rounded text-center">
                 <h3 class="mb-2">Dados do bolsista</h3>
-                <div class="fw-semibold">Inscricao - <?= h($edital->nome) ?></div>
-                <div class="text-muted mt-1">Rascunho: nenhum campo e obrigatorio nesta etapa.</div>
+                <div class="fw-semibold">Inscrição - <?= h($edital->nome) ?></div>
+                <div class="text-muted mt-1">Rascunho: nenhum campo é obrigatório nesta etapa.</div>
             </div>
 
             <div class="card bg-light border-0 mb-3">
@@ -27,14 +27,14 @@
                             ? substr($digits, 0, 3) . '.' . substr($digits, 3, 3) . '.' . substr($digits, 6, 3) . '-' . substr($digits, 9, 2)
                             : $inscricao->bolsista_usuario->cpf;
                     }
-                    $naoInformado = '<span class="badge bg-danger">Nao informado</span>';
+                    $naoInformado = '<span class="badge bg-danger">Não informado</span>';
                     ?>
                     <div class="row g-3">
                         <?php if (empty($inscricao->bolsista)) : ?>
                             <div class="col-12">
                                 <div class="alert alert-secondary mb-0">
                                     <div class="fw-semibold">Nenhum bolsista vinculado</div>
-                                    <div class="small">Voce pode incluir agora ou continuar o preenchimento e voltar depois.</div>
+                                    <div class="small">Você pode incluir agora ou continuar o preenchimento e voltar depois.</div>
                                 </div>
                             </div>
                         <?php else : ?>
@@ -78,7 +78,7 @@
                                             'class' => 'form-control',
                                             'maxlength' => 25,
                                             'required' => true,
-                                            'placeholder' => 'Somente numeros ou CPF formatado',
+                                            'placeholder' => 'Somente números ou CPF formatado',
                                         ]) ?>
                                     </div>
                                     <div class="col-md-5 d-grid d-md-flex justify-content-md-end">

@@ -1,8 +1,8 @@
 <div class="container mt-4">
     <div class="card">
         <div class="card-body">
-            <h4 class="mb-1">Inscricao - <?= h($edital->nome) ?></h4>
-            <div class="text-muted mb-3">Selecione a bolsa vigente para renovacao.</div>
+            <h4 class="mb-1">Inscrição - <?= h($edital->nome) ?></h4>
+            <div class="text-muted mb-3">Selecione a bolsa vigente para renovação.</div>
 
             <?= $this->element('inscricoes_steps', ['edital' => $edital, 'current' => 'dadosBolsista']) ?>
 
@@ -13,7 +13,7 @@
                             <th>Bolsista</th>
                             <th>CPF</th>
                             <th>Projeto</th>
-                            <th class="text-end">Acao</th>
+                            <th class="text-end">Ação</th>
                         </tr>
                     </thead>
                     <tbody>

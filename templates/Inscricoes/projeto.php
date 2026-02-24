@@ -10,8 +10,8 @@
         <div class="card-body">
             <div class="p-3 mb-4 bg-light border rounded text-center">
                 <h3 class="mb-2">Dados do projeto do orientador</h3>
-                <div class="fw-semibold">Inscricao - <?= h($edital->nome) ?></div>
-                <div class="text-muted mt-1">Projeto novo para esta inscricao.</div>
+                <div class="fw-semibold">Inscrição - <?= h($edital->nome) ?></div>
+                <div class="text-muted mt-1">Projeto novo para esta inscrição.</div>
             </div>
 
             <?= $this->Form->create($projetoSelecionado, ['type' => 'file', 'class' => 'row g-3', 'id' => 'projeto-form']) ?>
@@ -30,7 +30,7 @@
                 ?>
                 <div class="col-12">
                     <?= $this->Form->control('titulo', [
-                        'label' => 'Titulo do projeto',
+                        'label' => 'Título do projeto',
                         'class' => 'form-control' . ($valorTitulo === '' ? ' campo-vazio' : ''),
                         'required' => true,
                         'maxlength' => 255,
@@ -38,7 +38,7 @@
                 </div>
                 <div class="col-md-6">
                     <?= $this->Form->control('grande_area_id', [
-                        'label' => 'Grande area CNPQ',
+                        'label' => 'Grande área CNPQ',
                         'class' => 'form-select' . ($valorGrandeArea === '' ? ' campo-vazio' : ''),
                         'options' => $grandesAreas ?? [],
                         'empty' => ' - Selecione - ',
@@ -47,15 +47,15 @@
                 </div>
                 <div class="col-md-6">
                     <?= $this->Form->control('area_id', [
-                        'label' => 'Area CNPQ',
+                        'label' => 'Área CNPQ',
                         'class' => 'form-select' . ($valorAreaCnpq === '' ? ' campo-vazio' : ''),
                         'options' => $areas ?? [],
-                        'empty' => ' - Selecione a grande area - ',
+                        'empty' => ' - Selecione a grande área - ',
                     ]) ?>
                 </div>
                 <div class="col-12">
                     <?= $this->Form->control('area_fiocruz_id', [
-                        'label' => 'Area de pesquisa FIOCRUZ',
+                        'label' => 'Área de pesquisa FIOCRUZ',
                         'class' => 'form-select' . ($valorAreaFiocruz === '' ? ' campo-vazio' : ''),
                         'options' => $areasFiocruz ?? [],
                         'empty' => ' - Selecione - ',
@@ -67,7 +67,7 @@
                         'label' => 'Linha de pesquisa FIOCRUZ',
                         'class' => 'form-select' . ($valorLinhaFiocruz === '' ? ' campo-vazio' : ''),
                         'options' => $linhas ?? [],
-                        'empty' => ' - Selecione a area - ',
+                        'empty' => ' - Selecione a área - ',
                     ]) ?>
                 </div>
                 <div class="col-md-6">
@@ -90,7 +90,7 @@
                 </div>
                 <div class="col-12">
                     <?= $this->Form->control('resumo', [
-                        'label' => 'Resumo do Projeto (max 4mil caracteres)',
+                        'label' => 'Resumo do projeto (máx. 4 mil caracteres)',
                         'type' => 'textarea',
                         'class' => 'form-control' . ($valorResumo === '' ? ' campo-vazio' : ''),
                         'rows' => 6,
@@ -100,7 +100,7 @@
                 <div class="col-12 mt-3">
                     <h6 class="fw-semibold mb-1">Anexos</h6>
                     <p class="text-muted small mb-3">
-                        Envie os documentos do bloco de projeto. Itens com arquivo ja enviado podem ser baixados, alterados ou excluidos.
+                        Envie os documentos do bloco de projeto. Itens com arquivo já enviado podem ser baixados, alterados ou excluídos.
                     </p>
                     <div class="row g-3 anexos-areas">
                         <?php foreach ($anexosTiposProjeto as $tipo) : ?>
@@ -198,7 +198,7 @@ document.addEventListener('DOMContentLoaded', function () {
         areaCnpqSelect.innerHTML = '';
         var optionDefault = document.createElement('option');
         optionDefault.value = '';
-        optionDefault.textContent = ' - Selecione a grande area - ';
+        optionDefault.textContent = ' - Selecione a grande área - ';
         areaCnpqSelect.appendChild(optionDefault);
 
         opcoes.forEach(function (item) {
@@ -223,7 +223,7 @@ document.addEventListener('DOMContentLoaded', function () {
         linhaSelect.innerHTML = '';
         var optionDefault = document.createElement('option');
         optionDefault.value = '';
-        optionDefault.textContent = ' - Selecione a area - ';
+        optionDefault.textContent = ' - Selecione a área - ';
         linhaSelect.appendChild(optionDefault);
 
         opcoes.forEach(function (item) {
@@ -246,7 +246,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 return;
             }
             if (this.files[0].size > 2097152) {
-                alert('Arquivo maior que 2Mb. Selecione outro arquivo.');
+                alert('Arquivo maior que 2 MB. Selecione outro arquivo.');
                 this.value = '';
             }
         });

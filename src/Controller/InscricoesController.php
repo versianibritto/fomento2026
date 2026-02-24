@@ -27,7 +27,7 @@ class InscricoesController extends AppController
         $tipo = strtoupper(trim((string)$tipo));
 
         if (empty($editalId) || empty($inscricaoId) || $tipo === '') {
-            $this->Flash->error('Parametros de direcionamento invalidos.');
+            $this->Flash->error('Parâmetros de direcionamento inválidos.');
             return $this->redirect(['controller' => 'Index', 'action' => 'dashdetalhes', 'A']);
         }
 
@@ -52,7 +52,7 @@ class InscricoesController extends AppController
             case 'D':
                 return $this->redirect(['controller' => 'Padrao', 'action' => 'deletar', (int)$inscricaoId]);
             default:
-                $this->Flash->error('Acao de direcionamento invalida.');
+                $this->Flash->error('Ação de direcionamento inválida.');
                 return $this->redirect(['controller' => 'Index', 'action' => 'dashdetalhes', 'A']);
         }
     }
@@ -68,7 +68,7 @@ class InscricoesController extends AppController
         $identity = $context['identity'];
 
         if (empty($inscricaoId)) {
-            $this->Flash->error('Inscricao nao informada para exclusao.');
+            $this->Flash->error('Inscrição não informada para exclusão.');
             return $this->redirect(['controller' => 'Index', 'action' => 'dashdetalhes', 'A']);
         }
 
@@ -87,12 +87,12 @@ class InscricoesController extends AppController
             ->where($conditions)
             ->first();
         if (!$inscricao) {
-            $this->Flash->error('Inscricao nao localizada para exclusao.');
+            $this->Flash->error('Inscrição não localizada para exclusão.');
             return $this->redirect(['controller' => 'Index', 'action' => 'dashdetalhes', 'A']);
         }
 
         if (!in_array((int)$inscricao->fase_id, [1, 3], true)) {
-            $this->Flash->error('A inscricao so pode ser excluida nas fases 1 ou 3.');
+            $this->Flash->error('A inscrição só pode ser excluída nas fases 1 ou 3.');
             return $this->redirect(['controller' => 'Padrao', 'action' => 'visualizar', (int)$inscricao->id]);
         }
 
@@ -100,17 +100,17 @@ class InscricoesController extends AppController
             $faseAtual = (int)$inscricao->fase_id;
             $inscricaoPatch = $tblProjetoBolsistas->patchEntity($inscricao, ['deleted' => 1]);
             $tblProjetoBolsistas->saveOrFail($inscricaoPatch);
-            $this->historico((int)$inscricao->id, $faseAtual, $faseAtual, 'Exclusao da inscricao pelo orientador', true);
+            $this->historico((int)$inscricao->id, $faseAtual, $faseAtual, 'Exclusão da inscrição pelo orientador', true);
         } catch (\Throwable $e) {
             $this->flashFriendlyException(
                 $e,
-                'Erro no Sistema - exclusao de inscricao',
-                'Nao foi possivel excluir a inscricao.'
+                'Erro no Sistema - exclusão de inscrição',
+                'Não foi possível excluir a inscrição.'
             );
             return $this->redirect(['controller' => 'Padrao', 'action' => 'visualizar', (int)$inscricao->id]);
         }
 
-        $this->Flash->success('Inscricao excluida com sucesso.');
+        $this->Flash->success('Inscrição excluída com sucesso.');
         return $this->redirect(['controller' => 'Index', 'action' => 'dashdetalhes', 'A']);
     }
     // valida se tem alguma inscrição e se tem alguma renovação para decidir
@@ -136,7 +136,7 @@ class InscricoesController extends AppController
             ])
             ->count();
         if ($inscricoesEmAndamento > 0) {
-            $this->Flash->error('O(a) sr(a) ja possui uma inscricao em andamento neste programa.');
+            $this->Flash->error('O(a) sr(a) já possui uma inscrição em andamento neste programa.');
             return $this->redirect(['controller' => 'Index', 'action' => 'index']);
         }
 
@@ -159,7 +159,7 @@ class InscricoesController extends AppController
 
         $inscricao = $this->criarOuCarregarInscricaoNova($edital, $identity);
         if (!$inscricao) {
-            $this->Flash->error('Nao foi possivel iniciar a inscricao. Tente novamente.');
+            $this->Flash->error('Não foi possível iniciar a inscrição. Tente novamente.');
             return $this->redirect(['controller' => 'Index', 'action' => 'index']);
         }
 
@@ -227,9 +227,9 @@ class InscricoesController extends AppController
                     ])
                     ->all();
 
-                $justificativa = 'Voce possui inscricoes vigentes neste programa.
-                        Ao solicitar uma inscricao neste edital,
-                        nao sera possivel realizar a renovacao delas.
+                $justificativa = 'Você possui inscrições vigentes neste programa.
+                        Ao solicitar uma inscrição neste edital,
+                        não será possível realizar a renovação delas.
                         Ao confirmar esta ação não será possível futuramente renová-las.
                         Deseja continuar?
                         O(a) Orientador(a) confirmou o processo.';
@@ -264,7 +264,7 @@ class InscricoesController extends AppController
 
         $edital = $context['edital'];
         if (($edital->origem ?? null) !== 'N') {
-            $this->Flash->error('Origem do edital invalida para esta operacao.');
+            $this->Flash->error('Origem do edital inválida para esta operação.');
             return $this->redirect(['controller' => 'Index', 'action' => 'index']);
         }
 
@@ -311,7 +311,7 @@ class InscricoesController extends AppController
             ])
             ->first();
         if (!$inscricao) {
-            $this->Flash->error('Inscricao nao localizada ou deletetada');
+            $this->Flash->error('Inscrição não localizada ou deletada.');
             return $this->redirect(['controller' => 'Index', 'action' => 'index']);
         }
 
@@ -462,7 +462,7 @@ class InscricoesController extends AppController
                     $this->flashFriendlyException(
                         $e,
                         'Erro no Sistema - validar bolsista no dados bolsista',
-                        'Nao foi possivel validar o usuario informado.'
+                        'Não foi possível validar o usuário informado.'
                     );
                     return $this->redirect(['action' => 'dadosBolsista', $edital->id, $inscricao->id]);
                 }
@@ -480,7 +480,7 @@ class InscricoesController extends AppController
                     $this->flashFriendlyException(
                         $e,
                         'Erro no Sistema - vincular bolsista no dados bolsista',
-                        'Nao foi possivel vincular o usuario na inscricao.'
+                        'Não foi possível vincular o usuário na inscrição.'
                     );
                     return $this->redirect(['action' => 'dadosBolsista', $edital->id, $inscricao->id]);
                 }
@@ -538,7 +538,7 @@ class InscricoesController extends AppController
             if (in_array($acao, ['vincular_bolsista', 'incluir_bolsista'], true)) {
                 $cpfInformado = (string)($dados['cpf_bolsista'] ?? '');
                 if (!$this->validaCPF($cpfInformado)) {
-                    $this->Flash->error('Informe um CPF valido para o bolsista.');
+                    $this->Flash->error('Informe um CPF válido para o bolsista.');
                     return $this->redirect(['action' => 'dadosBolsista', $edital->id, $inscricao->id]);
                 }
                 $cpf = preg_replace('/\D/', '', $cpfInformado);
@@ -568,7 +568,7 @@ class InscricoesController extends AppController
                     $this->flashFriendlyException(
                         $e,
                         'Erro no Sistema - validar bolsista no dados bolsista',
-                        'Nao foi possivel validar o usuario informado.'
+                        'Não foi possível validar o usuário informado.'
                     );
                     return $this->redirect(['action' => 'dadosBolsista', $edital->id, $inscricao->id]);
                 }
@@ -586,7 +586,7 @@ class InscricoesController extends AppController
                     $this->flashFriendlyException(
                         $e,
                         'Erro no Sistema - vincular bolsista no dados bolsista',
-                        'Nao foi possivel vincular o usuario na inscricao.'
+                        'Não foi possível vincular o usuário na inscrição.'
                     );
                 }
                 return $this->redirect(['action' => 'dadosBolsista', $edital->id, $inscricao->id]);
@@ -599,12 +599,12 @@ class InscricoesController extends AppController
                     $projetoBolsistas->saveOrFail($inscricao);
                     $this->limparAnexosPorBloco((int)$inscricao->id, 'B');
                     $this->historico((int)$inscricao->id, $faseOriginal, $faseOriginal, 'Exclusão de bolsista no Dados Bolsista', true);
-                    $this->Flash->success('Bolsista removido da inscricao.');
+                    $this->Flash->success('Bolsista removido da inscrição.');
                 } catch (\Throwable $e) {
                     $this->flashFriendlyException(
                         $e,
                         'Erro no Sistema - excluir bolsista no dados bolsista',
-                        'Nao foi possivel remover o bolsista da inscricao.'
+                        'Não foi possível remover o bolsista da inscrição.'
                     );
                 }
 
@@ -636,7 +636,7 @@ class InscricoesController extends AppController
                 $this->flashFriendlyException(
                     $e,
                     'Erro no Sistema - salvar cota no dados bolsista',
-                    'Nao foi possivel salvar a cota do bolsista.'
+                    'Não foi possível salvar a cota do bolsista.'
                 );
                 return $this->redirect(['action' => 'dadosBolsista', $edital->id, $inscricao->id]);
             }
@@ -649,7 +649,7 @@ class InscricoesController extends AppController
                 return $this->redirect(['action' => $proximaAcao, $edital->id, $inscricao->id]);
             }
 
-            $this->Flash->error('Nao foi possivel salvar os anexos. Tente novamente.');
+            $this->Flash->error('Não foi possível salvar os anexos. Tente novamente.');
             return $this->redirect(['action' => 'dadosBolsista', $edital->id, $inscricao->id]);
         }
 
@@ -731,7 +731,7 @@ class InscricoesController extends AppController
         }
 
         if ($qtdRenovacoes === 0) {
-            $this->Flash->error('Nao ha bolsas vigentes para renovacao neste programa.');
+            $this->Flash->error('Não há bolsas vigentes para renovação neste programa.');
             return $this->redirect(['controller' => 'Index', 'action' => 'index']);
         }
 
@@ -865,12 +865,12 @@ class InscricoesController extends AppController
                     ]);
                 });
             } catch (\Throwable $e) {
-                $this->flashFriendlyException($e, 'Erro no Sistema - salvar sumula da inscricao');
+                $this->flashFriendlyException($e, 'Erro no Sistema - salvar súmula da inscrição');
                 return $this->redirect(['action' => 'sumula', $context['edital']->id, $inscricao->id]);
             }
 
             $faseAtual = (int)$inscricao->fase_id;
-            $this->historico((int)$inscricao->id, $faseAtual, $faseAtual, 'Atualizacao da sumula da inscricao', true);
+            $this->historico((int)$inscricao->id, $faseAtual, $faseAtual, 'Atualização da súmula da inscrição', true);
             $this->Flash->success('Súmula salva com sucesso.');
             return $this->redirect(['action' => 'projeto', $context['edital']->id, $inscricao->id]);
         }
@@ -1048,7 +1048,7 @@ class InscricoesController extends AppController
                     ])
                     ->count() > 0;
                 if (!$areaValida) {
-                    $this->Flash->error('A Area CNPQ selecionada nao pertence a Grande area informada.');
+                    $this->Flash->error('A Área CNPQ selecionada não pertence à Grande área informada.');
                     $projetoSelecionado = $this->fetchTable('Projetos')->patchEntity(
                         $projetoSelecionado ?? $this->fetchTable('Projetos')->newEmptyEntity(),
                         [
@@ -1087,7 +1087,7 @@ class InscricoesController extends AppController
                     ])
                     ->count() > 0;
                 if (!$linhaValida) {
-                    $this->Flash->error('A Linha Fiocruz selecionada nao pertence a Area Fiocruz informada.');
+                    $this->Flash->error('A Linha Fiocruz selecionada não pertence à Área Fiocruz informada.');
                     $projetoSelecionado = $this->fetchTable('Projetos')->patchEntity(
                         $projetoSelecionado ?? $this->fetchTable('Projetos')->newEmptyEntity(),
                         [
@@ -1197,11 +1197,11 @@ class InscricoesController extends AppController
             // Sem projeto vinculado, o titulo e obrigatorio para criar o primeiro projeto.
             if (!$projetoJaVinculado && $tituloInformado === '') {
                 if ($temArquivo) {
-                    $this->Flash->error('Nao e possivel anexar arquivos sem projeto vinculado. Informe o titulo para criar o projeto.');
+                    $this->Flash->error('Não é possível anexar arquivos sem projeto vinculado. Informe o título para criar o projeto.');
                 } elseif ($temDadosProjeto) {
-                    $this->Flash->error('Informe o titulo do projeto para salvar os dados.');
+                    $this->Flash->error('Informe o título do projeto para salvar os dados.');
                 } else {
-                    $this->Flash->error('Informe o titulo para criar o projeto.');
+                    $this->Flash->error('Informe o título para criar o projeto.');
                 }
                 $projetoSelecionado = $this->fetchTable('Projetos')->patchEntity(
                     $projetoSelecionado ?? $this->fetchTable('Projetos')->newEmptyEntity(),
@@ -1236,7 +1236,7 @@ class InscricoesController extends AppController
             if (!$temDadosProjeto && $projetoJaVinculado) {
                 $faseAtual = (int)$inscricao->fase_id;
                 $this->historico((int)$inscricao->id, $faseAtual, $faseAtual, 'Submissao de projeto sem alteracoes', true);
-                $this->Flash->success('Rascunho mantido sem alteracoes no projeto.');
+                $this->Flash->success('Rascunho mantido sem alterações no projeto.');
                 return $this->redirect(['action' => 'subprojeto', $context['edital']->id, $inscricao->id]);
             }
 
@@ -1250,7 +1250,7 @@ class InscricoesController extends AppController
                     ])
                     ->first();
                 if (!$projetoEntity) {
-                    throw new \RuntimeException('Projeto vinculado nao localizado para atualizacao.');
+                    throw new \RuntimeException('Projeto vinculado não localizado para atualização.');
                 }
             } else {
                 $projetoEntity = $projetosTable->newEmptyEntity();
@@ -1308,7 +1308,7 @@ class InscricoesController extends AppController
                 $this->flashFriendlyException(
                     $e,
                     'Erro no Sistema - bloco projeto da inscricao',
-                    'Nao foi possivel processar os dados do projeto.'
+                    'Não foi possível processar os dados do projeto.'
                 );
                 return $this->redirect(['action' => 'projeto', $context['edital']->id, $inscricao->id]);
             }
@@ -1409,7 +1409,7 @@ class InscricoesController extends AppController
                 $this->flashFriendlyException(
                     $e,
                     'Erro no Sistema - salvar subprojeto da inscricao',
-                    'Nao foi possivel processar os dados do subprojeto.'
+                    'Não foi possível processar os dados do subprojeto.'
                 );
                 return $this->redirect(['action' => 'subprojeto', $context['edital']->id, $inscricao->id]);
             }
@@ -1452,7 +1452,7 @@ class InscricoesController extends AppController
             ->first();
 
         if (!$inscricao) {
-            $this->Flash->error('Inscricao nao localizada. Reinicie o processo.');
+            $this->Flash->error('Inscrição não localizada. Reinicie o processo.');
             return $this->redirect(['controller' => 'Index', 'action' => 'index']);
         }
 
@@ -1503,7 +1503,7 @@ class InscricoesController extends AppController
             if (in_array($acao, ['vincular_coorientador', 'incluir_coorientador'], true)) {
                 $cpfInformado = (string)($dados['cpf_coorientador'] ?? '');
                 if (!$this->validaCPF($cpfInformado)) {
-                    $this->Flash->error('Informe um CPF valido para o coorientador.');
+                    $this->Flash->error('Informe um CPF válido para o coorientador.');
                     return $this->redirect(['action' => 'coorientador', $edital->id, $inscricao->id]);
                 }
                 $cpf = preg_replace('/\D/', '', $cpfInformado);
@@ -1550,7 +1550,7 @@ class InscricoesController extends AppController
                     $this->flashFriendlyException(
                         $e,
                         'Erro no Sistema - vincular coorientador na inscricao',
-                        'Nao foi possivel vincular o coorientador na inscricao.'
+                        'Não foi possível vincular o coorientador na inscrição.'
                     );
                 }
 
@@ -1564,12 +1564,12 @@ class InscricoesController extends AppController
                     $projetoBolsistas->saveOrFail($inscricao);
                     $this->limparAnexosPorBloco((int)$inscricao->id, 'C');
                     $this->historico((int)$inscricao->id, $faseOriginal, $faseOriginal, 'Exclusão de coorientador na inscrição', true);
-                    $this->Flash->success('Coorientador removido da inscricao.');
+                    $this->Flash->success('Coorientador removido da inscrição.');
                 } catch (\Throwable $e) {
                     $this->flashFriendlyException(
                         $e,
                         'Erro no Sistema - excluir coorientador na inscricao',
-                        'Nao foi possivel remover o coorientador da inscricao.'
+                        'Não foi possível remover o coorientador da inscrição.'
                     );
                 }
 
@@ -1592,7 +1592,7 @@ class InscricoesController extends AppController
                 return $this->redirect(['action' => 'gerarTermo', $edital->id, $inscricao->id]);
             }
 
-            $this->Flash->error('Nao foi possivel salvar os anexos. Tente novamente.');
+            $this->Flash->error('Não foi possível salvar os anexos. Tente novamente.');
             return $this->redirect(['action' => 'coorientador', $edital->id, $inscricao->id]);
         }
 
@@ -1612,7 +1612,7 @@ class InscricoesController extends AppController
         $edital = $context['edital'];
         $identity = $context['identity'];
         if (empty($inscricaoId)) {
-            $this->Flash->error('Inscricao nao informada.');
+            $this->Flash->error('Inscrição não informada.');
             return $this->redirect(['controller' => 'Index', 'action' => 'index']);
         }
 
@@ -1632,7 +1632,7 @@ class InscricoesController extends AppController
             ])
             ->first();
         if (!$inscricao) {
-            $this->Flash->error('Inscricao nao localizada ou deletada. Reinicie o processo.');
+            $this->Flash->error('Inscrição não localizada ou deletada. Reinicie o processo.');
             return $this->redirect(['controller' => 'Index', 'action' => 'index']);
         }
 
@@ -1642,7 +1642,7 @@ class InscricoesController extends AppController
             return $this->redirect(['controller' => 'Index', 'action' => 'index']);
         }
         if (!in_array((int)$inscricao->fase_id, [1, 3], true)) {
-            $this->Flash->error('Inscricao indisponivel para geracao de termo nesta fase. Permitido apenas nas fases 1 e 3.');
+            $this->Flash->error('Inscrição indisponível para geração de termo nesta fase. Permitido apenas nas fases 1 e 3.');
             return $this->redirect(['controller' => 'Index', 'action' => 'index']);
         }
 
@@ -1676,7 +1676,7 @@ class InscricoesController extends AppController
             }
 
             if (!empty($inscricao->bolsista_usuario->ano_conclusao) && (int)$inscricao->bolsista_usuario->ano_conclusao < (int)date('Y')) {
-                $errosBolsista[] = 'O ano de conclusao e menor que o ano atual, e o programa e para alunos nao graduados';
+                $errosBolsista[] = 'O ano de conclusão é menor que o ano atual, e o programa é para alunos não graduados';
             }
 
             if ((string)$inscricao->bolsista_usuario->documento_numero === '') {
@@ -1791,19 +1791,19 @@ class InscricoesController extends AppController
                 }
                 foreach ($sumulasIds as $sumulaId) {
                     if (!isset($mapSumulasSalvas[(int)$sumulaId])) {
-                        $errosSumula[] = 'Preencha a sumula #' . (int)$sumulaId . '.';
+                        $errosSumula[] = 'Preencha a súmula #' . (int)$sumulaId . '.';
                         continue;
                     }
                     $qtd = $mapSumulasSalvas[(int)$sumulaId]->quantidade;
                     if ($qtd === null || $qtd === '') {
-                        $errosSumula[] = 'Informe quantidade na sumula #' . (int)$sumulaId . ' (use 0 quando nao possuir).';
+                        $errosSumula[] = 'Informe quantidade na súmula #' . (int)$sumulaId . ' (use 0 quando não possuir).';
                     }
                 }
             }
         }
         if (!empty($errosSumula)) {
             $falhas[] = [
-                'nome' => 'Sumula',
+                'nome' => 'Súmula',
                 'url' => ['action' => 'sumula', $edital->id, $inscricao->id],
                 'erros' => $errosSumula,
             ];
@@ -1956,7 +1956,7 @@ class InscricoesController extends AppController
                 $this->flashFriendlyException(
                     $e,
                     'Erro no Sistema - gerar termo da inscricao',
-                    'Nao foi possivel concluir a geracao do termo.'
+                    'Não foi possível concluir a geração do termo.'
                 );
                 return $this->redirect(['action' => 'gerarTermo', $edital->id, $inscricao->id]);
             }
@@ -1985,7 +1985,7 @@ class InscricoesController extends AppController
         $edital = $context['edital'];
         $identity = $context['identity'];
         if (empty($inscricaoId)) {
-            $this->Flash->error('Inscricao nao informada.');
+            $this->Flash->error('Inscrição não informada.');
             return $this->redirect(['controller' => 'Index', 'action' => 'index']);
         }
 
@@ -1996,7 +1996,7 @@ class InscricoesController extends AppController
             ])
             ->first();
         if (!$inscricao) {
-            $this->Flash->error('Inscricao nao localizada. Reinicie o processo.');
+            $this->Flash->error('Inscrição não localizada. Reinicie o processo.');
             return $this->redirect(['controller' => 'Index', 'action' => 'index']);
         }
         $ehTI = $this->ehTi();
@@ -2010,7 +2010,7 @@ class InscricoesController extends AppController
             []
         );
         if (empty($falhas)) {
-            $this->Flash->info('Nenhuma falha pendente para esta inscricao.');
+            $this->Flash->info('Nenhuma falha pendente para esta inscrição.');
             return $this->redirect(['action' => 'gerarTermo', $edital->id, $inscricao->id]);
         }
 
@@ -2019,7 +2019,7 @@ class InscricoesController extends AppController
             'Anexos (Bolsista)' => ['controller' => 'Inscricoes', 'action' => 'dadosBolsista', $edital->id, $inscricao->id],
             'Coorientador' => ['controller' => 'Inscricoes', 'action' => 'coorientador', $edital->id, $inscricao->id],
             'Anexos (Coorientador)' => ['controller' => 'Inscricoes', 'action' => 'coorientador', $edital->id, $inscricao->id],
-            'Sumula' => ['controller' => 'Inscricoes', 'action' => 'sumula', $edital->id, $inscricao->id],
+            'Súmula' => ['controller' => 'Inscricoes', 'action' => 'sumula', $edital->id, $inscricao->id],
             'Projeto' => ['controller' => 'Inscricoes', 'action' => 'projeto', $edital->id, $inscricao->id],
             'Anexos (Projeto)' => ['controller' => 'Inscricoes', 'action' => 'projeto', $edital->id, $inscricao->id],
             'Subprojeto' => ['controller' => 'Inscricoes', 'action' => 'subprojeto', $edital->id, $inscricao->id],
@@ -2048,7 +2048,7 @@ class InscricoesController extends AppController
         $edital = $context['edital'];
         $identity = $context['identity'];
         if (empty($inscricaoId)) {
-            $this->Flash->error('Inscricao nao informada.');
+            $this->Flash->error('Inscrição não informada.');
             return $this->redirect(['controller' => 'Index', 'action' => 'index']);
         }
 
@@ -2061,7 +2061,7 @@ class InscricoesController extends AppController
             ])
             ->first();
         if (!$inscricao) {
-            $this->Flash->error('Inscricao nao localizada.');
+            $this->Flash->error('Inscrição não localizada.');
             return $this->redirect(['controller' => 'Index', 'action' => 'index']);
         }
 
@@ -2071,7 +2071,7 @@ class InscricoesController extends AppController
             return $this->redirect(['controller' => 'Index', 'action' => 'dashboard']);
         }
         if ((int)$inscricao->fase_id !== 5) {
-            $this->Flash->error('O termo so pode ser baixado quando a inscricao estiver na fase 5.');
+            $this->Flash->error('O termo só pode ser baixado quando a inscrição estiver na fase 5.');
             return $this->redirect(['action' => 'gerarTermo', $edital->id, $inscricao->id]);
         }
 
@@ -2080,7 +2080,7 @@ class InscricoesController extends AppController
         $htmlExport = $this->montarHtmlTermoInscricao($edital, $inscricao, false, '', $geracaoTopo);
 
         if (!class_exists(\Mpdf\Mpdf::class)) {
-            $this->Flash->error('Biblioteca de PDF nao instalada. Baixando termo em HTML.');
+            $this->Flash->error('Biblioteca de PDF não instalada. Baixando termo em HTML.');
             return $this->response
                 ->withType('text/html; charset=UTF-8')
                 ->withStringBody($htmlExport)
@@ -2109,7 +2109,7 @@ class InscricoesController extends AppController
                 'Falha gerar PDF mPDF termo inscricao #' . (int)$inscricao->id . ' | erro=' . $e->getMessage(),
                 'error'
             );
-            $this->Flash->error('Nao foi possivel gerar o PDF no momento. Baixando termo em HTML.');
+            $this->Flash->error('Não foi possível gerar o PDF no momento. Baixando termo em HTML.');
             return $this->response
                 ->withType('text/html; charset=UTF-8')
                 ->withStringBody($htmlExport)
@@ -2126,7 +2126,7 @@ class InscricoesController extends AppController
         $edital = $context['edital'];
         $identity = $context['identity'];
         if (empty($inscricaoId)) {
-            $this->Flash->error('Inscricao nao informada.');
+            $this->Flash->error('Inscrição não informada.');
             return $this->redirect(['controller' => 'Index', 'action' => 'index']);
         }
 
@@ -2145,7 +2145,7 @@ class InscricoesController extends AppController
             ])
             ->first();
         if (!$inscricao) {
-            $this->Flash->error('Inscricao nao localizada. Reinicie o processo.');
+            $this->Flash->error('Inscrição não localizada. Reinicie o processo.');
             return $this->redirect(['controller' => 'Index', 'action' => 'index']);
         }
         $ehTI = $this->ehTi();
@@ -2154,14 +2154,14 @@ class InscricoesController extends AppController
             return $this->redirect(['controller' => 'Index', 'action' => 'dashboard']);
         }
         if ((int)$inscricao->fase_id !== 5) {
-            $this->Flash->error('Inscricao indisponivel para finalizacao nesta fase. Gere o termo antes de finalizar.');
+            $this->Flash->error('Inscrição indisponível para finalização nesta fase. Gere o termo antes de finalizar.');
             return $this->redirect(['controller' => 'Inscricoes', 'action' => 'gerarTermo', $editalId, $inscricaoId]);
         }
 
         if ($this->request->is(['post', 'put', 'patch'])) {
             $arquivoTermo = $this->request->getData('termo_assinado');
             if (!is_object($arquivoTermo) || $arquivoTermo->getClientFilename() === '') {
-                $this->Flash->error('Anexe o termo assinado (PDF) para finalizar a inscricao.');
+                $this->Flash->error('Anexe o termo assinado (PDF) para finalizar a inscrição.');
                 return $this->redirect(['action' => 'finalizar', $edital->id, $inscricao->id]);
             }
 
@@ -2190,7 +2190,7 @@ class InscricoesController extends AppController
                 $this->flashFriendlyException(
                     $e,
                     'Erro no Sistema - finalizar inscricao com termo assinado',
-                    'Nao foi possivel finalizar a inscricao.'
+                    'Não foi possível finalizar a inscrição.'
                 );
                 return $this->redirect(['action' => 'finalizar', $edital->id, $inscricao->id]);
             }

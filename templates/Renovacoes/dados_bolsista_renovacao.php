@@ -10,8 +10,8 @@
         <div class="card-body">
             <div class="p-3 mb-4 bg-light border rounded text-center">
                 <h3 class="mb-2">Dados do bolsista</h3>
-                <div class="fw-semibold">Inscricao - <?= h($edital->nome) ?></div>
-                <div class="text-muted mt-1">Rascunho: nenhum campo e obrigatorio nesta etapa.</div>
+                <div class="fw-semibold">Inscrição - <?= h($edital->nome) ?></div>
+                <div class="text-muted mt-1">Rascunho: nenhum campo é obrigatório nesta etapa.</div>
             </div>
 
             <div class="card bg-light border-0 mb-3">
@@ -27,14 +27,14 @@
                             ? substr($digits, 0, 3) . '.' . substr($digits, 3, 3) . '.' . substr($digits, 6, 3) . '-' . substr($digits, 9, 2)
                             : $inscricao->bolsista_usuario->cpf;
                     }
-                    $naoInformado = '<span class="badge bg-danger">Nao informado</span>';
+                    $naoInformado = '<span class="badge bg-danger">Não informado</span>';
                     ?>
                     <div class="row g-3">
                         <?php if (empty($inscricao->bolsista)) : ?>
                             <div class="col-12">
                                 <div class="alert alert-secondary mb-0">
                                     <div class="fw-semibold">Nenhum bolsista vinculado</div>
-                                    <div class="small">Voce pode incluir agora ou continuar o preenchimento e voltar depois.</div>
+                                    <div class="small">Você pode incluir agora ou continuar o preenchimento e voltar depois.</div>
                                 </div>
                             </div>
                         <?php else : ?>
@@ -79,15 +79,15 @@
                                     <h5 class="mb-0">Vínculo do bolsista</h5>
                                 </div>
                                 <div class="small text-muted mt-2">
-                                    Na renovacao nao e possivel alterar o bolsista.
+                                    Na renovação não é possível alterar o bolsista.
                                 </div>
                                 <div class="row g-2 mt-1">
                                     <div class="col-md-4">
-                                        <div class="text-muted small">Inscricao de referencia</div>
+                                        <div class="text-muted small">Inscrição de referência</div>
                                         <div class="fw-semibold"><?= $refId !== null ? h((string)$refId) : '-' ?></div>
                                     </div>
                                     <div class="col-md-4">
-                                        <div class="text-muted small">Data de inicio</div>
+                                        <div class="text-muted small">Data de início</div>
                                         <div class="fw-semibold"><?= h($refDataInicio) ?></div>
                                     </div>
                                     <div class="col-md-4">
@@ -107,7 +107,7 @@
                     <p class="text-muted small mt-0 mb-4">
                         Envie os documentos por etapa. Itens com arquivo já enviado podem ser baixados, alterados ou excluídos.<br>
                         Todos os anexos disponibilizados nesta tela serão exigidos na finalização da inscrição.<br>
-                        Verifique se os anexos estao de acordo com o bolsista vinculado nesta renovacao.
+                        Verifique se os anexos estão de acordo com o bolsista vinculado nesta renovação.
                     </p>
                     <div class="row g-3 mb-4">
                         <div class="col-md-6">

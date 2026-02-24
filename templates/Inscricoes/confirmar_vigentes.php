@@ -1,15 +1,15 @@
 <div class="container mt-4">
     <div class="card">
         <div class="card-body">
-            <h4 class="mb-1">Inscricao - <?= h($edital->nome) ?></h4>
+            <h4 class="mb-1">Inscrição - <?= h($edital->nome) ?></h4>
             <div class="card bg-light border-0 mb-3">
                 <div class="card-body text-center">
                     <div class="text-danger fs-3 mb-1" aria-hidden="true">⚠️</div>
-                    <div class="fw-bold text-danger text-uppercase mb-2">Atencao</div>
+                    <div class="fw-bold text-danger text-uppercase mb-2">Atenção</div>
                     <div class="mx-auto" style="max-width: 640px;">
-                        Voce possui inscricoes vigentes neste programa.<br>
-                        Ao solicitar uma inscricao neste edital,
-                        nao sera possivel realizar a renovacao delas.<br>
+                        Você possui inscrições vigentes neste programa.<br>
+                        Ao solicitar uma inscrição neste edital,
+                        não será possível realizar a renovação delas.<br>
                         Ao confirmar esta ação não será possível futuramente renová-las.<br>
                         Deseja continuar?
                     </div>

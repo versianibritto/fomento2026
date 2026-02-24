@@ -10,8 +10,8 @@
         <div class="card-body">
             <div class="p-3 mb-4 bg-light border rounded text-center">
                 <h3 class="mb-2">Dados do coorientador</h3>
-                <div class="fw-semibold">Inscricao - <?= h($edital->nome) ?></div>
-                <div class="text-muted mt-1">Rascunho: nenhum campo e obrigatorio nesta etapa.</div>
+                <div class="fw-semibold">Inscrição - <?= h($edital->nome) ?></div>
+                <div class="text-muted mt-1">Rascunho: nenhum campo é obrigatório nesta etapa.</div>
             </div>
 
             <div class="card bg-light border-0 mb-3">
@@ -27,14 +27,14 @@
                             ? substr($digits, 0, 3) . '.' . substr($digits, 3, 3) . '.' . substr($digits, 6, 3) . '-' . substr($digits, 9, 2)
                             : $coorientadorUsuario->cpf;
                     }
-                    $naoInformado = '<span class="badge bg-danger">Nao informado</span>';
+                    $naoInformado = '<span class="badge bg-danger">Não informado</span>';
                     ?>
                     <div class="row g-3">
                         <?php if (empty($inscricao->coorientador)) : ?>
                             <div class="col-12">
                                 <div class="alert alert-secondary mb-0">
                                     <div class="fw-semibold">Nenhum coorientador vinculado</div>
-                                    <div class="small">Voce pode incluir agora ou continuar o preenchimento e voltar depois.</div>
+                                    <div class="small">Você pode incluir agora ou continuar o preenchimento e voltar depois.</div>
                                 </div>
                             </div>
                         <?php else : ?>
@@ -54,7 +54,7 @@
                         <div class="col-12">
                             <div class="border rounded bg-white p-3 p-md-4 mt-2">
                                 <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
-                                    <h5 class="mb-0">Acoes do coorientador</h5>
+                                    <h5 class="mb-0">Ações do coorientador</h5>
                                     <span class="text-muted small">Informe o CPF para <?= empty($inscricao->coorientador) ? 'incluir' : 'alterar' ?> o coorientador.</span>
                                 </div>
 
@@ -66,7 +66,7 @@
                                             'class' => 'form-control',
                                             'maxlength' => 25,
                                             'required' => true,
-                                            'placeholder' => 'Somente numeros ou CPF formatado',
+                                            'placeholder' => 'Somente números ou CPF formatado',
                                         ]) ?>
                                     </div>
                                     <div class="col-md-5 d-grid d-md-flex justify-content-md-end">
@@ -78,7 +78,7 @@
                                 <div class="pt-2 border-top">
                                     <?= $this->Form->create(null, ['class' => 'd-grid d-md-flex justify-content-md-end']) ?>
                                         <?= $this->Form->hidden('acao', ['value' => 'excluir_coorientador']) ?>
-                                        <button type="submit" class="btn btn-outline-danger" onclick="return confirm('Deseja excluir o coorientador vinculado a esta inscricao?');">Excluir coorientador</button>
+                                        <button type="submit" class="btn btn-outline-danger" onclick="return confirm('Deseja excluir o coorientador vinculado a esta inscrição?');">Excluir coorientador</button>
                                     <?= $this->Form->end() ?>
                                 </div>
                                 <?php endif; ?>
@@ -92,28 +92,28 @@
                 <div class="card-body">
                     <h4 class="mb-1">Anexos</h4>
                     <p class="text-muted small mt-0 mb-4">
-                        Envie os documentos por etapa. Itens com arquivo ja enviado podem ser baixados, alterados ou excluidos.<br>
-                        Todos os anexos disponibilizados nesta tela serao exigidos na finalizacao da inscricao.<br>
-                        Sempre que alterar um coorientador, verifique se os anexos estao de acordo com a atualizacao do usuario.
+                        Envie os documentos por etapa. Itens com arquivo já enviado podem ser baixados, alterados ou excluídos.<br>
+                        Todos os anexos disponibilizados nesta tela serão exigidos na finalização da inscrição.<br>
+                        Sempre que alterar um coorientador, verifique se os anexos estão de acordo com a atualização do usuário.
                     </p>
                     <div class="alert alert-info border mb-4">
                         <div class="fw-semibold mb-2">Termo de consentimento do coorientador</div>
                         <div class="small mb-2">
-                            Para o anexo de termo de consentimento, siga esta sequencia:
+                            Para o anexo de termo de consentimento, siga esta sequência:
                         </div>
                         <ol class="small mb-2 ps-3">
                             <li>Baixe o modelo disponibilizado para este edital.</li>
                             <li>Preencha os dados solicitados.</li>
-                            <li>Colete a(as) assinatura(as) necessaria(as).</li>
-                            <li>Retorne a esta tela e faca o upload do termo assinado.</li>
-                            <li>E permitida assinatura eletronica do Gov.br.</li>
+                            <li>Colete a(as) assinatura(as) necessárias.</li>
+                            <li>Retorne a esta tela e faça o upload do termo assinado.</li>
+                            <li>É permitida assinatura eletrônica do Gov.br.</li>
                         </ol>
                         <?php if (!empty($edital->modelo_cons_coor)) : ?>
                             <a href="/uploads/editais/<?= h($edital->modelo_cons_coor) ?>" target="_blank" class="btn btn-sm btn-outline-primary">
                                 <i class="fa fa-download me-1"></i>Baixar modelo do termo de consentimento do coorientador
                             </a>
                         <?php else : ?>
-                            <div class="small text-danger fw-semibold">Modelo de consentimento do coorientador nao cadastrado para este edital.</div>
+                            <div class="small text-danger fw-semibold">Modelo de consentimento do coorientador não cadastrado para este edital.</div>
                         <?php endif; ?>
                     </div>
                     <?= $this->Form->create(null, ['type' => 'file']) ?>
