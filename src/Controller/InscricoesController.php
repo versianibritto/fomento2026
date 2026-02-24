@@ -1,0 +1,2377 @@
+<?php
+namespace App\Controller;
+
+use App\Controller\AppController;
+use Cake\ORM\TableRegistry;
+use Cake\Event\EventInterface;
+
+class InscricoesController extends AppController
+{
+    protected $identityLogado = null;
+
+    public function initialize(): void
+    {
+        parent::initialize();
+        $this->viewBuilder()->setLayout('admin');
+    }
+
+    public function beforeFilter(EventInterface $event)
+    {
+        parent::beforeFilter($event);
+        $this->identityLogado = $this->Authentication->getIdentity();
+        return null;
+    }
+
+    public function direcionarAcao($editalId = null, $inscricaoId = null, $tipo = null)
+    {
+        $tipo = strtoupper(trim((string)$tipo));
+
+        if (empty($editalId) || empty($inscricaoId) || $tipo === '') {
+            $this->Flash->error('Parametros de direcionamento invalidos.');
+            return $this->redirect(['controller' => 'Index', 'action' => 'dashdetalhes', 'A']);
+        }
+
+        switch ($tipo) {
+            case 'E':
+                return $this->redirect(['controller' => 'Inscricoes', 'action' => 'dadosBolsista', (int)$editalId, (int)$inscricaoId]);
+            case 'V':
+                $programaId = (int)($this->fetchTable('Editais')->find()
+                    ->select(['programa_id'])
+                    ->where(['Editais.id' => (int)$editalId])
+                    ->first()
+                    ->programa_id ?? 0);
+                return $this->redirect(['controller' => 'Padrao', 'action' => 'visualizar', (int)$inscricaoId]);
+            case 'T':
+                return $this->redirect(['controller' => 'Inscricoes', 'action' => 'gerarTermo', (int)$editalId, (int)$inscricaoId]);
+            case 'F':
+                return $this->redirect(['controller' => 'Inscricoes', 'action' => 'finalizar', (int)$editalId, (int)$inscricaoId]);
+            case 'C':
+                return $this->redirect(['controller' => 'Padrao', 'action' => 'cancelar', (int)$inscricaoId]);
+            case 'S':
+                return $this->redirect(['controller' => 'Padrao', 'action' => 'substituir', (int)$inscricaoId]);
+            case 'D':
+                return $this->redirect(['controller' => 'Padrao', 'action' => 'deletar', (int)$inscricaoId]);
+            default:
+                $this->Flash->error('Acao de direcionamento invalida.');
+                return $this->redirect(['controller' => 'Index', 'action' => 'dashdetalhes', 'A']);
+        }
+    }
+
+    public function deletar($editalId = null, $inscricaoId = null)
+    {
+        $this->request->allowMethod(['post']);
+        $context = $this->loadContext($editalId);
+        if (isset($context['redirect'])) {
+            return $context['redirect'];
+        }
+        $edital = $context['edital'];
+        $identity = $context['identity'];
+
+        if (empty($inscricaoId)) {
+            $this->Flash->error('Inscricao nao informada para exclusao.');
+            return $this->redirect(['controller' => 'Index', 'action' => 'dashdetalhes', 'A']);
+        }
+
+        $ehTI = $this->ehTi();
+        $conditions = [
+            'ProjetoBolsistas.id' => (int)$inscricaoId,
+            'ProjetoBolsistas.editai_id' => (int)$edital->id,
+            'ProjetoBolsistas.deleted' => 0,
+        ];
+        if (!$ehTI) {
+            $conditions['ProjetoBolsistas.orientador'] = (int)$identity->id;
+        }
+
+        $tblProjetoBolsistas = $this->fetchTable('ProjetoBolsistas');
+        $inscricao = $tblProjetoBolsistas->find()
+            ->where($conditions)
+            ->first();
+        if (!$inscricao) {
+            $this->Flash->error('Inscricao nao localizada para exclusao.');
+            return $this->redirect(['controller' => 'Index', 'action' => 'dashdetalhes', 'A']);
+        }
+
+        if (!in_array((int)$inscricao->fase_id, [1, 3], true)) {
+            $this->Flash->error('A inscricao so pode ser excluida nas fases 1 ou 3.');
+            return $this->redirect(['controller' => 'Padrao', 'action' => 'visualizar', (int)$inscricao->id]);
+        }
+
+        try {
+            $faseAtual = (int)$inscricao->fase_id;
+            $inscricaoPatch = $tblProjetoBolsistas->patchEntity($inscricao, ['deleted' => 1]);
+            $tblProjetoBolsistas->saveOrFail($inscricaoPatch);
+            $this->historico((int)$inscricao->id, $faseAtual, $faseAtual, 'Exclusao da inscricao pelo orientador', true);
+        } catch (\Throwable $e) {
+            $this->flashFriendlyException(
+                $e,
+                'Erro no Sistema - exclusao de inscricao',
+                'Nao foi possivel excluir a inscricao.'
+            );
+            return $this->redirect(['controller' => 'Padrao', 'action' => 'visualizar', (int)$inscricao->id]);
+        }
+
+        $this->Flash->success('Inscricao excluida com sucesso.');
+        return $this->redirect(['controller' => 'Index', 'action' => 'dashdetalhes', 'A']);
+    }
+    // valida se tem alguma inscrição e se tem alguma renovação para decidir
+    public function fluxoNova($editalId = null)
+    {
+        $context = $this->loadContext($editalId);
+        if (isset($context['redirect'])) {
+            return $context['redirect'];
+        }
+
+        $edital = $context['edital'];
+        $identity = $context['identity'];
+        //dd($edital);
+        $projetoBolsistas = $this->fetchTable('ProjetoBolsistas');
+        
+        //valida se tem inscrições em andamento
+        $inscricoesEmAndamento = $projetoBolsistas->find()
+            ->where([
+                'ProjetoBolsistas.orientador' => (int)$identity->id,
+                'ProjetoBolsistas.programa_id' => (int)$edital->programa_id,
+                'ProjetoBolsistas.deleted' => 0,
+                'ProjetoBolsistas.fase_id <' => 10,
+            ])
+            ->count();
+        if ($inscricoesEmAndamento > 0) {
+            $this->Flash->error('O(a) sr(a) ja possui uma inscricao em andamento neste programa.');
+            return $this->redirect(['controller' => 'Index', 'action' => 'index']);
+        }
+
+        //valida se tem inscrições vigentes
+        $vigentes = $projetoBolsistas->find()
+            ->contain(['Bolsistas'])
+            ->where([
+                'ProjetoBolsistas.orientador' => (int)$identity->id,
+                'ProjetoBolsistas.programa_id' => (int)$edital->programa_id,
+                'ProjetoBolsistas.deleted' => 0,
+                'ProjetoBolsistas.fase_id' => 11,
+            ])
+            ->orderBy(['ProjetoBolsistas.id' => 'DESC']);
+
+        if ($vigentes->count() > 0) {
+            $this->set(compact('vigentes'));
+            $this->set($context);
+            return $this->render('confirmar_vigentes');
+        }
+
+        $inscricao = $this->criarOuCarregarInscricaoNova($edital, $identity);
+        if (!$inscricao) {
+            $this->Flash->error('Nao foi possivel iniciar a inscricao. Tente novamente.');
+            return $this->redirect(['controller' => 'Index', 'action' => 'index']);
+        }
+
+        return $this->redirect([
+            'action' => 'dadosBolsista',
+            $edital->id,
+            $inscricao->id,
+        ]);
+    }
+
+    private function criarOuCarregarInscricaoNova($edital, $identity)
+    {
+        $projetoBolsistas = $this->fetchTable('ProjetoBolsistas');
+        $inscricao = $projetoBolsistas->find()
+            ->where([
+                'ProjetoBolsistas.editai_id' => (int)$edital->id,
+                'ProjetoBolsistas.orientador' => (int)$identity->id,
+                'ProjetoBolsistas.origem' => 'N',
+                'ProjetoBolsistas.fase_id' => 3,
+                'ProjetoBolsistas.deleted' => 0,
+            ])
+            ->orderBy(['ProjetoBolsistas.id' => 'DESC'])
+            ->first();
+
+        if ($inscricao) {
+            return $inscricao;
+        }
+
+        $inscricao = $projetoBolsistas->newEmptyEntity();
+        $inscricao = $projetoBolsistas->patchEntity($inscricao, [
+            'editai_id' => (int)$edital->id,
+            'orientador' => (int)$identity->id,
+            'programa_id' => (int)$edital->programa_id,
+            'origem' => 'N',
+            'fase_id' => 3,
+            'vigente' => 0,
+            'deleted' => 0,
+            'autorizacao' => 0,
+            'prorrogacao' => 0,
+        ]);
+
+        try {
+            $projetoBolsistas->saveOrFail($inscricao);
+            $this->historico($inscricao->id, 3, 3, 'Criacao de inscricao', true);
+            return $inscricao;
+        } catch (\Throwable $e) {
+            $this->flashFriendlyException($e, 'Erro no Sistema - criacao de inscricao');
+            return null;
+        }
+    }
+
+    private function processaVigentes($edital, $identity): bool
+    {
+        $projetoBolsistas = $this->fetchTable('ProjetoBolsistas');
+
+        try {
+            $connection = $projetoBolsistas->getConnection();
+            $connection->transactional(function () use ($projetoBolsistas, $identity, $edital) {
+                $vigentes = $projetoBolsistas->find()
+                    ->where([
+                        'ProjetoBolsistas.orientador' => (int)$identity->id,
+                        'ProjetoBolsistas.programa_id' => (int)$edital->programa_id,
+                        'ProjetoBolsistas.deleted' => 0,
+                        'ProjetoBolsistas.vigente' => 1,
+                    ])
+                    ->all();
+
+                $justificativa = 'Voce possui inscricoes vigentes neste programa.
+                        Ao solicitar uma inscricao neste edital,
+                        nao sera possivel realizar a renovacao delas.
+                        Ao confirmar esta ação não será possível futuramente renová-las.
+                        Deseja continuar?
+                        O(a) Orientador(a) confirmou o processo.';
+                foreach ($vigentes as $registro) {
+                    $faseOriginal = (int)$registro->fase_id;
+                    $registro = $projetoBolsistas->patchEntity($registro, [
+                        'fase_id' => 18,
+                    ]);
+                    $projetoBolsistas->saveOrFail($registro);
+
+                    $this->historico($registro->id, $faseOriginal, 18, $justificativa, true);
+                }
+            });
+        } catch (\Throwable $e) {
+            $this->flashFriendlyException($e, 'Erro no Sistema - confirmacao de vigentes');
+            return false;
+        }
+
+        return true;
+    }
+
+    public function confirmarVigentes($editalId = null)
+    {
+        $context = $this->loadContext($editalId);
+        if (isset($context['redirect'])) {
+            return $context['redirect'];
+        }
+
+        if (!$this->request->is('post')) {
+            return $this->redirect(['action' => 'fluxoNova', $editalId]);
+        }
+
+        $edital = $context['edital'];
+        if (($edital->origem ?? null) !== 'N') {
+            $this->Flash->error('Origem do edital invalida para esta operacao.');
+            return $this->redirect(['controller' => 'Index', 'action' => 'index']);
+        }
+
+        $acao = (string)($this->request->getData('acao') ?? '');
+        if ($acao !== 'confirmar') {
+            return $this->redirect(['controller' => 'Index', 'action' => 'index']);
+        }
+
+        $identity = $context['identity'];
+        if (!$this->processaVigentes($edital, $identity)) {
+            return $this->redirect(['controller' => 'Index', 'action' => 'index']);
+        }
+
+        return $this->redirect(['action' => 'fluxoNova', $edital->id]);
+    }
+
+    public function dadosBolsista($editalId = null, $inscricaoId = null)
+    {
+        $context = $this->loadContext($editalId);
+        if (isset($context['redirect'])) {
+            return $context['redirect'];
+        }
+        $inscricaoContext = $this->loadInscricaoEditavel($context, $inscricaoId);
+        if (isset($inscricaoContext['redirect'])) {
+            return $inscricaoContext['redirect'];
+        }
+
+        $edital = $context['edital'];
+        $identity = $context['identity'];
+        $referenciaId = $this->request->getQuery('referencia_id');
+        $projetoBolsistas = $this->fetchTable('ProjetoBolsistas');
+        $inscricao = null;
+
+         $inscricao = $projetoBolsistas->find()
+            ->contain([
+                'Bolsistas'
+            ])
+            ->where([
+                'ProjetoBolsistas.id' => (int)$inscricaoContext['inscricao']->id,
+                'ProjetoBolsistas.editai_id' => (int)$edital->id,
+                'ProjetoBolsistas.orientador' => (int)$identity->id,
+                'ProjetoBolsistas.deleted' => 0,
+
+            ])
+            ->first();
+        if (!$inscricao) {
+            $this->Flash->error('Inscricao nao localizada ou deletetada');
+            return $this->redirect(['controller' => 'Index', 'action' => 'index']);
+        }
+
+     
+        $anexosTiposBase = $this->fetchTable('AnexosTipos')->find()
+            ->where([
+                'AnexosTipos.bloco' => 'B',
+                'AnexosTipos.deleted' => 0,
+            ])
+            ->orderBy(['AnexosTipos.id' => 'ASC'])
+            ->all();
+
+       
+
+        $programaEditalId = (int)($edital->programa_id ?? 0);
+        $cotaAtual = (string)($inscricao->cota ?? '');
+        $primeiroPeriodoAtual = $inscricao->primeiro_periodo !== null ? (string)(int)$inscricao->primeiro_periodo : '';
+
+        $bolsistaMenorIdade = false;
+        if (!empty($inscricao->bolsista_usuario) && !empty($inscricao->bolsista_usuario->data_nascimento)) {
+            $dataNascimento = $inscricao->bolsista_usuario->data_nascimento;
+            if (is_object($dataNascimento) && method_exists($dataNascimento, 'i18nFormat')) {
+                $dataNascimento = $dataNascimento->i18nFormat('yyyy-MM-dd');
+            }
+            $idadeBolsista = (int)$this->idade((string)$dataNascimento, false);
+            $bolsistaMenorIdade = $idadeBolsista < 18;
+        }
+
+        $anexosTiposDefault = [];
+        $anexosTiposPrograma = [];
+        $anexosTiposCota = [];
+        $anexosTiposPrimeiroPeriodo = [];
+        $anexosTiposCondicional = [];
+        foreach ($anexosTiposBase as $tipoAnexo) {
+            $tipoId = (int)$tipoAnexo->id;
+            $condicional = (int)($tipoAnexo->condicional ?? 0);
+            $programaRegra = trim((string)($tipoAnexo->programa ?? ''));
+            $cotaRegra = strtoupper(trim((string)($tipoAnexo->cota ?? '')));
+
+            if ($tipoId === 16) {
+                $anexosTiposPrimeiroPeriodo[] = $tipoAnexo;
+                continue;
+            }
+
+            if ($condicional === 0) {
+                if ($programaRegra === '' && $cotaRegra === '') {
+                    $anexosTiposDefault[] = $tipoAnexo;
+                    continue;
+                }
+                if ($cotaRegra === '' && $programaRegra !== '') {
+                    $programas = array_filter(array_map('trim', explode(',', $programaRegra)));
+                    if (in_array((string)$programaEditalId, $programas, true)) {
+                        $anexosTiposPrograma[] = $tipoAnexo;
+                    }
+                    continue;
+                }
+                if ($programaRegra === '' && $cotaRegra !== '') {
+                    $anexosTiposCota[] = $tipoAnexo;
+                }
+                continue;
+            }
+
+            // Condicional=1 com programa/cota nulos
+            if ($programaRegra !== '' || $cotaRegra !== '') {
+                continue;
+            }
+            if ($tipoId === 18) {
+                if ($bolsistaMenorIdade) {
+                    $anexosTiposCondicional[] = $tipoAnexo;
+                }
+                continue;
+            }
+            if ($tipoId === 19) {
+                if ($bolsistaMenorIdade) {
+                    $anexosTiposCondicional[] = $tipoAnexo;
+                }
+                continue;
+            }
+        }
+
+        $anexos = [];
+        $tiposBaseIds = [];
+        foreach ($anexosTiposBase as $tipoBase) {
+            $tiposBaseIds[] = (int)$tipoBase->id;
+        }
+        $tiposBaseIds = array_values(array_unique(array_filter($tiposBaseIds)));
+        if (!empty($tiposBaseIds)) {
+            $anexosBol = $this->fetchTable('Anexos')->find()
+                ->select(['id', 'anexos_tipo_id', 'anexo'])
+                ->where([
+                    'Anexos.projeto_bolsista_id' => (int)$inscricao->id,
+                    'Anexos.anexos_tipo_id IN' => $tiposBaseIds,
+                    'Anexos.deleted IS' => null,
+                ])
+                ->orderBy(['Anexos.id' => 'DESC'])
+                ->all();
+        } else {
+            $anexosBol = [];
+        }
+        foreach ($anexosBol as $an) {
+            $tipoId = (int)$an->anexos_tipo_id;
+            if (!isset($anexos[$tipoId])) {
+                $anexos[$tipoId] = (string)$an->anexo;
+            }
+        }
+        $cotas = [
+            'G' => 'Geral',
+            'I' => 'Pessoas Indígenas',
+            'N' => 'Pessoas Negras (Pretos/Pardos)',
+            'T' => 'Pessoas Trans',
+            'D' => 'Pessoas com deficiência',
+        ];
+        if ((int)$edital->programa_id === 9) {
+            $cotas = [
+                'I' => 'Pessoas Indígenas',
+            ];
+        }
+        $cpfVincular = (string)$this->request->getQuery('cpf_vincular');
+        if ($cpfVincular !== '' && !$this->validaCPF($cpfVincular)) {
+            $this->Flash->error('CPF inválido para vinculação.');
+            return $this->redirect(['action' => 'dadosBolsista', $edital->id, $inscricao->id]);
+        }
+
+        // aqui eu preciso verificar se o cpf vincular existe na base: se sim chamo check bolsista.... se nao chamo cadastro usuario
+        if ($cpfVincular !== '') {
+            $cpfVincularNumerico = preg_replace('/\D/', '', $cpfVincular);
+            $bolsistaVincular = $this->fetchTable('Usuarios')->find()
+                ->select(['id'])
+                ->where(['Usuarios.cpf' => $cpfVincularNumerico])
+                ->first();
+
+            if (!$bolsistaVincular) {
+                return $this->redirect([
+                    'controller' => 'Users',
+                    'action' => 'cadastrarUsuario',
+                    $cpfVincularNumerico,
+                    'B',
+                    (int)$inscricao->id,
+                    (int)$edital->id,
+                ]);
+            } else {
+                try {
+                    $this->checkBolsista((int)$bolsistaVincular->id);
+                } catch (\Exception $e) {
+                    $this->Flash->error($e->getMessage());
+                    return $this->redirect(['action' => 'dadosBolsista', $edital->id, $inscricao->id]);
+                } catch (\Throwable $e) {
+                    $this->flashFriendlyException(
+                        $e,
+                        'Erro no Sistema - validar bolsista no dados bolsista',
+                        'Nao foi possivel validar o usuario informado.'
+                    );
+                    return $this->redirect(['action' => 'dadosBolsista', $edital->id, $inscricao->id]);
+                }
+
+                try {
+                    $faseOriginal = (int)$inscricao->fase_id;
+                    $inscricao = $projetoBolsistas->patchEntity($inscricao, [
+                        'bolsista' => (int)$bolsistaVincular->id,
+                    ]);
+                    $projetoBolsistas->saveOrFail($inscricao);
+                    $this->historico((int)$inscricao->id, $faseOriginal, $faseOriginal, 'Vinculação de usuário cadastrada no Dados Bolsista', true);
+                    $this->Flash->success('Usuário vinculado à inscrição com sucesso.');
+                    return $this->redirect(['action' => 'dadosBolsista', $edital->id, $inscricao->id]);
+                } catch (\Throwable $e) {
+                    $this->flashFriendlyException(
+                        $e,
+                        'Erro no Sistema - vincular bolsista no dados bolsista',
+                        'Nao foi possivel vincular o usuario na inscricao.'
+                    );
+                    return $this->redirect(['action' => 'dadosBolsista', $edital->id, $inscricao->id]);
+                }
+            }
+        }
+
+        if ($this->request->is(['post', 'put', 'patch'])) {
+            $dados = $this->request->getData();
+            $primeiroPeriodoInformado = array_key_exists('primeiro_periodo', $dados)
+                ? (string)$dados['primeiro_periodo']
+                : $primeiroPeriodoAtual;
+            if ($primeiroPeriodoInformado !== '' && !in_array($primeiroPeriodoInformado, ['0', '1'], true)) {
+                $this->Flash->error('Informe corretamente se o bolsista está no primeiro período.');
+                return $this->redirect(['action' => 'dadosBolsista', $edital->id, $inscricao->id]);
+            }
+
+            $tiposAnexosPermitidos = [];
+            foreach ($anexosTiposDefault as $tipoAnexo) {
+                $tiposAnexosPermitidos[] = (int)$tipoAnexo->id;
+            }
+            foreach ($anexosTiposPrograma as $tipoAnexo) {
+                $tiposAnexosPermitidos[] = (int)$tipoAnexo->id;
+            }
+            $cotaProcessada = strtoupper(trim((string)($dados['cota'] ?? $cotaAtual)));
+            foreach ($anexosTiposCota as $tipoAnexo) {
+                $cotaRegra = strtoupper(trim((string)($tipoAnexo->cota ?? '')));
+                if ($cotaRegra === '') {
+                    continue;
+                }
+                $cotasRegra = array_filter(array_map('trim', explode(',', $cotaRegra)));
+                if (in_array($cotaProcessada, $cotasRegra, true)) {
+                    $tiposAnexosPermitidos[] = (int)$tipoAnexo->id;
+                }
+            }
+            if ($bolsistaMenorIdade) {
+                $tiposAnexosPermitidos[] = 18;
+                $tiposAnexosPermitidos[] = 19;
+            }
+            if ($primeiroPeriodoInformado === '0') {
+                $tiposAnexosPermitidos[] = 16;
+            }
+            $tiposAnexosPermitidos = array_values(array_unique($tiposAnexosPermitidos));
+            $acaoRapidaAnexo = $this->processarAcaoRapidaAnexoInscricao(
+                $dados,
+                $inscricao->projeto_id !== null ? (int)$inscricao->projeto_id : null,
+                (int)$inscricao->id,
+                $tiposAnexosPermitidos
+            );
+            if ($acaoRapidaAnexo !== null) {
+                return $this->redirect(['action' => 'dadosBolsista', $edital->id, $inscricao->id]);
+            }
+
+            $acao = (string)($dados['acao'] ?? 'salvar_anexos');
+
+            if (in_array($acao, ['vincular_bolsista', 'incluir_bolsista'], true)) {
+                $cpfInformado = (string)($dados['cpf_bolsista'] ?? '');
+                if (!$this->validaCPF($cpfInformado)) {
+                    $this->Flash->error('Informe um CPF valido para o bolsista.');
+                    return $this->redirect(['action' => 'dadosBolsista', $edital->id, $inscricao->id]);
+                }
+                $cpf = preg_replace('/\D/', '', $cpfInformado);
+
+                $bolsista = $this->fetchTable('Usuarios')->find()
+                    ->select(['id'])
+                    ->where(['Usuarios.cpf' => $cpf])
+                    ->first();
+
+                if (!$bolsista) {
+                    return $this->redirect([
+                        'controller' => 'Users',
+                        'action' => 'cadastrarUsuario',
+                        $cpf,
+                        'B',
+                        (int)$inscricao->id,
+                        (int)$edital->id,
+                    ]);
+                }
+
+                try {
+                    $this->checkBolsista((int)$bolsista->id);
+                } catch (\Exception $e) {
+                    $this->Flash->error($e->getMessage());
+                    return $this->redirect(['action' => 'dadosBolsista', $edital->id, $inscricao->id]);
+                } catch (\Throwable $e) {
+                    $this->flashFriendlyException(
+                        $e,
+                        'Erro no Sistema - validar bolsista no dados bolsista',
+                        'Nao foi possivel validar o usuario informado.'
+                    );
+                    return $this->redirect(['action' => 'dadosBolsista', $edital->id, $inscricao->id]);
+                }
+
+                try {
+                    $faseOriginal = (int)$inscricao->fase_id;
+                    $inscricao = $projetoBolsistas->patchEntity($inscricao, [
+                        'bolsista' => (int)$bolsista->id,
+                    ]);
+                    $projetoBolsistas->saveOrFail($inscricao);
+                    $this->limparAnexosPorBloco((int)$inscricao->id, 'B');
+                    $this->historico((int)$inscricao->id, $faseOriginal, $faseOriginal, 'Vinculação de usuário cadastrada no Dados Bolsista', true);
+                    $this->Flash->success('Usuário vinculado à inscrição com sucesso.');
+                } catch (\Throwable $e) {
+                    $this->flashFriendlyException(
+                        $e,
+                        'Erro no Sistema - vincular bolsista no dados bolsista',
+                        'Nao foi possivel vincular o usuario na inscricao.'
+                    );
+                }
+                return $this->redirect(['action' => 'dadosBolsista', $edital->id, $inscricao->id]);
+            }
+
+            if ($acao === 'excluir_bolsista') {
+                try {
+                    $faseOriginal = (int)$inscricao->fase_id;
+                    $inscricao = $projetoBolsistas->patchEntity($inscricao, ['bolsista' => null]);
+                    $projetoBolsistas->saveOrFail($inscricao);
+                    $this->limparAnexosPorBloco((int)$inscricao->id, 'B');
+                    $this->historico((int)$inscricao->id, $faseOriginal, $faseOriginal, 'Exclusão de bolsista no Dados Bolsista', true);
+                    $this->Flash->success('Bolsista removido da inscricao.');
+                } catch (\Throwable $e) {
+                    $this->flashFriendlyException(
+                        $e,
+                        'Erro no Sistema - excluir bolsista no dados bolsista',
+                        'Nao foi possivel remover o bolsista da inscricao.'
+                    );
+                }
+
+                return $this->redirect(['action' => 'dadosBolsista', $edital->id, $inscricao->id]);
+            }
+
+            $anexosUpload = $dados['anexos'] ?? [];
+            if (!is_array($anexosUpload)) {
+                $anexosUpload = [];
+            }
+            if (empty($inscricao->bolsista)) {
+                $this->Flash->error('Vincule um bolsista antes de anexar os documentos.');
+                return $this->redirect(['action' => 'dadosBolsista', $edital->id, $inscricao->id]);
+            }
+
+            $cotaInformada = (string)($dados['cota'] ?? '');
+            if ($cotaInformada !== '' && !array_key_exists($cotaInformada, $cotas)) {
+                $this->Flash->error('Cota inválida para este edital.');
+                return $this->redirect(['action' => 'dadosBolsista', $edital->id, $inscricao->id]);
+            }
+
+            try {
+                $inscricao = $projetoBolsistas->patchEntity($inscricao, [
+                    'cota' => $cotaInformada !== '' ? $cotaInformada : null,
+                    'primeiro_periodo' => $primeiroPeriodoInformado !== '' ? (int)$primeiroPeriodoInformado : null,
+                ]);
+                $projetoBolsistas->saveOrFail($inscricao);
+            } catch (\Throwable $e) {
+                $this->flashFriendlyException(
+                    $e,
+                    'Erro no Sistema - salvar cota no dados bolsista',
+                    'Nao foi possivel salvar a cota do bolsista.'
+                );
+                return $this->redirect(['action' => 'dadosBolsista', $edital->id, $inscricao->id]);
+            }
+
+            if ($this->anexarInscricao($anexosUpload, $inscricao->projeto_id, $inscricao->id, null, true)) {
+                $faseAtual = (int)$inscricao->fase_id;
+                $this->historico((int)$inscricao->id, $faseAtual, $faseAtual, 'Atualizacao de dados do bolsista', true);
+                $this->Flash->success('Dados do bolsista salvos com sucesso.');
+                $proximaAcao = (($edital->origem ?? null) === 'N') ? 'sumula' : 'projeto';
+                return $this->redirect(['action' => $proximaAcao, $edital->id, $inscricao->id]);
+            }
+
+            $this->Flash->error('Nao foi possivel salvar os anexos. Tente novamente.');
+            return $this->redirect(['action' => 'dadosBolsista', $edital->id, $inscricao->id]);
+        }
+
+
+        $this->set(compact(
+            'anexos',
+            'inscricao',
+            'anexosTiposDefault',
+            'anexosTiposPrograma',
+            'anexosTiposCota',
+            'anexosTiposPrimeiroPeriodo',
+            'anexosTiposCondicional',
+            'cotas',
+            'bolsistaMenorIdade'
+        ));
+        $this->set($context);
+    }
+
+    private function checkBolsista(int $usuarioId): void
+    {
+        $projetoBolsistas = $this->fetchTable('ProjetoBolsistas');
+        $temVigente = $projetoBolsistas->find()
+            ->where([
+                'ProjetoBolsistas.bolsista' => $usuarioId,
+                'ProjetoBolsistas.deleted' => 0,
+                'ProjetoBolsistas.vigente' => 1,
+                'ProjetoBolsistas.fase_id' => 11,
+            ])
+            ->count();
+
+        $temAndamento = $projetoBolsistas->find()
+            ->where([
+                'ProjetoBolsistas.bolsista' => $usuarioId,
+                'ProjetoBolsistas.deleted' => 0,
+                'ProjetoBolsistas.fase_id <' => 10,
+            ])
+            ->count();
+
+        if ($temVigente > 0 || $temAndamento > 0) {
+            throw new \Exception('O bolsista informado possui bolsa ativa ou inscricao em andamento.');
+        }
+    }
+
+    public function selecionarRenovacao($editalId = null)
+    {
+        $context = $this->loadContext($editalId);
+        if (isset($context['redirect'])) {
+            return $context['redirect'];
+        }
+
+        $edital = $context['edital'];
+        $identity = $context['identity'];
+
+        if (($edital->origem ?? null) !== 'R') {
+            return $this->redirect(['action' => 'dadosBolsista', $edital->id]);
+        }
+
+        $renovacoes = $this->fetchTable('ProjetoBolsistas')->find()
+            ->contain(['Bolsistas'])
+            ->where([
+                'ProjetoBolsistas.orientador' => (int)$identity->id,
+                'ProjetoBolsistas.programa_id' => (int)$edital->programa_id,
+                'ProjetoBolsistas.vigente' => 1,
+                'ProjetoBolsistas.deleted' => 0,
+            ])
+            ->orderBy(['ProjetoBolsistas.id' => 'DESC']);
+
+        $qtdRenovacoes = $renovacoes->count();
+        if ($qtdRenovacoes === 1) {
+            $registro = $renovacoes->first();
+            return $this->redirect([
+                'action' => 'dadosBolsista',
+                $edital->id,
+                '?' => [
+                    'bolsista_id' => $registro->bolsista,
+                    'referencia_id' => $registro->id,
+                ],
+            ]);
+        }
+
+        if ($qtdRenovacoes === 0) {
+            $this->Flash->error('Nao ha bolsas vigentes para renovacao neste programa.');
+            return $this->redirect(['controller' => 'Index', 'action' => 'index']);
+        }
+
+        $this->set(compact('renovacoes'));
+        $this->set($context);
+    }
+
+    public function sumula($editalId = null, $inscricaoId = null)
+    {
+        $context = $this->loadContext($editalId);
+        if (isset($context['redirect'])) {
+            return $context['redirect'];
+        }
+
+        $inscricaoContext = $this->loadInscricaoEditavel($context, $inscricaoId);
+        if (isset($inscricaoContext['redirect'])) {
+            return $inscricaoContext['redirect'];
+        }
+        $inscricao = $inscricaoContext['inscricao'];
+
+        if (($context['edital']->origem ?? null) !== 'N') {
+            return $this->redirect(['action' => 'projeto', $context['edital']->id, $inscricaoId]);
+        }
+
+        $projetoBolsistas = $this->fetchTable('ProjetoBolsistas');
+        $sumulasEdital = $this->fetchTable('EditaisSumulas')->find()
+            ->contain(['EditaisSumulasBlocos'])
+            ->where([
+                'EditaisSumulas.editai_id' => (int)$context['edital']->id,
+                'EditaisSumulas.deleted IS' => null,
+            ])
+            ->orderBy([
+                'EditaisSumulas.editais_sumula_bloco_id' => 'ASC',
+                'EditaisSumulas.id' => 'ASC',
+            ])
+            ->all();
+
+        $sumulasPermitidas = [];
+        foreach ($sumulasEdital as $sumulaItem) {
+            $sumulasPermitidas[(int)$sumulaItem->id] = $sumulaItem;
+        }
+
+        $inscricaoSumulasTable = $this->fetchTable('InscricaoSumulas');
+        if ($this->request->is(['post', 'put', 'patch'])) {
+            $dados = $this->request->getData();
+            $filhosMenor = array_key_exists('filhos_menor', $dados) ? (string)$dados['filhos_menor'] : '';
+            if ($filhosMenor !== '' && !in_array($filhosMenor, ['0', '1', '2'], true)) {
+                $this->Flash->error('Informe corretamente a opção de filhos menores.');
+                return $this->redirect(['action' => 'sumula', $context['edital']->id, $inscricao->id]);
+            }
+
+            $linhasSumula = $dados['sumula'] ?? [];
+            if (!is_array($linhasSumula)) {
+                $linhasSumula = [];
+            }
+
+            $quantidadesValidas = [];
+            foreach ($linhasSumula as $linha) {
+                $sumulaId = (int)($linha['editais_sumula_id'] ?? 0);
+                if ($sumulaId <= 0 || !isset($sumulasPermitidas[$sumulaId])) {
+                    continue;
+                }
+                $qtdRaw = trim((string)($linha['quantidade'] ?? ''));
+                if ($qtdRaw === '') {
+                    $quantidadesValidas[$sumulaId] = null;
+                    continue;
+                }
+                if (!ctype_digit($qtdRaw)) {
+                    $this->Flash->error('Quantidade inválida na súmula.');
+                    return $this->redirect(['action' => 'sumula', $context['edital']->id, $inscricao->id]);
+                }
+                $quantidade = (int)$qtdRaw;
+                if ($quantidade < 0 || $quantidade > 50) {
+                    $this->Flash->error('A quantidade deve estar entre 0 e 50.');
+                    return $this->redirect(['action' => 'sumula', $context['edital']->id, $inscricao->id]);
+                }
+                $quantidadesValidas[$sumulaId] = $quantidade;
+            }
+            foreach ($sumulasPermitidas as $sumulaId => $sumulaItem) {
+                if (!array_key_exists((int)$sumulaId, $quantidadesValidas)) {
+                    $quantidadesValidas[(int)$sumulaId] = null;
+                }
+            }
+
+            try {
+                $connection = $inscricaoSumulasTable->getConnection();
+                $connection->transactional(function () use (
+                    $projetoBolsistas,
+                    $inscricao,
+                    $filhosMenor,
+                    $inscricaoSumulasTable,
+                    $quantidadesValidas,
+                    $sumulasPermitidas,
+                    $context
+                ) {
+                    $inscricaoAtualizada = $projetoBolsistas->patchEntity($inscricao, [
+                        'filhos_menor' => $filhosMenor !== '' ? $filhosMenor : null,
+                    ]);
+                    $projetoBolsistas->saveOrFail($inscricaoAtualizada);
+
+                    $registrosExistentes = $inscricaoSumulasTable->find()
+                        ->where([
+                            'projeto_bolsista_id' => (int)$inscricao->id,
+                            'pdj_inscricoe_id IS' => null,
+                        ])
+                        ->all();
+                    $mapExistentes = [];
+                    foreach ($registrosExistentes as $registroExistente) {
+                        $mapExistentes[(int)$registroExistente->editais_sumula_id] = $registroExistente;
+                    }
+
+                    foreach ($quantidadesValidas as $sumulaId => $quantidade) {
+                        $sumulaItem = $sumulasPermitidas[(int)$sumulaId];
+                        $inscricaoSumula = $mapExistentes[(int)$sumulaId] ?? $inscricaoSumulasTable->newEmptyEntity();
+                        $inscricaoSumula = $inscricaoSumulasTable->patchEntity($inscricaoSumula, [
+                            'editais_sumula_id' => (int)$sumulaItem->id,
+                            'editai_id' => (int)$context['edital']->id,
+                            'editais_sumula_bloco_id' => (int)$sumulaItem->editais_sumula_bloco_id,
+                            'projeto_bolsista_id' => (int)$inscricao->id,
+                            'pdj_inscricoe_id' => null,
+                            'quantidade' => $quantidade,
+                        ]);
+                        $inscricaoSumulasTable->saveOrFail($inscricaoSumula);
+                    }
+
+                    $sumulasAtivasIds = array_map('intval', array_keys($sumulasPermitidas));
+                    $inscricaoSumulasTable->deleteAll([
+                        'projeto_bolsista_id' => (int)$inscricao->id,
+                        'pdj_inscricoe_id IS' => null,
+                        'editais_sumula_id NOT IN' => $sumulasAtivasIds,
+                    ]);
+                });
+            } catch (\Throwable $e) {
+                $this->flashFriendlyException($e, 'Erro no Sistema - salvar sumula da inscricao');
+                return $this->redirect(['action' => 'sumula', $context['edital']->id, $inscricao->id]);
+            }
+
+            $faseAtual = (int)$inscricao->fase_id;
+            $this->historico((int)$inscricao->id, $faseAtual, $faseAtual, 'Atualizacao da sumula da inscricao', true);
+            $this->Flash->success('Súmula salva com sucesso.');
+            return $this->redirect(['action' => 'projeto', $context['edital']->id, $inscricao->id]);
+        }
+
+        $inscricaoSumulasSalvas = $inscricaoSumulasTable->find()
+            ->where([
+                'InscricaoSumulas.projeto_bolsista_id' => (int)$inscricao->id,
+                'InscricaoSumulas.pdj_inscricoe_id IS' => null,
+            ])
+            ->all();
+        $quantidadesSalvas = [];
+        foreach ($inscricaoSumulasSalvas as $itemSalvo) {
+            $quantidadesSalvas[(int)$itemSalvo->editais_sumula_id] = $itemSalvo->quantidade;
+        }
+
+        $this->set(compact('sumulasEdital', 'quantidadesSalvas'));
+        $this->set(compact('inscricao'));
+        $this->set($context);
+    }
+
+    public function projeto($editalId = null, $inscricaoId = null)
+    {
+        $context = $this->loadContext($editalId);
+        if (isset($context['redirect'])) {
+            return $context['redirect'];
+        }
+
+        $inscricaoContext = $this->loadInscricaoEditavel($context, $inscricaoId);
+        if (isset($inscricaoContext['redirect'])) {
+            return $inscricaoContext['redirect'];
+        }
+        $inscricao = $inscricaoContext['inscricao'];
+
+        $projetoSelecionado = null;
+        if (!empty($inscricao->projeto_id)) {
+            $projetoSelecionado = $this->fetchTable('Projetos')->find()
+                ->contain(['Areas', 'Linhas'])
+                ->where([
+                    'Projetos.id' => (int)$inscricao->projeto_id,
+                    'Projetos.usuario_id' => (int)$context['identity']->id,
+                    'Projetos.deleted IS' => null,
+                ])
+                ->first();
+        }
+
+        $anexosTiposProjeto = $this->fetchTable('AnexosTipos')->find()
+            ->where([
+                'AnexosTipos.bloco' => 'P',
+                'AnexosTipos.deleted' => 0,
+            ])
+            ->orderBy(['AnexosTipos.id' => 'ASC'])
+            ->all();
+        $anexosTiposProjetoOrdenados = [];
+        $anexosTiposProjetoRestantes = [];
+        foreach ($anexosTiposProjeto as $tipoProjetoItem) {
+            if ((int)$tipoProjetoItem->id === 5) {
+                $anexosTiposProjetoOrdenados[] = $tipoProjetoItem;
+                continue;
+            }
+            $anexosTiposProjetoRestantes[] = $tipoProjetoItem;
+        }
+        $anexosTiposProjeto = array_merge($anexosTiposProjetoOrdenados, $anexosTiposProjetoRestantes);
+        $tiposAnexosProjetoPermitidos = [];
+        foreach ($anexosTiposProjeto as $tipoProjeto) {
+            $tiposAnexosProjetoPermitidos[] = (int)$tipoProjeto->id;
+        }
+
+        $anexosProjeto = $this->fetchTable('Anexos')->find()
+            ->where([
+                'Anexos.projeto_bolsista_id' => (int)$inscricao->id,
+                'Anexos.deleted IS' => null,
+            ])
+            ->orderBy(['Anexos.id' => 'DESC'])
+            ->all();
+        $anexos = [];
+        foreach ($anexosProjeto as $anexoProjeto) {
+            $tipoId = (int)$anexoProjeto->anexos_tipo_id;
+            if (!isset($anexos[$tipoId])) {
+                $anexos[$tipoId] = (string)$anexoProjeto->anexo;
+            }
+        }
+
+        $grandesAreas = $this->fetchTable('GrandesAreas')->find('list', [
+            'keyField' => 'id',
+            'valueField' => 'nome',
+        ])->orderBy(['GrandesAreas.nome' => 'ASC'])->toArray();
+
+        $areasRows = $this->fetchTable('Areas')->find()
+            ->select(['id', 'nome', 'grandes_area_id'])
+            ->orderBy(['Areas.nome' => 'ASC'])
+            ->all();
+
+        $areas = [];
+        $areasPorGrandeArea = [];
+        foreach ($areasRows as $areaRow) {
+            $areas[(int)$areaRow->id] = (string)$areaRow->nome;
+            $grandeAreaId = (int)($areaRow->grandes_area_id ?? 0);
+            if (!isset($areasPorGrandeArea[$grandeAreaId])) {
+                $areasPorGrandeArea[$grandeAreaId] = [];
+            }
+            $areasPorGrandeArea[$grandeAreaId][] = [
+                'id' => (int)$areaRow->id,
+                'nome' => (string)$areaRow->nome,
+            ];
+        }
+
+        $areasFiocruz = $this->fetchTable('AreasFiocruz')->find('list', [
+            'keyField' => 'id',
+            'valueField' => 'nome',
+        ])->orderBy(['AreasFiocruz.nome' => 'ASC'])->toArray();
+
+        $linhasRows = $this->fetchTable('Linhas')->find()
+            ->select(['id', 'nome', 'areas_fiocruz_id'])
+            ->orderBy(['Linhas.nome' => 'ASC'])
+            ->all();
+
+        $linhas = [];
+        $linhasPorAreaFiocruz = [];
+        foreach ($linhasRows as $linhaRow) {
+            $linhas[(int)$linhaRow->id] = (string)$linhaRow->nome;
+            $areaFiocruzId = (int)($linhaRow->areas_fiocruz_id ?? 0);
+            if (!isset($linhasPorAreaFiocruz[$areaFiocruzId])) {
+                $linhasPorAreaFiocruz[$areaFiocruzId] = [];
+            }
+            $linhasPorAreaFiocruz[$areaFiocruzId][] = [
+                'id' => (int)$linhaRow->id,
+                'nome' => (string)$linhaRow->nome,
+            ];
+        }
+
+        $areaFiocruzSelecionada = null;
+        if ($projetoSelecionado && !empty($projetoSelecionado->linha) && $projetoSelecionado->linha->areas_fiocruz_id !== null) {
+            $areaFiocruzSelecionada = (int)$projetoSelecionado->linha->areas_fiocruz_id;
+        }
+        $grandeAreaSelecionada = null;
+        if ($projetoSelecionado && !empty($projetoSelecionado->area) && $projetoSelecionado->area->grandes_area_id !== null) {
+            $grandeAreaSelecionada = (int)$projetoSelecionado->area->grandes_area_id;
+        }
+
+        if ($this->request->is(['post', 'put', 'patch'])) {
+            $dados = $this->request->getData();
+            $projetoJaVinculado = !empty($inscricao->projeto_id);
+            if ($projetoJaVinculado) {
+                $acaoRapidaAnexo = $this->processarAcaoRapidaAnexoInscricao(
+                    $dados,
+                    (int)$inscricao->projeto_id,
+                    (int)$inscricao->id,
+                    $tiposAnexosProjetoPermitidos
+                );
+                if ($acaoRapidaAnexo !== null) {
+                    return $this->redirect(['action' => 'projeto', $context['edital']->id, $inscricao->id]);
+                }
+            } else {
+                $solicitouAcaoRapida = !empty($dados['anexo_acao']) || !empty($dados['alterar_anexo_tipo']) || !empty($dados['anexo_tipo']);
+                if ($solicitouAcaoRapida) {
+                    $this->Flash->error('Cadastre primeiro o projeto para depois alterar ou excluir anexos.');
+                    return $this->redirect(['action' => 'projeto', $context['edital']->id, $inscricao->id]);
+                }
+            }
+            try {
+            $grandeAreaSelecionada = isset($dados['grande_area_id']) && $dados['grande_area_id'] !== ''
+                ? (int)$dados['grande_area_id']
+                : $grandeAreaSelecionada;
+            $areaFiocruzSelecionada = isset($dados['area_fiocruz_id']) && $dados['area_fiocruz_id'] !== ''
+                ? (int)$dados['area_fiocruz_id']
+                : $areaFiocruzSelecionada;
+            $areaCnpqSelecionada = isset($dados['area_id']) && $dados['area_id'] !== '' ? (int)$dados['area_id'] : null;
+            $linhaFiocruzSelecionada = isset($dados['linha_id']) && $dados['linha_id'] !== '' ? (int)$dados['linha_id'] : null;
+
+            if ($grandeAreaSelecionada && $areaCnpqSelecionada) {
+                $areaValida = $this->fetchTable('Areas')->find()
+                    ->where([
+                        'Areas.id' => $areaCnpqSelecionada,
+                        'Areas.grandes_area_id' => $grandeAreaSelecionada,
+                    ])
+                    ->count() > 0;
+                if (!$areaValida) {
+                    $this->Flash->error('A Area CNPQ selecionada nao pertence a Grande area informada.');
+                    $projetoSelecionado = $this->fetchTable('Projetos')->patchEntity(
+                        $projetoSelecionado ?? $this->fetchTable('Projetos')->newEmptyEntity(),
+                        [
+                            'titulo' => (string)($dados['titulo'] ?? ''),
+                            'area_id' => $areaCnpqSelecionada,
+                            'linha_id' => $linhaFiocruzSelecionada,
+                            'financiamento' => (string)($dados['financiadores'] ?? ''),
+                            'palavras_chaves' => (string)($dados['palavras_chaves'] ?? ''),
+                            'resumo' => (string)($dados['resumo'] ?? ''),
+                        ]
+                    );
+                    $this->set(compact(
+                        'inscricao',
+                        'projetoSelecionado',
+                        'anexosTiposProjeto',
+                        'anexos',
+                        'grandesAreas',
+                        'areas',
+                        'areasFiocruz',
+                        'areasPorGrandeArea',
+                        'linhas',
+                        'linhasPorAreaFiocruz',
+                        'grandeAreaSelecionada',
+                        'areaFiocruzSelecionada'
+                    ));
+                    $this->set($context);
+                    return;
+                }
+            }
+
+            if ($areaFiocruzSelecionada && $linhaFiocruzSelecionada) {
+                $linhaValida = $this->fetchTable('Linhas')->find()
+                    ->where([
+                        'Linhas.id' => $linhaFiocruzSelecionada,
+                        'Linhas.areas_fiocruz_id' => $areaFiocruzSelecionada,
+                    ])
+                    ->count() > 0;
+                if (!$linhaValida) {
+                    $this->Flash->error('A Linha Fiocruz selecionada nao pertence a Area Fiocruz informada.');
+                    $projetoSelecionado = $this->fetchTable('Projetos')->patchEntity(
+                        $projetoSelecionado ?? $this->fetchTable('Projetos')->newEmptyEntity(),
+                        [
+                            'titulo' => (string)($dados['titulo'] ?? ''),
+                            'area_id' => $areaCnpqSelecionada,
+                            'linha_id' => $linhaFiocruzSelecionada,
+                            'financiamento' => (string)($dados['financiadores'] ?? ''),
+                            'palavras_chaves' => (string)($dados['palavras_chaves'] ?? ''),
+                            'resumo' => (string)($dados['resumo'] ?? ''),
+                        ]
+                    );
+                    $this->set(compact(
+                        'inscricao',
+                        'projetoSelecionado',
+                        'anexosTiposProjeto',
+                        'anexos',
+                        'grandesAreas',
+                        'areas',
+                        'areasFiocruz',
+                        'areasPorGrandeArea',
+                        'linhas',
+                        'linhasPorAreaFiocruz',
+                        'grandeAreaSelecionada',
+                        'areaFiocruzSelecionada'
+                    ));
+                    $this->set($context);
+                    return;
+                }
+            }
+
+            $tituloInformado = trim((string)($dados['titulo'] ?? ''));
+            $resumoInformado = trim((string)($dados['resumo'] ?? ''));
+            $financiadoresInformado = trim((string)($dados['financiadores'] ?? ''));
+            $palavrasInformado = trim((string)($dados['palavras_chaves'] ?? ''));
+            $errosTextoProjeto = [];
+            $erroTituloProjeto = $this->validarTextoComLimites($tituloInformado, 'Titulo do projeto', 20, 255);
+            if ($erroTituloProjeto !== null) {
+                $errosTextoProjeto[] = $erroTituloProjeto;
+            }
+            $erroResumoProjeto = $this->validarTextoComLimites($resumoInformado, 'Resumo do projeto', 20, 4000);
+            if ($erroResumoProjeto !== null) {
+                $errosTextoProjeto[] = $erroResumoProjeto;
+            }
+            $erroFinanciadores = $this->validarTextoComLimites($financiadoresInformado, 'Instituicoes financiadoras', 20, 255);
+            if ($erroFinanciadores !== null) {
+                $errosTextoProjeto[] = $erroFinanciadores;
+            }
+            $erroPalavras = $this->validarTextoComLimites($palavrasInformado, 'Palavras-chave', 20, 255);
+            if ($erroPalavras !== null) {
+                $errosTextoProjeto[] = $erroPalavras;
+            }
+            if (!empty($errosTextoProjeto)) {
+                foreach ($errosTextoProjeto as $erroTextoProjeto) {
+                    $this->Flash->error($erroTextoProjeto);
+                }
+                $projetoSelecionado = $this->fetchTable('Projetos')->patchEntity(
+                    $projetoSelecionado ?? $this->fetchTable('Projetos')->newEmptyEntity(),
+                    [
+                        'titulo' => $tituloInformado,
+                        'area_id' => $areaCnpqSelecionada,
+                        'linha_id' => $linhaFiocruzSelecionada,
+                        'financiamento' => $financiadoresInformado,
+                        'palavras_chaves' => $palavrasInformado,
+                        'resumo' => $resumoInformado,
+                    ]
+                );
+                $this->set(compact(
+                    'inscricao',
+                    'projetoSelecionado',
+                    'anexosTiposProjeto',
+                    'anexos',
+                    'grandesAreas',
+                    'areas',
+                    'areasFiocruz',
+                    'areasPorGrandeArea',
+                    'linhas',
+                    'linhasPorAreaFiocruz',
+                    'grandeAreaSelecionada',
+                    'areaFiocruzSelecionada'
+                ));
+                $this->set($context);
+                return;
+            }
+            $temArquivo = false;
+            $anexosUpload = $dados['anexos'] ?? [];
+            if (is_array($anexosUpload)) {
+                foreach ($anexosUpload as $arquivoUpload) {
+                    if (is_object($arquivoUpload) && $arquivoUpload->getClientFilename() !== '') {
+                        $temArquivo = true;
+                        break;
+                    }
+                }
+            } else {
+                $anexosUpload = [];
+            }
+
+            $temDadosProjeto = $tituloInformado !== ''
+                || $resumoInformado !== ''
+                || $financiadoresInformado !== ''
+                || $palavrasInformado !== ''
+                || !empty($dados['grande_area_id'])
+                || !empty($dados['area_id'])
+                || !empty($dados['area_fiocruz_id'])
+                || !empty($dados['linha_id'])
+                || $temArquivo;
+
+            // Sem projeto vinculado, o titulo e obrigatorio para criar o primeiro projeto.
+            if (!$projetoJaVinculado && $tituloInformado === '') {
+                if ($temArquivo) {
+                    $this->Flash->error('Nao e possivel anexar arquivos sem projeto vinculado. Informe o titulo para criar o projeto.');
+                } elseif ($temDadosProjeto) {
+                    $this->Flash->error('Informe o titulo do projeto para salvar os dados.');
+                } else {
+                    $this->Flash->error('Informe o titulo para criar o projeto.');
+                }
+                $projetoSelecionado = $this->fetchTable('Projetos')->patchEntity(
+                    $projetoSelecionado ?? $this->fetchTable('Projetos')->newEmptyEntity(),
+                    [
+                        'titulo' => '',
+                        'area_id' => $areaCnpqSelecionada,
+                        'linha_id' => $linhaFiocruzSelecionada,
+                        'financiamento' => $financiadoresInformado,
+                        'palavras_chaves' => $palavrasInformado,
+                        'resumo' => $resumoInformado,
+                    ]
+                );
+                $this->set(compact(
+                    'inscricao',
+                    'projetoSelecionado',
+                    'anexosTiposProjeto',
+                    'anexos',
+                    'grandesAreas',
+                    'areas',
+                    'areasFiocruz',
+                    'areasPorGrandeArea',
+                    'linhas',
+                    'linhasPorAreaFiocruz',
+                    'grandeAreaSelecionada',
+                    'areaFiocruzSelecionada'
+                ));
+                $this->set($context);
+                return;
+            }
+
+            // Se ja ha projeto e nada foi informado, permite seguir no rascunho.
+            if (!$temDadosProjeto && $projetoJaVinculado) {
+                $faseAtual = (int)$inscricao->fase_id;
+                $this->historico((int)$inscricao->id, $faseAtual, $faseAtual, 'Submissao de projeto sem alteracoes', true);
+                $this->Flash->success('Rascunho mantido sem alteracoes no projeto.');
+                return $this->redirect(['action' => 'subprojeto', $context['edital']->id, $inscricao->id]);
+            }
+
+            $projetosTable = $this->fetchTable('Projetos');
+            if ($projetoJaVinculado) {
+                $projetoEntity = $projetosTable->find()
+                    ->where([
+                        'Projetos.id' => (int)$inscricao->projeto_id,
+                        'Projetos.usuario_id' => (int)$context['identity']->id,
+                        'Projetos.deleted IS' => null,
+                    ])
+                    ->first();
+                if (!$projetoEntity) {
+                    throw new \RuntimeException('Projeto vinculado nao localizado para atualizacao.');
+                }
+            } else {
+                $projetoEntity = $projetosTable->newEmptyEntity();
+            }
+            $projetoEntity = $projetosTable->patchEntity($projetoEntity, [
+                'usuario_id' => (int)$context['identity']->id,
+                'titulo' => $tituloInformado,
+                'area_id' => isset($dados['area_id']) && $dados['area_id'] !== '' ? (int)$dados['area_id'] : null,
+                'linha_id' => isset($dados['linha_id']) && $dados['linha_id'] !== '' ? (int)$dados['linha_id'] : null,
+                'financiamento' => $financiadoresInformado,
+                'palavras_chaves' => $palavrasInformado,
+                'resumo' => $resumoInformado,
+            ]);
+
+            try {
+                $projetosTable->getConnection()->transactional(function () use ($projetosTable, &$projetoEntity, $inscricao, $anexosUpload) {
+                    $projetosTable->saveOrFail($projetoEntity);
+
+                    $tblProjetoBolsistas = $this->fetchTable('ProjetoBolsistas');
+                    $inscricaoPatch = $tblProjetoBolsistas->patchEntity($inscricao, [
+                        'projeto_id' => (int)$projetoEntity->id,
+                    ]);
+                    $tblProjetoBolsistas->saveOrFail($inscricaoPatch);
+
+                    if (!$this->anexarInscricao($anexosUpload, (int)$projetoEntity->id, (int)$inscricao->id, null, true)) {
+                        throw new \RuntimeException('Falha ao salvar anexos do projeto.');
+                    }
+                });
+            } catch (\Throwable $e) {
+                $this->flashFriendlyException($e, 'Erro no Sistema - salvar projeto da inscricao');
+                $projetoSelecionado = $projetoEntity;
+                $this->set(compact(
+                    'inscricao',
+                    'projetoSelecionado',
+                    'anexosTiposProjeto',
+                    'anexos',
+                    'grandesAreas',
+                    'areas',
+                    'areasFiocruz',
+                    'areasPorGrandeArea',
+                    'linhas',
+                    'linhasPorAreaFiocruz',
+                    'grandeAreaSelecionada',
+                    'areaFiocruzSelecionada'
+                ));
+                $this->set($context);
+                return;
+            }
+
+            $faseAtual = (int)$inscricao->fase_id;
+            $this->historico((int)$inscricao->id, $faseAtual, $faseAtual, 'Atualizacao do projeto da inscricao', true);
+            $this->Flash->success('Projeto salvo com sucesso.');
+            return $this->redirect(['action' => 'subprojeto', $context['edital']->id, $inscricao->id]);
+            } catch (\Throwable $e) {
+                $this->flashFriendlyException(
+                    $e,
+                    'Erro no Sistema - bloco projeto da inscricao',
+                    'Nao foi possivel processar os dados do projeto.'
+                );
+                return $this->redirect(['action' => 'projeto', $context['edital']->id, $inscricao->id]);
+            }
+        }
+
+        $this->set(compact(
+            'inscricao',
+            'projetoSelecionado',
+            'anexosTiposProjeto',
+            'anexos',
+            'grandesAreas',
+            'areas',
+            'areasFiocruz',
+            'areasPorGrandeArea',
+            'linhas',
+            'linhasPorAreaFiocruz',
+            'grandeAreaSelecionada',
+            'areaFiocruzSelecionada'
+        ));
+        $this->set($context);
+    }
+
+    public function subprojeto($editalId = null, $inscricaoId = null)
+    {
+        $context = $this->loadContext($editalId);
+        if (isset($context['redirect'])) {
+            return $context['redirect'];
+        }
+
+        $inscricaoContext = $this->loadInscricaoEditavel($context, $inscricaoId);
+        if (isset($inscricaoContext['redirect'])) {
+            return $inscricaoContext['redirect'];
+        }
+        $inscricao = $inscricaoContext['inscricao'];
+
+        $anexoTipoSubprojeto = 20;
+        $anexos = [];
+        $anexoAtualSubprojeto = $this->fetchTable('Anexos')->find()
+            ->where([
+                'Anexos.projeto_bolsista_id' => (int)$inscricao->id,
+                'Anexos.anexos_tipo_id' => $anexoTipoSubprojeto,
+                'Anexos.deleted IS' => null,
+            ])
+            ->orderBy(['Anexos.id' => 'DESC'])
+            ->first();
+        if ($anexoAtualSubprojeto) {
+            $anexos[$anexoTipoSubprojeto] = (string)$anexoAtualSubprojeto->anexo;
+        }
+
+        if ($this->request->is(['post', 'put', 'patch'])) {
+            $dados = $this->request->getData();
+            $spTitulo = trim((string)($dados['sp_titulo'] ?? ''));
+            $spResumo = trim((string)($dados['sp_resumo'] ?? ''));
+            $errosTextoSubprojeto = [];
+            $erroTituloSubprojeto = $this->validarTextoComLimites($spTitulo, 'Titulo do subprojeto', 20, 255);
+            if ($erroTituloSubprojeto !== null) {
+                $errosTextoSubprojeto[] = $erroTituloSubprojeto;
+            }
+            $erroResumoSubprojeto = $this->validarTextoComLimites($spResumo, 'Resumo do subprojeto', 20, 4000);
+            if ($erroResumoSubprojeto !== null) {
+                $errosTextoSubprojeto[] = $erroResumoSubprojeto;
+            }
+            if (!empty($errosTextoSubprojeto)) {
+                foreach ($errosTextoSubprojeto as $erroTextoSubprojeto) {
+                    $this->Flash->error($erroTextoSubprojeto);
+                }
+                return $this->redirect(['action' => 'subprojeto', $context['edital']->id, $inscricao->id]);
+            }
+            try {
+                $acaoRapidaAnexo = $this->processarAcaoRapidaAnexoInscricao(
+                    $dados,
+                    !empty($inscricao->projeto_id) ? (int)$inscricao->projeto_id : null,
+                    (int)$inscricao->id,
+                    [$anexoTipoSubprojeto]
+                );
+                if ($acaoRapidaAnexo !== null) {
+                    return $this->redirect(['action' => 'subprojeto', $context['edital']->id, $inscricao->id]);
+                }
+
+                $anexosUpload = $dados['anexos'] ?? [];
+                if (!is_array($anexosUpload)) {
+                    $anexosUpload = [];
+                }
+
+                $tblProjetoBolsistas = $this->fetchTable('ProjetoBolsistas');
+                $tblProjetoBolsistas->getConnection()->transactional(function () use ($tblProjetoBolsistas, &$inscricao, $dados, $anexosUpload) {
+                    $inscricaoPatch = $tblProjetoBolsistas->patchEntity($inscricao, [
+                        'sp_titulo' => trim((string)($dados['sp_titulo'] ?? '')),
+                        'sp_resumo' => trim((string)($dados['sp_resumo'] ?? '')),
+                    ]);
+                    $tblProjetoBolsistas->saveOrFail($inscricaoPatch);
+
+                    if (!$this->anexarInscricao($anexosUpload, $inscricao->projeto_id, (int)$inscricao->id, null, true)) {
+                        throw new \RuntimeException('Falha ao salvar anexo do subprojeto.');
+                    }
+                });
+            } catch (\Throwable $e) {
+                $this->flashFriendlyException(
+                    $e,
+                    'Erro no Sistema - salvar subprojeto da inscricao',
+                    'Nao foi possivel processar os dados do subprojeto.'
+                );
+                return $this->redirect(['action' => 'subprojeto', $context['edital']->id, $inscricao->id]);
+            }
+
+            $faseAtual = (int)$inscricao->fase_id;
+            $this->historico((int)$inscricao->id, $faseAtual, $faseAtual, 'Atualizacao do subprojeto da inscricao', true);
+            $this->Flash->success('Subprojeto salvo com sucesso.');
+            return $this->redirect(['action' => 'coorientador', $context['edital']->id, $inscricao->id]);
+        }
+
+        $this->set(compact('inscricao', 'anexos'));
+        $this->set($context);
+    }
+
+    public function coorientador($editalId = null, $inscricaoId = null)
+    {
+        $context = $this->loadContext($editalId);
+        if (isset($context['redirect'])) {
+            return $context['redirect'];
+        }
+
+        $inscricaoContext = $this->loadInscricaoEditavel($context, $inscricaoId);
+        if (isset($inscricaoContext['redirect'])) {
+            return $inscricaoContext['redirect'];
+        }
+        $edital = $context['edital'];
+        $identity = $context['identity'];
+        $projetoBolsistas = $this->fetchTable('ProjetoBolsistas');
+        $inscricao = $projetoBolsistas->find()
+            ->contain([
+                'Coorientadores',
+                'Anexos' => ['conditions' => 'Anexos.deleted IS NULL', 'AnexosTipos'],
+            ])
+            ->where([
+                'ProjetoBolsistas.id' => (int)$inscricaoContext['inscricao']->id,
+                'ProjetoBolsistas.editai_id' => (int)$edital->id,
+                'ProjetoBolsistas.orientador' => (int)$identity->id,
+                'ProjetoBolsistas.deleted' => 0,
+            ])
+            ->first();
+
+        if (!$inscricao) {
+            $this->Flash->error('Inscricao nao localizada. Reinicie o processo.');
+            return $this->redirect(['controller' => 'Index', 'action' => 'index']);
+        }
+
+        $anexosTiposC = $this->fetchTable('AnexosTipos')->find()
+            ->where([
+                'AnexosTipos.bloco' => 'C',
+                'AnexosTipos.deleted' => 0,
+            ])
+            ->orderBy(['AnexosTipos.id' => 'ASC'])
+            ->all()
+            ->toList();
+
+        $tiposAnexosPermitidos = [];
+        foreach ($anexosTiposC as $tipoAnexo) {
+            $tiposAnexosPermitidos[] = (int)$tipoAnexo->id;
+        }
+
+        $anexos = [];
+        foreach ($inscricao->anexos as $anexoAtual) {
+            $tipoId = (int)$anexoAtual->anexos_tipo_id;
+            if (!in_array($tipoId, $tiposAnexosPermitidos, true)) {
+                continue;
+            }
+            $anexos[$tipoId] = (string)$anexoAtual->anexo;
+        }
+
+        $coorientadorUsuario = null;
+        if (!empty($inscricao->coorientador)) {
+            $coorientadorUsuario = $this->fetchTable('Usuarios')->find()
+                ->where(['Usuarios.id' => (int)$inscricao->coorientador])
+                ->first();
+        }
+
+        if ($this->request->is(['post', 'put', 'patch'])) {
+            $dados = $this->request->getData();
+
+            $acaoRapidaAnexo = $this->processarAcaoRapidaAnexoInscricao(
+                $dados,
+                $inscricao->projeto_id !== null ? (int)$inscricao->projeto_id : null,
+                (int)$inscricao->id,
+                $tiposAnexosPermitidos
+            );
+            if ($acaoRapidaAnexo !== null) {
+                return $this->redirect(['action' => 'coorientador', $edital->id, $inscricao->id]);
+            }
+
+            $acao = (string)($dados['acao'] ?? 'salvar_anexos');
+            if (in_array($acao, ['vincular_coorientador', 'incluir_coorientador'], true)) {
+                $cpfInformado = (string)($dados['cpf_coorientador'] ?? '');
+                if (!$this->validaCPF($cpfInformado)) {
+                    $this->Flash->error('Informe um CPF valido para o coorientador.');
+                    return $this->redirect(['action' => 'coorientador', $edital->id, $inscricao->id]);
+                }
+                $cpf = preg_replace('/\D/', '', $cpfInformado);
+
+                $coorientador = $this->fetchTable('Usuarios')->find()
+                    ->select(['id'])
+                    ->where(['Usuarios.cpf' => $cpf])
+                    ->first();
+
+                if (!$coorientador) {
+                    return $this->redirect([
+                        'controller' => 'Users',
+                        'action' => 'cadastrarUsuario',
+                        $cpf,
+                        'C',
+                        (int)$inscricao->id,
+                        (int)$edital->id,
+                    ]);
+                }
+
+                try {
+                    $programaAtual = (int)($inscricao->programa_id ?? $edital->programa_id ?? 0);
+                    $mensagemElegibilidade = $this->checkCoorientador(
+                        (int)$coorientador->id,
+                        (int)$inscricao->orientador,
+                        $programaAtual,
+                        (int)($inscricao->editai_id ?? $edital->id ?? 0),
+                        (int)$inscricao->id
+                    );
+                    if ($mensagemElegibilidade !== null) {
+                        $this->Flash->error($mensagemElegibilidade);
+                        return $this->redirect(['action' => 'coorientador', $edital->id, $inscricao->id]);
+                    }
+
+                    $faseOriginal = (int)$inscricao->fase_id;
+                    $inscricao = $projetoBolsistas->patchEntity($inscricao, [
+                        'coorientador' => (int)$coorientador->id,
+                    ]);
+                    $projetoBolsistas->saveOrFail($inscricao);
+                    $this->limparAnexosPorBloco((int)$inscricao->id, 'C');
+                    $this->historico((int)$inscricao->id, $faseOriginal, $faseOriginal, 'Vinculação de usuário cadastrada no Coorientador', true);
+                    $this->Flash->success('Coorientador vinculado à inscrição com sucesso.');
+                } catch (\Throwable $e) {
+                    $this->flashFriendlyException(
+                        $e,
+                        'Erro no Sistema - vincular coorientador na inscricao',
+                        'Nao foi possivel vincular o coorientador na inscricao.'
+                    );
+                }
+
+                return $this->redirect(['action' => 'coorientador', $edital->id, $inscricao->id]);
+            }
+
+            if ($acao === 'excluir_coorientador') {
+                try {
+                    $faseOriginal = (int)$inscricao->fase_id;
+                    $inscricao = $projetoBolsistas->patchEntity($inscricao, ['coorientador' => null]);
+                    $projetoBolsistas->saveOrFail($inscricao);
+                    $this->limparAnexosPorBloco((int)$inscricao->id, 'C');
+                    $this->historico((int)$inscricao->id, $faseOriginal, $faseOriginal, 'Exclusão de coorientador na inscrição', true);
+                    $this->Flash->success('Coorientador removido da inscricao.');
+                } catch (\Throwable $e) {
+                    $this->flashFriendlyException(
+                        $e,
+                        'Erro no Sistema - excluir coorientador na inscricao',
+                        'Nao foi possivel remover o coorientador da inscricao.'
+                    );
+                }
+
+                return $this->redirect(['action' => 'coorientador', $edital->id, $inscricao->id]);
+            }
+
+            $anexosUpload = $dados['anexos'] ?? [];
+            if (!is_array($anexosUpload)) {
+                $anexosUpload = [];
+            }
+            if (empty($inscricao->coorientador)) {
+                $this->Flash->error('Vincule um coorientador antes de anexar os documentos.');
+                return $this->redirect(['action' => 'coorientador', $edital->id, $inscricao->id]);
+            }
+
+            if ($this->anexarInscricao($anexosUpload, $inscricao->projeto_id, $inscricao->id, null, true)) {
+                $faseAtual = (int)$inscricao->fase_id;
+                $this->historico((int)$inscricao->id, $faseAtual, $faseAtual, 'Atualizacao de dados do coorientador', true);
+                $this->Flash->success('Dados do coorientador salvos com sucesso.');
+                return $this->redirect(['action' => 'gerarTermo', $edital->id, $inscricao->id]);
+            }
+
+            $this->Flash->error('Nao foi possivel salvar os anexos. Tente novamente.');
+            return $this->redirect(['action' => 'coorientador', $edital->id, $inscricao->id]);
+        }
+
+        $this->set(compact('inscricao', 'anexosTiposC', 'anexos', 'coorientadorUsuario'));
+        $this->set($context);
+    }
+
+
+    public function gerarTermo($editalId = null, $inscricaoId = null)
+    {
+        $this->request->allowMethod(['get', 'post']);
+
+        $context = $this->loadContext($editalId);
+        if (isset($context['redirect'])) {
+            return $context['redirect'];
+        }
+        $edital = $context['edital'];
+        $identity = $context['identity'];
+        if (empty($inscricaoId)) {
+            $this->Flash->error('Inscricao nao informada.');
+            return $this->redirect(['controller' => 'Index', 'action' => 'index']);
+        }
+
+        $inscricao = $this->fetchTable('ProjetoBolsistas')->find()
+            ->contain([
+                'Bolsistas',
+                'Orientadores' => ['Vinculos'],
+                'Coorientadores',
+                'Projetos',
+                'Anexos' => ['conditions' => 'Anexos.deleted IS NULL', 'AnexosTipos'],
+            ])
+            ->where([
+                'ProjetoBolsistas.id' => (int)$inscricaoId,
+                'ProjetoBolsistas.editai_id' => (int)$edital->id,
+                'ProjetoBolsistas.deleted' => 0,
+
+            ])
+            ->first();
+        if (!$inscricao) {
+            $this->Flash->error('Inscricao nao localizada ou deletada. Reinicie o processo.');
+            return $this->redirect(['controller' => 'Index', 'action' => 'index']);
+        }
+
+        $ehTI = $this->ehTi();
+        if ((int)$inscricao->orientador !== (int)$identity->id && !$ehTI) {
+            $this->Flash->error('Acesso negado. Somente o Orientador pode realizar esta ação.');
+            return $this->redirect(['controller' => 'Index', 'action' => 'index']);
+        }
+        if (!in_array((int)$inscricao->fase_id, [1, 3], true)) {
+            $this->Flash->error('Inscricao indisponivel para geracao de termo nesta fase. Permitido apenas nas fases 1 e 3.');
+            return $this->redirect(['controller' => 'Index', 'action' => 'index']);
+        }
+
+        if (!$this->request->is('post')) {
+            $this->set(compact('inscricao'));
+            $this->set($context);
+            return;
+        }
+
+        $anexosPorTipo = [];
+        foreach ((array)$inscricao->anexos as $anexo) {
+            $tipoId = (int)($anexo->anexos_tipo_id ?? 0);
+            if ($tipoId > 0) {
+                $anexosPorTipo[$tipoId] = true;
+            }
+        }
+        $falhas = [];
+
+        $errosBolsista = [];
+        if (empty($inscricao->bolsista)) {
+            $errosBolsista[] = 'Informe o bolsista.';
+        }else{
+            // validar os dados do bolsista
+            
+            if ((string)$inscricao->bolsista_usuario->curso === '') {
+                $errosBolsista[] = 'Dados do bolsista pendentes: CURSO';
+            }
+            
+            if ((string)$inscricao->bolsista_usuario->ano_conclusao === '') {
+                $errosBolsista[] = 'Dados do bolsista pendentes: ANO DE CONCLUSAO DO CURSO';
+            }
+
+            if (!empty($inscricao->bolsista_usuario->ano_conclusao) && (int)$inscricao->bolsista_usuario->ano_conclusao < (int)date('Y')) {
+                $errosBolsista[] = 'O ano de conclusao e menor que o ano atual, e o programa e para alunos nao graduados';
+            }
+
+            if ((string)$inscricao->bolsista_usuario->documento_numero === '') {
+                $errosBolsista[] = 'Dados do bolsista pendentes: NUMERO DO DOCUMENTO DE IDENTIFICACAO';
+            }
+                
+        }
+        if (($inscricao->cota == null)) {
+            $errosBolsista[] = 'Informe a cota afirmativa.';
+        }
+        if (($inscricao->primeiro_periodo ===null))  {
+            $errosBolsista[] = 'Informe se o aluno é do primeiro período.';
+        }
+
+
+
+        
+        $programaId = (string)((int)($edital->programa_id ?? 0));
+        $cotaAtual = strtoupper(trim((string)($inscricao->cota ?? '')));
+        $primeiroPeriodo = $inscricao->primeiro_periodo !== null ? (string)(int)$inscricao->primeiro_periodo : '';
+        $bolsistaMenorIdade = false;
+        if (!empty($inscricao->bolsista) && !empty($inscricao->bolsista_usuario) && !empty($inscricao->bolsista_usuario->data_nascimento)) {
+            $dataNascimento = $inscricao->bolsista_usuario->data_nascimento;
+            if (is_object($dataNascimento) && method_exists($dataNascimento, 'i18nFormat')) {
+                $dataNascimento = $dataNascimento->i18nFormat('yyyy-MM-dd');
+            }
+            $idade = (int)$this->idade((string)$dataNascimento, false);
+            $bolsistaMenorIdade = $idade < 18;
+        }
+        $tiposB = $this->fetchTable('AnexosTipos')->find()
+            ->where([
+                'AnexosTipos.bloco' => 'B',
+                'AnexosTipos.deleted' => 0,
+            ])
+            ->orderBy(['AnexosTipos.id' => 'ASC'])
+            ->all();
+        $tiposObrigatoriosB = [];
+        $nomesTiposB = [];
+        foreach ($tiposB as $tipo) {
+            $tipoId = (int)$tipo->id;
+            $nomesTiposB[$tipoId] = (string)$tipo->nome;
+            $condicional = (int)($tipo->condicional ?? 0);
+            $programaRegra = trim((string)($tipo->programa ?? ''));
+            $cotaRegra = strtoupper(trim((string)($tipo->cota ?? '')));
+
+            if ($tipoId === 16) {
+                if ($primeiroPeriodo === '0') {
+                    $tiposObrigatoriosB[] = $tipoId;
+                }
+                continue;
+            }
+
+            if ($condicional === 1 && $programaRegra === '' && $cotaRegra === '') {
+                if (in_array($tipoId, [18, 19], true) && $bolsistaMenorIdade) {
+                    $tiposObrigatoriosB[] = $tipoId;
+                }
+                continue;
+            }
+            if ($condicional !== 0) {
+                continue;
+            }
+            if ($programaRegra === '' && $cotaRegra === '') {
+                $tiposObrigatoriosB[] = $tipoId;
+                continue;
+            }
+            if ($cotaRegra === '' && $programaRegra !== '') {
+                $programas = array_filter(array_map('trim', explode(',', $programaRegra)));
+                if (in_array($programaId, $programas, true)) {
+                    $tiposObrigatoriosB[] = $tipoId;
+                }
+                continue;
+            }
+            if ($programaRegra === '' && $cotaRegra !== '') {
+                $cotasRegra = array_filter(array_map('trim', explode(',', $cotaRegra)));
+                if ($cotaAtual !== '' && in_array($cotaAtual, $cotasRegra, true)) {
+                    $tiposObrigatoriosB[] = $tipoId;
+                }
+            }
+        }
+        $tiposObrigatoriosB = array_values(array_unique($tiposObrigatoriosB));
+        if (!empty($errosBolsista)) {
+            $falhas[] = [
+                'nome' => 'Bolsista',
+                'url' => ['action' => 'dadosBolsista', $edital->id, $inscricao->id],
+                'erros' => $errosBolsista,
+            ];
+        }
+
+        $errosSumula = [];
+        if (($edital->origem ?? null) === 'N') {
+            $sumulasAtivas = $this->fetchTable('EditaisSumulas')->find()
+                ->where([
+                    'EditaisSumulas.editai_id' => (int)$edital->id,
+                    'EditaisSumulas.deleted IS' => null,
+                ])
+                ->all();
+            $sumulasIds = [];
+            foreach ($sumulasAtivas as $sumula) {
+                $sumulasIds[] = (int)$sumula->id;
+            }
+            if (!empty($sumulasIds)) {
+                $sumulasSalvas = $this->fetchTable('InscricaoSumulas')->find()
+                    ->where([
+                        'InscricaoSumulas.projeto_bolsista_id' => (int)$inscricao->id,
+                        'InscricaoSumulas.pdj_inscricoe_id IS' => null,
+                        'InscricaoSumulas.editais_sumula_id IN' => $sumulasIds,
+                    ])
+                    ->all();
+                $mapSumulasSalvas = [];
+                foreach ($sumulasSalvas as $item) {
+                    $mapSumulasSalvas[(int)$item->editais_sumula_id] = $item;
+                }
+                foreach ($sumulasIds as $sumulaId) {
+                    if (!isset($mapSumulasSalvas[(int)$sumulaId])) {
+                        $errosSumula[] = 'Preencha a sumula #' . (int)$sumulaId . '.';
+                        continue;
+                    }
+                    $qtd = $mapSumulasSalvas[(int)$sumulaId]->quantidade;
+                    if ($qtd === null || $qtd === '') {
+                        $errosSumula[] = 'Informe quantidade na sumula #' . (int)$sumulaId . ' (use 0 quando nao possuir).';
+                    }
+                }
+            }
+        }
+        if (!empty($errosSumula)) {
+            $falhas[] = [
+                'nome' => 'Sumula',
+                'url' => ['action' => 'sumula', $edital->id, $inscricao->id],
+                'erros' => $errosSumula,
+            ];
+        }
+
+        $errosCoorientador = [];
+        $orientadorServidor = (int)($inscricao->orientadore->vinculo->servidor ?? 0);
+        if ($orientadorServidor !== 1 && empty($inscricao->coorientador)) {
+            $errosCoorientador[] = 'Informe o coorientador.';
+        }
+        if (!empty($errosCoorientador)) {
+            $falhas[] = [
+                'nome' => 'Coorientador',
+                'url' => ['action' => 'coorientador', $edital->id, $inscricao->id],
+                'erros' => $errosCoorientador,
+            ];
+        }
+
+        $errosProjeto = [];
+        $projeto = $inscricao->projeto ?? null;
+        if (empty($inscricao->projeto_id) || !$projeto) {
+            $errosProjeto[] = 'Cadastre o projeto.';
+        } else {
+            $erroTituloProjeto = $this->validarTextoComLimites((string)($projeto->titulo ?? ''), 'Titulo do projeto', 20, 255, true);
+            if ($erroTituloProjeto !== null) {
+                $errosProjeto[] = $erroTituloProjeto;
+            }
+            $erroResumoProjeto = $this->validarTextoComLimites((string)($projeto->resumo ?? ''), 'Resumo do projeto', 20, 4000, true);
+            if ($erroResumoProjeto !== null) {
+                $errosProjeto[] = $erroResumoProjeto;
+            }
+            $erroFinanciadores = $this->validarTextoComLimites((string)($projeto->financiamento ?? ''), 'Instituicoes financiadoras', 20, 255);
+            if ($erroFinanciadores !== null) {
+                $errosProjeto[] = $erroFinanciadores;
+            }
+            $erroPalavras = $this->validarTextoComLimites((string)($projeto->palavras_chaves ?? ''), 'Palavras-chave', 20, 255);
+            if ($erroPalavras !== null) {
+                $errosProjeto[] = $erroPalavras;
+            }
+            if (empty($projeto->area_id)) {
+                $errosProjeto[] = 'Informe a Area CNPQ do projeto.';
+            }
+            if (empty($projeto->linha_id)) {
+                $errosProjeto[] = 'Informe a Linha Fiocruz do projeto.';
+            }
+        }
+        if (!empty($errosProjeto)) {
+            $falhas[] = [
+                'nome' => 'Projeto',
+                'url' => ['action' => 'projeto', $edital->id, $inscricao->id],
+                'erros' => $errosProjeto,
+            ];
+        }
+
+        $errosSubprojeto = [];
+        $erroTituloSubprojeto = $this->validarTextoComLimites((string)($inscricao->sp_titulo ?? ''), 'Titulo do subprojeto', 20, 255, true);
+        if ($erroTituloSubprojeto !== null) {
+            $errosSubprojeto[] = $erroTituloSubprojeto;
+        }
+        $erroResumoSubprojeto = $this->validarTextoComLimites((string)($inscricao->sp_resumo ?? ''), 'Resumo do subprojeto', 20, 4000, true);
+        if ($erroResumoSubprojeto !== null) {
+            $errosSubprojeto[] = $erroResumoSubprojeto;
+        }
+        if (!empty($errosSubprojeto)) {
+            $falhas[] = [
+                'nome' => 'Subprojeto',
+                'url' => ['action' => 'subprojeto', $edital->id, $inscricao->id],
+                'erros' => $errosSubprojeto,
+            ];
+        }
+
+        //==== bloco anexos (mesma logica dos forms)
+        $errosAnexosBolsista = [];
+        foreach ($tiposObrigatoriosB as $tipoId) {
+            if (empty($anexosPorTipo[(int)$tipoId])) {
+                $errosAnexosBolsista[] = 'Anexo pendente: ' . ($nomesTiposB[(int)$tipoId] ?? ('anexo #' . (int)$tipoId)) . '.';
+            }
+        }
+        if (!empty($errosAnexosBolsista)) {
+            $falhas[] = [
+                'nome' => 'Anexos (Bolsista)',
+                'url' => ['action' => 'dadosBolsista', $edital->id, $inscricao->id],
+                'erros' => $errosAnexosBolsista,
+            ];
+        }
+
+        if (!empty($inscricao->coorientador)) {
+            $tiposC = $this->fetchTable('AnexosTipos')->find()
+                ->select(['id', 'nome'])
+                ->where([
+                    'AnexosTipos.bloco' => 'C',
+                    'AnexosTipos.deleted' => 0,
+                ])
+                ->orderBy(['AnexosTipos.id' => 'ASC'])
+                ->all();
+            $errosAnexosCoorientador = [];
+            foreach ($tiposC as $tipoC) {
+                $tipoId = (int)$tipoC->id;
+                if (empty($anexosPorTipo[$tipoId])) {
+                    $errosAnexosCoorientador[] = 'Anexo pendente: ' . (string)$tipoC->nome . '.';
+                }
+            }
+            if (!empty($errosAnexosCoorientador)) {
+                $falhas[] = [
+                    'nome' => 'Anexos (Coorientador)',
+                    'url' => ['action' => 'coorientador', $edital->id, $inscricao->id],
+                    'erros' => $errosAnexosCoorientador,
+                ];
+            }
+        }
+
+        $errosAnexosProjeto = [];
+        if (empty($anexosPorTipo[5])) {
+            $nomeTipo5 = $this->fetchTable('AnexosTipos')->find()
+                ->select(['nome'])
+                ->where(['AnexosTipos.id' => 5])
+                ->first();
+            $errosAnexosProjeto[] = 'Anexo pendente: ' . ($nomeTipo5 ? (string)$nomeTipo5->nome : 'anexo #5') . '.';
+        }
+        if (!empty($errosAnexosProjeto)) {
+            $falhas[] = [
+                'nome' => 'Anexos (Projeto)',
+                'url' => ['action' => 'projeto', $edital->id, $inscricao->id],
+                'erros' => $errosAnexosProjeto,
+            ];
+        }
+
+        $errosAnexosSubprojeto = [];
+        if (empty($anexosPorTipo[20])) {
+            $errosAnexosSubprojeto[] = 'Anexo pendente: arquivo do subprojeto (tipo #20).';
+        }
+        if (!empty($errosAnexosSubprojeto)) {
+            $falhas[] = [
+                'nome' => 'Anexos (Subprojeto)',
+                'url' => ['action' => 'subprojeto', $edital->id, $inscricao->id],
+                'erros' => $errosAnexosSubprojeto,
+            ];
+        }
+
+        if (empty($falhas)) {
+            try {
+                $projetoBolsistasTable = $this->fetchTable('ProjetoBolsistas');
+                $projetoBolsistasTable->getConnection()->transactional(function () use ($projetoBolsistasTable, $inscricao) {
+                    $faseOriginal = (int)$inscricao->fase_id;
+                    $inscricaoPatch = $projetoBolsistasTable->patchEntity($inscricao, ['fase_id' => 5]);
+                    $projetoBolsistasTable->saveOrFail($inscricaoPatch);
+                    $this->historico((int)$inscricao->id, $faseOriginal, 5, 'Geracao de termo da inscricao', true);
+                });
+            } catch (\Throwable $e) {
+                $this->flashFriendlyException(
+                    $e,
+                    'Erro no Sistema - gerar termo da inscricao',
+                    'Nao foi possivel concluir a geracao do termo.'
+                );
+                return $this->redirect(['action' => 'gerarTermo', $edital->id, $inscricao->id]);
+            }
+            return $this->redirect(['action' => 'finalizar', $edital->id, $inscricao->id]);
+        }
+
+        $this->request->getSession()->write(
+            'Inscricoes.gerar_termo_falhas.' . (int)$inscricao->id,
+            $falhas
+        );
+        return $this->redirect(['action' => 'errosGeracaoTermo', $edital->id, $inscricao->id]);
+    }
+
+    public function validarGeracaoTermo($editalId = null, $inscricaoId = null)
+    {
+        $this->request->allowMethod(['post']);
+        return $this->gerarTermo($editalId, $inscricaoId);
+    }
+
+    public function errosGeracaoTermo($editalId = null, $inscricaoId = null)
+    {
+        $context = $this->loadContext($editalId);
+        if (isset($context['redirect'])) {
+            return $context['redirect'];
+        }
+        $edital = $context['edital'];
+        $identity = $context['identity'];
+        if (empty($inscricaoId)) {
+            $this->Flash->error('Inscricao nao informada.');
+            return $this->redirect(['controller' => 'Index', 'action' => 'index']);
+        }
+
+        $inscricao = $this->fetchTable('ProjetoBolsistas')->find()
+            ->where([
+                'ProjetoBolsistas.id' => (int)$inscricaoId,
+                'ProjetoBolsistas.editai_id' => (int)$edital->id,
+            ])
+            ->first();
+        if (!$inscricao) {
+            $this->Flash->error('Inscricao nao localizada. Reinicie o processo.');
+            return $this->redirect(['controller' => 'Index', 'action' => 'index']);
+        }
+        $ehTI = $this->ehTi();
+        if ((int)$inscricao->orientador !== (int)$identity->id && !$ehTI) {
+            $this->Flash->error('Acesso negado.');
+            return $this->redirect(['controller' => 'Index', 'action' => 'dashboard']);
+        }
+
+        $falhas = (array)$this->request->getSession()->read(
+            'Inscricoes.gerar_termo_falhas.' . (int)$inscricao->id,
+            []
+        );
+        if (empty($falhas)) {
+            $this->Flash->info('Nenhuma falha pendente para esta inscricao.');
+            return $this->redirect(['action' => 'gerarTermo', $edital->id, $inscricao->id]);
+        }
+
+        $linksPorBloco = [
+            'Bolsista' => ['controller' => 'Inscricoes', 'action' => 'dadosBolsista', $edital->id, $inscricao->id],
+            'Anexos (Bolsista)' => ['controller' => 'Inscricoes', 'action' => 'dadosBolsista', $edital->id, $inscricao->id],
+            'Coorientador' => ['controller' => 'Inscricoes', 'action' => 'coorientador', $edital->id, $inscricao->id],
+            'Anexos (Coorientador)' => ['controller' => 'Inscricoes', 'action' => 'coorientador', $edital->id, $inscricao->id],
+            'Sumula' => ['controller' => 'Inscricoes', 'action' => 'sumula', $edital->id, $inscricao->id],
+            'Projeto' => ['controller' => 'Inscricoes', 'action' => 'projeto', $edital->id, $inscricao->id],
+            'Anexos (Projeto)' => ['controller' => 'Inscricoes', 'action' => 'projeto', $edital->id, $inscricao->id],
+            'Subprojeto' => ['controller' => 'Inscricoes', 'action' => 'subprojeto', $edital->id, $inscricao->id],
+            'Anexos (Subprojeto)' => ['controller' => 'Inscricoes', 'action' => 'subprojeto', $edital->id, $inscricao->id],
+        ];
+        foreach ($falhas as &$falha) {
+            $nomeBloco = (string)($falha['nome'] ?? '');
+            if (isset($linksPorBloco[$nomeBloco])) {
+                $falha['url'] = $linksPorBloco[$nomeBloco];
+            } else {
+                $falha['url'] = ['controller' => 'Inscricoes', 'action' => 'gerarTermo', $edital->id, $inscricao->id];
+            }
+        }
+        unset($falha);
+
+        $this->set(compact('inscricao', 'falhas'));
+        $this->set($context);
+    }
+
+    public function baixarTermo($editalId = null, $inscricaoId = null)
+    {
+        $context = $this->loadContext($editalId);
+        if (isset($context['redirect'])) {
+            return $context['redirect'];
+        }
+        $edital = $context['edital'];
+        $identity = $context['identity'];
+        if (empty($inscricaoId)) {
+            $this->Flash->error('Inscricao nao informada.');
+            return $this->redirect(['controller' => 'Index', 'action' => 'index']);
+        }
+
+        $inscricao = $this->fetchTable('ProjetoBolsistas')->find()
+            ->contain(['Bolsistas', 'Orientadores', 'Projetos'])
+            ->where([
+                'ProjetoBolsistas.id' => (int)$inscricaoId,
+                'ProjetoBolsistas.editai_id' => (int)$edital->id,
+                'ProjetoBolsistas.deleted' => 0,
+            ])
+            ->first();
+        if (!$inscricao) {
+            $this->Flash->error('Inscricao nao localizada.');
+            return $this->redirect(['controller' => 'Index', 'action' => 'index']);
+        }
+
+        $ehTI = $this->ehTi();
+        if ((int)$inscricao->orientador !== (int)$identity->id && !$ehTI) {
+            $this->Flash->error('Acesso negado.');
+            return $this->redirect(['controller' => 'Index', 'action' => 'dashboard']);
+        }
+        if ((int)$inscricao->fase_id !== 5) {
+            $this->Flash->error('O termo so pode ser baixado quando a inscricao estiver na fase 5.');
+            return $this->redirect(['action' => 'gerarTermo', $edital->id, $inscricao->id]);
+        }
+
+        $geracaoTopo = 'Termo gerado em ' . date('d/m/Y H:i:s', strtotime('-3 hours')) . ' por ' . (string)($identity->nome ?? 'Usuario');
+        $htmlPdf = $this->montarHtmlTermoInscricao($edital, $inscricao, false, '', $geracaoTopo);
+        $htmlExport = $this->montarHtmlTermoInscricao($edital, $inscricao, false, '', $geracaoTopo);
+
+        if (!class_exists(\Mpdf\Mpdf::class)) {
+            $this->Flash->error('Biblioteca de PDF nao instalada. Baixando termo em HTML.');
+            return $this->response
+                ->withType('text/html; charset=UTF-8')
+                ->withStringBody($htmlExport)
+                ->withDownload('termo_inscricao_' . (int)$inscricao->id . '.html');
+        }
+
+        try {
+            $mpdf = new \Mpdf\Mpdf([
+                'mode' => 'utf-8',
+                'format' => 'A4',
+                'tempDir' => TMP,
+                'margin_left' => 12,
+                'margin_right' => 12,
+                'margin_top' => 20,
+                'margin_bottom' => 18,
+            ]);
+            $mpdf->WriteHTML($htmlPdf);
+            $pdfBin = $mpdf->Output('', \Mpdf\Output\Destination::STRING_RETURN);
+
+            return $this->response
+                ->withType('application/pdf')
+                ->withStringBody($pdfBin)
+                ->withDownload('termo_inscricao_' . (int)$inscricao->id . '.pdf');
+        } catch (\Throwable $e) {
+            $this->log(
+                'Falha gerar PDF mPDF termo inscricao #' . (int)$inscricao->id . ' | erro=' . $e->getMessage(),
+                'error'
+            );
+            $this->Flash->error('Nao foi possivel gerar o PDF no momento. Baixando termo em HTML.');
+            return $this->response
+                ->withType('text/html; charset=UTF-8')
+                ->withStringBody($htmlExport)
+                ->withDownload('termo_inscricao_' . (int)$inscricao->id . '.html');
+        }
+    }
+
+    public function finalizar($editalId = null, $inscricaoId = null)
+    {
+        $context = $this->loadContext($editalId);
+        if (isset($context['redirect'])) {
+            return $context['redirect'];
+        }
+        $edital = $context['edital'];
+        $identity = $context['identity'];
+        if (empty($inscricaoId)) {
+            $this->Flash->error('Inscricao nao informada.');
+            return $this->redirect(['controller' => 'Index', 'action' => 'index']);
+        }
+
+        $inscricao = $this->fetchTable('ProjetoBolsistas')->find()
+            ->contain([
+                'Bolsistas',
+                'Orientadores',
+                'Coorientadores',
+                'Projetos',
+                'Anexos' => ['conditions' => 'Anexos.deleted IS NULL', 'AnexosTipos'],
+            ])
+            ->where([
+                'ProjetoBolsistas.id' => (int)$inscricaoId,
+                'ProjetoBolsistas.editai_id' => (int)$edital->id,
+                'ProjetoBolsistas.deleted' => 0,
+            ])
+            ->first();
+        if (!$inscricao) {
+            $this->Flash->error('Inscricao nao localizada. Reinicie o processo.');
+            return $this->redirect(['controller' => 'Index', 'action' => 'index']);
+        }
+        $ehTI = $this->ehTi();
+        if ((int)$inscricao->orientador !== (int)$identity->id && !$ehTI) {
+            $this->Flash->error('Acesso negado.');
+            return $this->redirect(['controller' => 'Index', 'action' => 'dashboard']);
+        }
+        if ((int)$inscricao->fase_id !== 5) {
+            $this->Flash->error('Inscricao indisponivel para finalizacao nesta fase. Gere o termo antes de finalizar.');
+            return $this->redirect(['controller' => 'Inscricoes', 'action' => 'gerarTermo', $editalId, $inscricaoId]);
+        }
+
+        if ($this->request->is(['post', 'put', 'patch'])) {
+            $arquivoTermo = $this->request->getData('termo_assinado');
+            if (!is_object($arquivoTermo) || $arquivoTermo->getClientFilename() === '') {
+                $this->Flash->error('Anexe o termo assinado (PDF) para finalizar a inscricao.');
+                return $this->redirect(['action' => 'finalizar', $edital->id, $inscricao->id]);
+            }
+
+            $projetoBolsistasTable = $this->fetchTable('ProjetoBolsistas');
+            try {
+                $projetoBolsistasTable->getConnection()->transactional(function () use ($projetoBolsistasTable, $inscricao, $arquivoTermo) {
+                    $okAnexo = $this->anexarInscricao(
+                        [24 => $arquivoTermo],
+                        !empty($inscricao->projeto_id) ? (int)$inscricao->projeto_id : null,
+                        (int)$inscricao->id,
+                        null,
+                        true
+                    );
+                    if (!$okAnexo) {
+                        throw new \RuntimeException('Falha ao anexar termo assinado da inscricao.');
+                    }
+
+                    $faseOriginal = (int)$inscricao->fase_id;
+                    $inscricaoPatch = $projetoBolsistasTable->patchEntity($inscricao, [
+                        'fase_id' => 4,
+                    ]);
+                    $projetoBolsistasTable->saveOrFail($inscricaoPatch);
+                    $this->historico((int)$inscricao->id, $faseOriginal, 4, 'Finalizacao da inscricao com termo assinado', true);
+                });
+            } catch (\Throwable $e) {
+                $this->flashFriendlyException(
+                    $e,
+                    'Erro no Sistema - finalizar inscricao com termo assinado',
+                    'Nao foi possivel finalizar a inscricao.'
+                );
+                return $this->redirect(['action' => 'finalizar', $edital->id, $inscricao->id]);
+            }
+
+            $this->Flash->success(
+                '<strong>Parabens!</strong> Sua inscricao foi finalizada com sucesso.<br>Boa sorte no processo seletivo!',
+                ['escape' => false]
+            );
+            return $this->redirect(['controller' => 'Padrao', 'action' => 'visualizar', (int)$inscricao->id]);
+        }
+
+        $this->set(compact('inscricao'));
+        $this->set($context);
+    }
+
+    private function tamanhoTexto(string $valor): int
+    {
+        return function_exists('mb_strlen') ? mb_strlen($valor) : strlen($valor);
+    }
+
+    private function validarTextoComLimites(
+        ?string $valor,
+        string $rotulo,
+        int $minimo,
+        int $maximo,
+        bool $obrigatorio = false
+    ): ?string {
+        $texto = trim((string)$valor);
+        if ($texto === '') {
+            return $obrigatorio ? 'Informe ' . strtolower($rotulo) . '.' : null;
+        }
+        $tamanho = $this->tamanhoTexto($texto);
+        if ($tamanho > $maximo) {
+            return $rotulo . ' deve ter no maximo ' . $maximo . ' caracteres.';
+        }
+        return null;
+    }
+
+    private function montarHtmlTermoInscricao(
+        $edital,
+        $inscricao,
+        bool $incluirRodapeHtml = false,
+        string $textoRodapeUrl = '',
+        string $textoRodapeGeracao = ''
+    ): string
+    {
+        $esc = fn($v) => htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
+        $fmt = fn($v) => '<strong><em>' . $esc($v) . '</em></strong>';
+        $orientador = $inscricao->orientadore;
+        $bolsista = $inscricao->bolsista_usuario;
+        $projeto = $inscricao->projeto;
+
+        $numeroSistema = str_pad((string)(int)$inscricao->orientador, 5, '0', STR_PAD_LEFT);
+        $inscricaoNumero = (int)$inscricao->id;
+        $periodoInicio = '01/09/2026';
+        $periodoFim = '31/08/2027';
+        $anoAtual = date('Y');
+        $nomeOrientador = $fmt($orientador->nome ?? '');
+        $cpfOrientador = $fmt(preg_replace('/\D+/', '', (string)($orientador->cpf ?? '')));
+        $nomeBolsista = $fmt($bolsista->nome ?? '');
+        $cpfBolsista = $fmt(preg_replace('/\D+/', '', (string)($bolsista->cpf ?? '')));
+        $cursoBolsista = $fmt($bolsista->curso ?? '');
+        $instituicaoBolsista = $fmt($bolsista->instituicao_curso ?? '');
+        $tituloProjeto = $fmt($projeto->titulo ?? '');
+        $numeroSistemaFmt = $fmt($numeroSistema);
+        $inscricaoNumeroFmt = $fmt($inscricaoNumero);
+        $periodoInicioFmt = $fmt($periodoInicio);
+        $periodoFimFmt = $fmt($periodoFim);
+        $anoAtualFmt = $fmt($anoAtual);
+        $nomeVinculoOrientador = 'Pesquisador 40h';
+        if (!empty($orientador) && !empty($orientador->vinculo_id)) {
+            $vinculo = $this->fetchTable('Vinculos')->find()
+                ->select(['nome'])
+                ->where([
+                    'Vinculos.id' => (int)$orientador->vinculo_id,
+                    'Vinculos.deleted' => 0,
+                ])
+                ->first();
+            if ($vinculo && !empty($vinculo->nome)) {
+                $nomeVinculoOrientador = (string)$vinculo->nome;
+            }
+        }
+        $nomeVinculoOrientadorFmt = $fmt($nomeVinculoOrientador);
+        $nomeEscolaridadeOrientador = 'Doutorado';
+        if (!empty($orientador) && !empty($orientador->escolaridade_id)) {
+            $escolaridade = $this->fetchTable('Escolaridades')->find()
+                ->select(['nome'])
+                ->where([
+                    'Escolaridades.id' => (int)$orientador->escolaridade_id,
+                ])
+                ->first();
+            if ($escolaridade && !empty($escolaridade->nome)) {
+                $nomeEscolaridadeOrientador = (string)$escolaridade->nome;
+            }
+        }
+        $nomeEscolaridadeOrientadorFmt = $fmt($nomeEscolaridadeOrientador);
+        $origemInscricao = strtoupper(trim((string)($inscricao->origem ?? '')));
+        $rotuloOrigem = 'Bolsa Nova';
+        if ($origemInscricao === 'R') {
+            $rotuloOrigem = 'Renovacao';
+        } elseif ($origemInscricao === 'S') {
+            $rotuloOrigem = 'Subst';
+        } elseif ($origemInscricao === 'A') {
+            $rotuloOrigem = 'Subst na Implantacao';
+        }
+        $rotuloOrigemFmt = $fmt($rotuloOrigem);
+        $nomeEditalCabecalho = $esc($edital->nome ?? 'PIBIC');
+        $textoGeracaoCabecalho = trim($textoRodapeGeracao) !== ''
+            ? $esc($textoRodapeGeracao)
+            : $esc('Termo gerado em ' . date('d/m/Y H:i:s', strtotime('-3 hours')) . ' por Usuario');
+
+        $logoHtml = '<img src="/img/logoNovo.svg" alt="Logo Fomento" style="width:15%;">';
+
+        return '<!doctype html><html><head><meta charset="utf-8"><style>
+            @page { size: auto; margin: 50px 0; }
+            body{font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.5;color:#111}
+            p{margin:0 0 10px 0;text-align:justify}
+            .wrap{padding:0 70px 50px}
+            .topo-termo{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:22px}
+            .topo-termo .geracao{font-size:11px;text-align:right;max-width:60%;line-height:1.35;color:#222}
+            .titulo{text-align:center;margin:14px 0 18px}
+            .titulo h1{margin:0 0 8px;font-size:19px;line-height:1.2;font-weight:700}
+            .titulo h2{margin:0;font-size:14px;line-height:1.3;font-weight:600}
+            .caixa-inscricao{background:#eee;padding:6px 10px;text-align:right;margin-top:12px}
+            .assinatura{margin-top:28px}
+            ul{margin:6px 0 12px 20px}
+            </style></head><body>
+            <div class="wrap">
+                <div class="topo-termo"><div>' . $logoHtml . '</div><div class="geracao">' . $textoGeracaoCabecalho . '</div></div>
+                <div class="titulo">
+                    <h1>' . $nomeEditalCabecalho . ' - CNPq/FIOCRUZ</h1>
+                    <h2>Termo de Solicitação de Bolsas para o Período ' . $periodoInicioFmt . ' a ' . $periodoFimFmt . '</h2>
+                </div>
+                <div class="caixa-inscricao">Inscrição número <b>' . $inscricaoNumeroFmt . '</b></div>
+
+                <br><br>
+                <p>Eu, ' . $nomeOrientador . ', portadora do CPF de número ' . $cpfOrientador . ', registrado no Sistema de Fomento à Pesquisa da VPPCB-FIOCRUZ sob o número ' . $numeroSistemaFmt . ', onde constam todos os meus dados pessoais e de contato, informados por mim.</p>
+                <p>Declaro que meu vínculo com a FIOCRUZ é de ' . $nomeVinculoOrientadorFmt . ' e que detenho a graduação de ' . $nomeEscolaridadeOrientadorFmt . ', mínima exigida para a submissão de projetos conforme o Edital, que foi lido e estou de pleno acordo.</p>
+                <p>O projeto (' . $tituloProjeto . ') apresentado solicita o/a bolsista descrito a seguir:</p>
+                <ul>
+                    <li>(' . $rotuloOrigemFmt . ' - ' . $inscricaoNumeroFmt . ' - ' . $anoAtualFmt . ') ' . $nomeBolsista . ', CPF ' . $cpfBolsista . ', estudante de ' . $cursoBolsista . ' em ' . $instituicaoBolsista . ', conforme Histórico Escolar e Comprovante de Matrícula anexo.</li>
+                </ul>
+
+                <br><br>
+                <p><b>DECLARAÇÕES E TERMOS DE COMPROMISSO</b></p>
+                <p>Eu, ' . $nomeBolsista . ', CPF nº ' . $cpfBolsista . ' declaro estar apto(a) a participar do Programa Institucional de Bolsas de Iniciação Científica Fiocruz/CNPq.</p>
+                <p>Sendo assim me considero de acordo com o proposto pela GESTÃO DA PROPRIEDADE INTELECTUAL, considerando que a FIOCRUZ é uma instituição pública diretamente vinculada ao Ministério da Saúde, cuja missão é a geração, absorção e difusão de conhecimentos científicos e tecnológicos em saúde;</p>
+                <p>Considerando que a FIOCRUZ, visando contribuir com a política nacional de saúde pública, possui como política institucional a busca da proteção legal dos resultados oriundos das suas atividades de pesquisas e desenvolvimento tecnológico;</p>
+                <p>Considerando que a novidade é um dos requisitos necessários à proteção dos resultados de pesquisas pelos institutos de propriedade industrial, e, por consequência, a sua manutenção em sigilo até a adoção dos procedimentos legais pertinentes é indispensável para a obtenção da proteção almejada;</p>
+                <p>Considerando, ainda, o disciplinado pelo ordenamento jurídico brasileiro, em especial pela Lei 9.279/96 (Lei de Propriedade Industrial), Lei 9.609/98 (Lei de Programa de Computador), Lei 9.610/98 (Lei de Direitos Autorais), Decreto 2.553/98 (que regulamenta sobre a premiação aos inventores de instituições públicas) e Lei 10.973/04 (Lei de regulamentada pelo Decreto nº 5.563, de 11 de outubro de 2005), pela Medida Provisória 2.186/2001 e demais atos normativos emanados do Conselho de Gestão do Patrimônio Genético do Ministério do Meio Ambiente;</p>
+
+                <p>Pelo presente TERMO DE COMPROMISSO, o signatário abaixo qualificado:</p>
+                <p>1º Obriga-se a manter em sigilo de todas as informações obtidas em função das atividades desempenhadas junto a FIOCRUZ, incluindo, mas não limitadas, às informações técnicas e científicas relativas a: projetos, resultados de pesquisas, operações, processos, produção, instalações, equipamentos, habilidades especializadas, métodos e metodologias, fluxogramas, componentes, fórmulas, produtos, amostras, diagramas, desenhos, desenho de esquema industrial, patentes, segredos de negócio. Estas informações serão consideradas INFORMAÇÕES CONFIDENCIAIS.</p>
+                <p>A obrigação de sigilo assumida, por meio deste termo, não compreende informações que já sejam de conhecimento público ou se tornem publicamente disponíveis por outra maneira que não uma revelação não autorizada.</p>
+                <p>O sigilo imposto veda quaisquer formas de divulgação das INFORMAÇÕES CONFIDENCIAIS, sejam através de artigos técnicos, relatórios, publicações, comunicações verbais entre outras, salvo prévia autorização por escrito da FIOCRUZ, em conformidade com o disposto no art. 12 da Lei 10.973/2004, que dispõe: “É vedado a dirigente, ao criador ou a qualquer servidor, militar, empregado ou prestador de serviços de ICT divulgar, noticiar ou publicar qualquer aspecto de criações de cujo desenvolvimento tenha participado diretamente ou tomado conhecimento por força de suas atividades, sem antes obter expressa autorização da ICT”.</p>
+                <p>A vigência da obrigação de sigilo perdurará até que a informação tida como INFORMAÇÃO CONFIDENCIAL seja licitamente tornada de conhecimento público ou FIOCRUZ autorize por escrito a sua divulgação, devendo ser observado os procedimentos institucionais estabelecidos para tanto.</p>
+                <p>2º Obriga-se a não usar as INFORMAÇÕES CONFIDENCIAIS de forma distinta dos propósitos das atividades a serem desempenhadas junto a FIOCRUZ.</p>
+                <p>3º Obriga-se a não enviar amostras de material biológico e/ou genético, obtidas em função das atividades desempenhadas junto a FIOCRUZ, a terceiros sem a prévia autorização por escrito da FIOCRUZ, devendo ser observado os procedimentos institucionais estabelecidos para tanto.</p>
+                <p>4º Reconhece que, respeitado o direito de nomeação a autoria (autor/inventor), os direitos de propriedade intelectual sobre os resultados porventura advindos da execução das atividades pelo signatário desempenhadas perante a FIOCRUZ pertencerão exclusivamente a FIOCRUZ, ficando esta desde já autorizada a requerer a proteção pelos institutos de propriedade intelectual que julgar pertinente. Para tanto, se compromete em assinar todos os documentos que forem necessários para regularizar a titularidade da FIOCRUZ perante os institutos de propriedade intelectual, no Brasil e exterior.</p>
+                <p>5º Reconhece que a inobservância das disposições aqui contidas sujeitar-lhe-á à aplicação das sanções legais pertinentes, em especial às sanções administrativas, além de ensejar responsabilidade em eventuais perdas e danos ocasionados a FIOCRUZ.</p>
+                <p>6º Declaro comprometimento da atualização da produção intelectual no Repositório Intelectual, ARCA.</p>
+                <p>Submetido o projeto, aceitamos e concordamos com os seguintes <b>TERMOS DE COMPROMISSO</b>:</p>
+
+                <br><br>
+                <p><b>CONDIÇÕES GERAIS</b></p>
+                <p>1. Ao aceitar a concessão, caso a bolsa seja aprovada, compromete-se o beneficiário a dedicar-se, com exclusividade, às atividades pertinentes à bolsa concedida.</p>
+                <p>2. Confirma também ter sido informado pelo orientador sobre: (a) as normas de biossegurança da Instituição; (b) os aspectos éticos da pesquisa em desenvolvimento; (c) em caso de pesquisa com geração de produtos passíveis de registro de patente, estar a par e compromissado com os termos de sigilo.</p>
+                <p>3. Compromete-se ainda o beneficiário a: a) estar regularmente matriculado em curso de graduação; b) apresentar excelente rendimento acadêmico e não ter reprovação em disciplinas afins com as atividades do projeto de pesquisa e nem ser do círculo familiar do orientador; c) dedicar-se integralmente às atividades acadêmicas e de pesquisa, em ritmo compatível com as atividades exigidas pelo curso durante o ano letivo, e de forma intensificada durante as férias letivas; d) não se afastar da instituição em que desenvolve seu projeto de pesquisa, exceto para a realização de pesquisa de campo, participação em evento científico ou estágio de pesquisa, por período limitado e com autorização do orientador; e) apresentar, após 6 (seis) meses de vigência do período da bolsa, relatório de pesquisa, contendo resultados parciais; f) apresentar os resultados parciais ou finais da pesquisa, sob a forma de exposições orais e painéis, acompanhado de um relatório de pesquisa com redação científica, que permita verificar o acesso a métodos e processos científicos; g) estar recebendo apenas esta modalidade de bolsa, sendo vedada a acumulação desta com a de outros programas do CNPq, de outra agência ou da própria instituição; h) devolver ao CNPq, em valores atualizados, a(s) mensalidade(s) recebidas indevidamente, caso os requisitos e compromissos estabelecidos acima não sejam cumpridos.</p>
+                <p>4. Os trabalhos publicados em decorrência das atividades apoiadas pelo CNPq deverão, necessariamente, fazer referência ao apoio recebido, com as seguintes expressões: a) Se publicado individualmente: "O presente trabalho foi realizado com o apoio do Conselho Nacional de Desenvolvimento Científico e Tecnológico – CNPq – Brasil". b) Se publicado em co-autoria: "Bolsista do CNPq – Brasil".</p>
+                <p>5. O CNPq poderá cancelar ou suspender a bolsa quando constatada infringência a quaisquer das condições constantes deste Termo das normas aplicáveis a esta concessão, sem prejuízo da aplicação dos dispositivos legais que disciplinam o ressarcimento dos recursos.</p>
+                <p>6. A concessão objeto do presente instrumento não gera vínculo de qualquer natureza ou relação de trabalho, constituindo doação, com encargos, feita ao beneficiário.</p>
+                <p>7. O beneficiário e o orientador manifestam sua integral e incondicional concordância com os termos da concessão, comprometendo-se a cumprir fielmente as condições expressas neste instrumento e as normas que lhe são aplicáveis: Resolução Normativa 017/2006 do Programa Institucional de Bolsas de Iniciação Científica.</p>
+
+                <br><br>
+                <p>Data: ________________________________________</p>
+                <br><br>
+                <p class="assinatura">______________________________________________________________________<br>' . $nomeBolsista . ' - CPF ' . $cpfBolsista . '<br>Bolsista</p>
+                <br><br>
+                <p class="assinatura">________________________________________________________________________<br>' . $nomeOrientador . ' - CPF ' . $cpfOrientador . '<br>Orientador</p>
+            </div>
+            </body></html>';
+    }
+
+}

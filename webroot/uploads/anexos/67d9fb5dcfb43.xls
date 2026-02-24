@@ -1,0 +1,1366 @@
+
+<table>
+    <tr>       
+        <th>id_inscricao</th>
+        <th>nome_bolsista</th>
+        <th>cpf_bolsista</th>
+        <th>documento</th>
+        <th>documento_numero</th>
+        <th>documento_emissor</th>
+        <th>telefone</th>
+        <th>telefone_contato</th>
+        <th>celular</th>
+        <th>whatsapp</th>
+        <th>email_bolsista</th>
+        <th>email_alternativo_bolsista</th>
+        <th>sexo_bolsista</th>
+        <th>raca_bolsista</th>
+        <th>deficiencia_bolsista</th>
+
+        <th>nome_orientador</th>
+        <th>cpf_orientador</th>
+        <th>vinculo_orientador</th>
+        <th>telefone_orientador</th>
+        <th>telefone_contato_orientador</th>
+        <th>celular_orientador</th>
+        <th>whatsapp_orientador</th>
+        <th>email_orientador</th>
+        <th>email_alternativo_orientador</th>
+        <th>unidade_orientador</th>
+
+        <th>nome_coorientador</th>
+        <th>cpf_coorientador</th>
+        <th>vinculo_coorientador</th>
+        <th>telefone_coorientador</th>
+        <th>telefone_contato_coorientador</th>
+        <th>celular_coorientador</th>
+        <th>whatsapp_coorientador</th>
+        <th>email_coorientador</th>
+        <th>email_alternativo_coorientador</th>
+        <th>unidade_coorientador</th>
+
+
+        <th>projeto_titulo</th>
+        <th>grande_area</th>
+        <th>area</th>
+        <th>area_fiocruz</th>
+        <th>linha_fiocruz</th>
+        <th>subprojeto_titulo</th>
+
+        <th>programa</th>
+        <th>cota</th>
+        <th>Situacao</th>
+        <th>edital_nome</th>
+        <th>resposta_bolsista</th>
+        <th>resposta_coorientador</th>
+        <th>obrigatorio</th>
+        <th>justificativa_cancelamento_substituiÃ§Ã£o</th>
+        <th>vigente</th>
+        <th>origem</th>
+
+
+
+
+    </tr><tr>
+                    <td style='text-align:center'>14461</td>
+                    <td style='text-align:center'>LUCIA CRISTINA SOUZA SOARES</td>
+                    <td style='text-align:center'>02383697737</td>
+                    <td style='text-align:center'>RG</td>
+                    <td style='text-align:center'>087945473</td>
+                    <td style='text-align:center'>IFP</td>
+                    <td style='text-align:center'>21988294896</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>21988294896</td>
+                    <td style='text-align:center'>21988294896</td>
+                    
+                    <td style='text-align:center'>maria.britto@fiocruz.br</td>
+                    <td style='text-align:center'>mariaversiani@yahoo.com.br</td>
+                    <td style='text-align:center'>Feminino</td>
+                    <td style='text-align:center'>Preta</td>
+                    <td style='text-align:center'>Não</td>
+
+                    <td style='text-align:center'>ADRIANA SOTERO MARTINS</td>
+                    <td style='text-align:center'>99663040700</td>
+                    <td style='text-align:center'>Pesquisador 40h</td>
+                    <td style='text-align:center'>21 99855-2001</td>
+                    <td style='text-align:center'>21-2502-1983</td>
+                    <td style='text-align:center'>21- 9855-2001</td>
+                    <td style='text-align:center'>21- 9855-2001</td>
+                    <td style='text-align:center'>maria.britto@fiocruz.br</td>
+                    <td style='text-align:center'>mariaversiani@yahoo.com.br</td> 
+                    <td style='text-align:center'>ENSP</td>
+                    
+
+                    <td style='text-align:center'>NATASHA BERENDONK HANDAM</td>
+                    <td style='text-align:center'>13325099750</td>
+                    <td style='text-align:center'>Bolsista Fiotec</td>
+                    <td style='text-align:center'>21982109897</td>
+                    <td style='text-align:center'>(21) 98210-9897</td>
+                    <td style='text-align:center'>(21)982109897</td>
+                    <td style='text-align:center'>(21)982109897</td>
+                    <td style='text-align:center'>maria.britto@fiocruz.br</td>
+                    <td style='text-align:center'>mariaversiani@yahoo.com.br</td> 
+                    <td style='text-align:center'>ENSP</td>
+                    
+
+                    <td style='text-align:center'>Pesquisa-ação em comunidades com falta de saneamento na favela do Jacarezinho, RJ</td> 
+                    <td style='text-align:center'>Ciências da Saúde</td> 
+                    <td style='text-align:center'>Saúde Coletiva</td> 
+                    <td style='text-align:center'>Ambiente, Ecologia e Saúde</td> 
+                    <td style='text-align:center'>14.5. Saneamento e saúde ambiental, inclusive infantil</td> 
+                    <td style='text-align:center'>Percepção da população sobre as condições do saneamento ambiental em favela do Jacarezinho, RJ</td> 
+
+                    
+                    <td style='text-align:center'>IC MAnguinhos</td>
+                    <td style='text-align:center'>Não desejo participar de cotas afirmativas!</td>
+                    <td style='text-align:center'>Ativo</td>      
+                    <td style='text-align:center'>IC Manguinhos - Nova</td>      
+                    <td style='text-align:center'>Aceito</td>
+                    <td style='text-align:center'>Aceito</td>
+                    <td style='text-align:center'>Opcional</td>
+
+                    <td style='text-align:center'>Não Informado</td> 
+                    <td style='text-align:center'>Sim</td> 
+                    <td style='text-align:center'>Nova</td>
+
+                </tr><tr>
+                    <td style='text-align:center'>14414</td>
+                    <td style='text-align:center'>LUANA DE CARVALHO SILVA</td>
+                    <td style='text-align:center'>20602150728</td>
+                    <td style='text-align:center'>RG</td>
+                    <td style='text-align:center'>32.212.509-7</td>
+                    <td style='text-align:center'>Detran</td>
+                    <td style='text-align:center'>(21) 97988-6346</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>(21)979886346</td>
+                    <td style='text-align:center'>(21)979886346</td>
+                    
+                    <td style='text-align:center'>maria.britto@fiocruz.br</td>
+                    <td style='text-align:center'>mariaversiani@yahoo.com.br</td>
+                    <td style='text-align:center'>Feminino</td>
+                    <td style='text-align:center'>Parda</td>
+                    <td style='text-align:center'>Não</td>
+
+                    <td style='text-align:center'>GISELE O DWYER DE OLIVEIRA</td>
+                    <td style='text-align:center'>83235426787</td>
+                    <td style='text-align:center'>Pesquisador 40h</td>
+                    <td style='text-align:center'>21996165411</td>
+                    <td style='text-align:center'>21-9616-5411</td>
+                    <td style='text-align:center'>21-9616-5411</td>
+                    <td style='text-align:center'>21996165411</td>
+                    <td style='text-align:center'>maria.britto@fiocruz.br</td>
+                    <td style='text-align:center'>mariaversiani@yahoo.com.br</td> 
+                    <td style='text-align:center'>ENSP</td>
+                    
+
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>Não Informado</td> 
+                    <td style='text-align:center'>Não Informado</td>
+                    
+
+                    <td style='text-align:center'>20 anos de Política Nacional de Atenção às Urgências: análise da expansão da rede assistencial</td> 
+                    <td style='text-align:center'>Ciências da Saúde</td> 
+                    <td style='text-align:center'>Saúde Coletiva</td> 
+                    <td style='text-align:center'>Políticas Públicas, Planejamento e Gestão em saúde</td> 
+                    <td style='text-align:center'>17.6. Política, planejamento, administração e gestão de sistemas e organização em saúde</td> 
+                    <td style='text-align:center'>20 anos de Política Nacional de Atenção às Urgências: expansão da rede assistencial, o caso da Unidade de Pronto Atendimento - UPA</td> 
+
+                    
+                    <td style='text-align:center'>IC MAnguinhos</td>
+                    <td style='text-align:center'>Não desejo participar de cotas afirmativas!</td>
+                    <td style='text-align:center'>Ativo</td>      
+                    <td style='text-align:center'>IC Manguinhos - Nova</td>      
+                    <td style='text-align:center'>Aceito</td>
+                    <td style='text-align:center'>Coorientador Não Informado</td>
+                    <td style='text-align:center'>Opcional</td>
+
+                    <td style='text-align:center'>Não Informado</td> 
+                    <td style='text-align:center'>Sim</td> 
+                    <td style='text-align:center'>Nova</td>
+
+                </tr><tr>
+                    <td style='text-align:center'>14478</td>
+                    <td style='text-align:center'>GABRIELA RIBEIRO PEREIRA</td>
+                    <td style='text-align:center'>17851193702</td>
+                    <td style='text-align:center'>RG</td>
+                    <td style='text-align:center'>308019090</td>
+                    <td style='text-align:center'>detran</td>
+                    <td style='text-align:center'>21981335378</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>21981335378</td>
+                    <td style='text-align:center'>21981335378</td>
+                    
+                    <td style='text-align:center'>maria.britto@fiocruz.br</td>
+                    <td style='text-align:center'>mariaversiani@yahoo.com.br</td>
+                    <td style='text-align:center'>Feminino</td>
+                    <td style='text-align:center'>Preta</td>
+                    <td style='text-align:center'>Não</td>
+
+                    <td style='text-align:center'>Jaime Lopes da Mota Oliveira</td>
+                    <td style='text-align:center'>03369911779</td>
+                    <td style='text-align:center'>Pesquisador 40h</td>
+                    <td style='text-align:center'>21986389884</td>
+                    <td style='text-align:center'>21-986389858</td>
+                    <td style='text-align:center'>21-9863-89884</td>
+                    <td style='text-align:center'>21986389884</td>
+                    <td style='text-align:center'>maria.britto@fiocruz.br</td>
+                    <td style='text-align:center'>mariaversiani@yahoo.com.br</td> 
+                    <td style='text-align:center'>ENSP</td>
+                    
+
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>Não Informado</td> 
+                    <td style='text-align:center'>Não Informado</td>
+                    
+
+                    <td style='text-align:center'>Tratamento Terciário de Esgotos</td> 
+                    <td style='text-align:center'>Engenharias</td> 
+                    <td style='text-align:center'>Engenharia Sanitária</td> 
+                    <td style='text-align:center'>Ambiente, Ecologia e Saúde</td> 
+                    <td style='text-align:center'>14.5. Saneamento e saúde ambiental, inclusive infantil</td> 
+                    <td style='text-align:center'>Aperfeiçoamento na Determinação dos Gases do Efeito Estufa (GEE) Metano e Óxido de nitrogênio por HS-CG</td> 
+
+                    
+                    <td style='text-align:center'>IC MAnguinhos</td>
+                    <td style='text-align:center'>Pessoas Negras (Pretos/Pardos)</td>
+                    <td style='text-align:center'>Ativo</td>      
+                    <td style='text-align:center'>IC Manguinhos - Nova</td>      
+                    <td style='text-align:center'>Aceito</td>
+                    <td style='text-align:center'>Coorientador Não Informado</td>
+                    <td style='text-align:center'>Opcional</td>
+
+                    <td style='text-align:center'>Não Informado</td> 
+                    <td style='text-align:center'>Sim</td> 
+                    <td style='text-align:center'>Nova</td>
+
+                </tr><tr>
+                    <td style='text-align:center'>14486</td>
+                    <td style='text-align:center'>MARCELLE DA SILVA RAMOS</td>
+                    <td style='text-align:center'>19046722724</td>
+                    <td style='text-align:center'>RG</td>
+                    <td style='text-align:center'>30472320/8</td>
+                    <td style='text-align:center'>Detran </td>
+                    <td style='text-align:center'>21971117414</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>21971117414</td>
+                    <td style='text-align:center'>21971117414</td>
+                    
+                    <td style='text-align:center'>maria.britto@fiocruz.br</td>
+                    <td style='text-align:center'>mariaversiani@yahoo.com.br</td>
+                    <td style='text-align:center'>Feminino</td>
+                    <td style='text-align:center'>Branca</td>
+                    <td style='text-align:center'>Não</td>
+
+                    <td style='text-align:center'>JESUS PAIS RAMOS</td>
+                    <td style='text-align:center'>01022736779</td>
+                    <td style='text-align:center'>Pesquisador 40h</td>
+                    <td style='text-align:center'>2124486808</td>
+                    <td style='text-align:center'>21-24486808</td>
+                    <td style='text-align:center'>21-966000109</td>
+                    <td style='text-align:center'>21-966000109</td>
+                    <td style='text-align:center'>maria.britto@fiocruz.br</td>
+                    <td style='text-align:center'>mariaversiani@yahoo.com.br</td> 
+                    <td style='text-align:center'>ENSP</td>
+                    
+
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>Não Informado</td> 
+                    <td style='text-align:center'>Não Informado</td>
+                    
+
+                    <td style='text-align:center'>IDENTIFICAÇÃO DE MICOBACTÉRIAS NÃO CAUSADORAS DE TUBERCULOSE ATRAVÉS DE DIFERENTES MARCADORES MOLECULARES</td> 
+                    <td style='text-align:center'>Ciências da Saúde</td> 
+                    <td style='text-align:center'>Saúde Coletiva</td> 
+                    <td style='text-align:center'>Vigilância em Saúde</td> 
+                    <td style='text-align:center'>16.2. Vigilância sanitária</td> 
+                    <td style='text-align:center'>CARACTERIZAÇÃO DE CEPAS DE MICOBACTÉRIAS NÃO CAUSADORAS DE TUBERCULOSE (MNT).</td> 
+
+                    
+                    <td style='text-align:center'>IC MAnguinhos</td>
+                    <td style='text-align:center'>Não desejo participar de cotas afirmativas!</td>
+                    <td style='text-align:center'>Ativo</td>      
+                    <td style='text-align:center'>IC Manguinhos - Nova</td>      
+                    <td style='text-align:center'>Aceito</td>
+                    <td style='text-align:center'>Coorientador Não Informado</td>
+                    <td style='text-align:center'>Opcional</td>
+
+                    <td style='text-align:center'>Não Informado</td> 
+                    <td style='text-align:center'>Sim</td> 
+                    <td style='text-align:center'>Nova</td>
+
+                </tr><tr>
+                    <td style='text-align:center'>14518</td>
+                    <td style='text-align:center'>LARISSA GOMES FERNANDES DA COSTA</td>
+                    <td style='text-align:center'>15804029762</td>
+                    <td style='text-align:center'>RG</td>
+                    <td style='text-align:center'>284852035</td>
+                    <td style='text-align:center'>DETRAN</td>
+                    <td style='text-align:center'>21 39774116</td>
+                    <td style='text-align:center'>(21) 97227-8511</td>
+                    <td style='text-align:center'>(21) 967184978</td>
+                    <td style='text-align:center'>(21) 967184978</td>
+                    
+                    <td style='text-align:center'>maria.britto@fiocruz.br</td>
+                    <td style='text-align:center'>mariaversiani@yahoo.com.br</td>
+                    <td style='text-align:center'>Feminino</td>
+                    <td style='text-align:center'>Branca</td>
+                    <td style='text-align:center'>Não</td>
+
+                    <td style='text-align:center'>KATHIE NJAINE</td>
+                    <td style='text-align:center'>48301582715</td>
+                    <td style='text-align:center'>Pesquisador 40h</td>
+                    <td style='text-align:center'>21-38829151</td>
+                    <td style='text-align:center'>21-9539-0845</td>
+                    <td style='text-align:center'>21-995390845</td>
+                    <td style='text-align:center'>21-995390845</td>
+                    <td style='text-align:center'>maria.britto@fiocruz.br</td>
+                    <td style='text-align:center'>mariaversiani@yahoo.com.br</td> 
+                    <td style='text-align:center'>ENSP</td>
+                    
+
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>Não Informado</td> 
+                    <td style='text-align:center'>Não Informado</td>
+                    
+
+                    <td style='text-align:center'>Equidade de gênero e comunidade escolar: pensando estratégias de enfrentamento da violência de gênero na escola sob a perspectiva da promoção da saúde.</td> 
+                    <td style='text-align:center'>Ciências da Saúde</td> 
+                    <td style='text-align:center'>Saúde Coletiva</td> 
+                    <td style='text-align:center'>Promoção da Saúde</td> 
+                    <td style='text-align:center'>19.9. Violência e seu impacto na qualidade de vida e na saúde</td> 
+                    <td style='text-align:center'>Equidade de Gênero no Ambiente Escolar: enfrentamento à violência de gênero por uma perspectiva psicossocial e promotora de saúde</td> 
+
+                    
+                    <td style='text-align:center'>IC MAnguinhos</td>
+                    <td style='text-align:center'>Não desejo participar de cotas afirmativas!</td>
+                    <td style='text-align:center'>Ativo</td>      
+                    <td style='text-align:center'>IC Manguinhos - Nova</td>      
+                    <td style='text-align:center'>Aceito</td>
+                    <td style='text-align:center'>Coorientador Não Informado</td>
+                    <td style='text-align:center'>Opcional</td>
+
+                    <td style='text-align:center'>Não Informado</td> 
+                    <td style='text-align:center'>Sim</td> 
+                    <td style='text-align:center'>Nova</td>
+
+                </tr><tr>
+                    <td style='text-align:center'>14457</td>
+                    <td style='text-align:center'>JULIA CAMILO DA CUNHA</td>
+                    <td style='text-align:center'>18951588777</td>
+                    <td style='text-align:center'>RG</td>
+                    <td style='text-align:center'>321813016</td>
+                    <td style='text-align:center'>Detran</td>
+                    <td style='text-align:center'>21979518365</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>21 969403844 </td>
+                    <td style='text-align:center'>21 969403844 </td>
+                    
+                    <td style='text-align:center'>maria.britto@fiocruz.br</td>
+                    <td style='text-align:center'>mariaversiani@yahoo.com.br</td>
+                    <td style='text-align:center'>Feminino</td>
+                    <td style='text-align:center'>Parda</td>
+                    <td style='text-align:center'>Não</td>
+
+                    <td style='text-align:center'>LUCIANA DIAS DE LIMA</td>
+                    <td style='text-align:center'>00135327741</td>
+                    <td style='text-align:center'>Pesquisador 40h</td>
+                    <td style='text-align:center'>(21) 2598-2880</td>
+                    <td style='text-align:center'>21987544567</td>
+                    <td style='text-align:center'>21987544567</td>
+                    <td style='text-align:center'>21987544567</td>
+                    <td style='text-align:center'>maria.britto@fiocruz.br</td>
+                    <td style='text-align:center'>mariaversiani@yahoo.com.br</td> 
+                    <td style='text-align:center'>ENSP</td>
+                    
+
+                    <td style='text-align:center'>JOAO GABRIEL RIBEIRO PESSANHA LEAL</td>
+                    <td style='text-align:center'>15657154703</td>
+                    <td style='text-align:center'>Externo</td>
+                    <td style='text-align:center'>(22) 99922-6601</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>(22)999226601</td>
+                    <td style='text-align:center'>(22)999226601</td>
+                    <td style='text-align:center'>maria.britto@fiocruz.br</td>
+                    <td style='text-align:center'>mariaversiani@yahoo.com.br</td> 
+                    <td style='text-align:center'>Não Informado</td>
+                    
+
+                    <td style='text-align:center'>Financiamento federal do SUS por emendas parlamentares: características, implicações e desafios</td> 
+                    <td style='text-align:center'>Ciências da Saúde</td> 
+                    <td style='text-align:center'>Saúde Coletiva</td> 
+                    <td style='text-align:center'>Políticas Públicas, Planejamento e Gestão em saúde</td> 
+                    <td style='text-align:center'>17.6. Política, planejamento, administração e gestão de sistemas e organização em saúde</td> 
+                    <td style='text-align:center'>Análise do financiamento federal do SUS por emendas parlamentares nos municípios brasileiros: uma exploração dos dados disponíveis (2019 ? 2022)</td> 
+
+                    
+                    <td style='text-align:center'>IC MAnguinhos</td>
+                    <td style='text-align:center'>Não desejo participar de cotas afirmativas!</td>
+                    <td style='text-align:center'>Ativo</td>      
+                    <td style='text-align:center'>IC Manguinhos - Nova</td>      
+                    <td style='text-align:center'>Aceito</td>
+                    <td style='text-align:center'>Pendente</td>
+                    <td style='text-align:center'>Opcional</td>
+
+                    <td style='text-align:center'>Não Informado</td> 
+                    <td style='text-align:center'>Sim</td> 
+                    <td style='text-align:center'>Nova</td>
+
+                </tr><tr>
+                    <td style='text-align:center'>14482</td>
+                    <td style='text-align:center'>GUILHERME SEHNEM NETO</td>
+                    <td style='text-align:center'>18560631780</td>
+                    <td style='text-align:center'>RG</td>
+                    <td style='text-align:center'>258735588</td>
+                    <td style='text-align:center'>DETRAN</td>
+                    <td style='text-align:center'>21994470986</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>21998420461</td>
+                    <td style='text-align:center'>21998420461</td>
+                    
+                    <td style='text-align:center'>maria.britto@fiocruz.br</td>
+                    <td style='text-align:center'>mariaversiani@yahoo.com.br</td>
+                    <td style='text-align:center'>Masculinos</td>
+                    <td style='text-align:center'>Branca</td>
+                    <td style='text-align:center'>Não</td>
+
+                    <td style='text-align:center'>MARCIA SOALHEIRO DE ALMEIDA</td>
+                    <td style='text-align:center'>53343212768</td>
+                    <td style='text-align:center'>Celetista</td>
+                    <td style='text-align:center'>(21) 22352413</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>(21) 999799604</td>
+                    <td style='text-align:center'>(21) 999799604</td>
+                    <td style='text-align:center'>maria.britto@fiocruz.br</td>
+                    <td style='text-align:center'>mariaversiani@yahoo.com.br</td> 
+                    <td style='text-align:center'>ENSP</td>
+                    
+
+                    <td style='text-align:center'>THELMA PAVESI</td>
+                    <td style='text-align:center'>15093986860</td>
+                    <td style='text-align:center'>Pesquisador 40h</td>
+                    <td style='text-align:center'>25982986</td>
+                    <td style='text-align:center'>21993649556</td>
+                    <td style='text-align:center'>21993649556</td>
+                    <td style='text-align:center'>21982452692</td>
+                    <td style='text-align:center'>maria.britto@fiocruz.br</td>
+                    <td style='text-align:center'>mariaversiani@yahoo.com.br</td> 
+                    <td style='text-align:center'>ENSP</td>
+                    
+
+                    <td style='text-align:center'>Perda Auditiva Relacionada ao Trabalho</td> 
+                    <td style='text-align:center'>Ciências da Saúde</td> 
+                    <td style='text-align:center'>Saúde Coletiva</td> 
+                    <td style='text-align:center'>Ambiente, Ecologia e Saúde</td> 
+                    <td style='text-align:center'>14.7. Exposição a agentes químicos, físicos e biológicos e efeitos, inclusive patologias, associados na saúde humana e animal</td> 
+                    <td style='text-align:center'>Estudo da perda auditiva relacionada ao trabalho e seus agravos decorrentes da exposição ao agente físico ruído e/ou substâncias químicas</td> 
+
+                    
+                    <td style='text-align:center'>IC MAnguinhos</td>
+                    <td style='text-align:center'>Não desejo participar de cotas afirmativas!</td>
+                    <td style='text-align:center'>Ativo</td>      
+                    <td style='text-align:center'>IC Manguinhos - Nova</td>      
+                    <td style='text-align:center'>Aceito</td>
+                    <td style='text-align:center'>Aceito</td>
+                    <td style='text-align:center'>Obrigatório</td>
+
+                    <td style='text-align:center'>Não Informado</td> 
+                    <td style='text-align:center'>Sim</td> 
+                    <td style='text-align:center'>Nova</td>
+
+                </tr><tr>
+                    <td style='text-align:center'>14523</td>
+                    <td style='text-align:center'>THAMIRIS DE ANDRADE SOUSA</td>
+                    <td style='text-align:center'>12843511739</td>
+                    <td style='text-align:center'>RG</td>
+                    <td style='text-align:center'>215637695</td>
+                    <td style='text-align:center'>Detran</td>
+                    <td style='text-align:center'>20972-110 </td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>21998461040</td>
+                    <td style='text-align:center'>21998461040</td>
+                    
+                    <td style='text-align:center'>maria.britto@fiocruz.br</td>
+                    <td style='text-align:center'>mariaversiani@yahoo.com.br</td>
+                    <td style='text-align:center'>Feminino</td>
+                    <td style='text-align:center'>Preta</td>
+                    <td style='text-align:center'>Sim</td>
+
+                    <td style='text-align:center'>MARIA DO CARMO LEAL</td>
+                    <td style='text-align:center'>08009961515</td>
+                    <td style='text-align:center'>Pesquisador 40h</td>
+                    <td style='text-align:center'>21-25982620</td>
+                    <td style='text-align:center'>21-25982620</td>
+                    <td style='text-align:center'>21-996011163</td>
+                    <td style='text-align:center'>21-996011163</td>
+                    <td style='text-align:center'>maria.britto@fiocruz.br</td>
+                    <td style='text-align:center'>mariaversiani@yahoo.com.br</td> 
+                    <td style='text-align:center'>ENSP</td>
+                    
+
+                    <td style='text-align:center'>THAIZA DUTRA GOMES DE CARVALHO</td>
+                    <td style='text-align:center'>11371151733</td>
+                    <td style='text-align:center'>Aluno de Pós-Doutorado</td>
+                    <td style='text-align:center'>21993251673</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>21993251673</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>maria.britto@fiocruz.br</td>
+                    <td style='text-align:center'>mariaversiani@yahoo.com.br</td> 
+                    <td style='text-align:center'>ENSP</td>
+                    
+
+                    <td style='text-align:center'>Nascer no Brasil II: inquérito nacional sobre perda fetal, parto e nascimento</td> 
+                    <td style='text-align:center'>Ciências da Saúde</td> 
+                    <td style='text-align:center'>Saúde Coletiva</td> 
+                    <td style='text-align:center'>Saúde e Gênero, Saúde do Idoso</td> 
+                    <td style='text-align:center'>12.1.   Gênero e saúde, sexualidade e saúde reprodutiva</td> 
+                    <td style='text-align:center'>Divulgação Científica dos Resultados do Projeto ?Nascer no Brasil II: inquérito nacional sobre perda fetal, parto e nascimento?</td> 
+
+                    
+                    <td style='text-align:center'>IC MAnguinhos</td>
+                    <td style='text-align:center'>Pessoas Negras (Pretos/Pardos)</td>
+                    <td style='text-align:center'>Ativo</td>      
+                    <td style='text-align:center'>IC Manguinhos - Nova</td>      
+                    <td style='text-align:center'>Aceito</td>
+                    <td style='text-align:center'>Aceito</td>
+                    <td style='text-align:center'>Opcional</td>
+
+                    <td style='text-align:center'>Não Informado</td> 
+                    <td style='text-align:center'>Sim</td> 
+                    <td style='text-align:center'>Nova</td>
+
+                </tr><tr>
+                    <td style='text-align:center'>14514</td>
+                    <td style='text-align:center'>GABRIEL ARAUJO DA SILVA GOMES</td>
+                    <td style='text-align:center'>13978638703</td>
+                    <td style='text-align:center'>RG</td>
+                    <td style='text-align:center'>21.617.977-0</td>
+                    <td style='text-align:center'>Detran </td>
+                    <td style='text-align:center'>21982493349</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>(21)996507545</td>
+                    <td style='text-align:center'>(21)996507545</td>
+                    
+                    <td style='text-align:center'>maria.britto@fiocruz.br</td>
+                    <td style='text-align:center'>mariaversiani@yahoo.com.br</td>
+                    <td style='text-align:center'>Masculinos</td>
+                    <td style='text-align:center'>Preta</td>
+                    <td style='text-align:center'>Não</td>
+
+                    <td style='text-align:center'>MAYALU MATOS SILVA</td>
+                    <td style='text-align:center'>76896455187</td>
+                    <td style='text-align:center'>Pesquisador 40h</td>
+                    <td style='text-align:center'>21989502280</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>21989502280</td>
+                    <td style='text-align:center'>21989502280</td>
+                    <td style='text-align:center'>maria.britto@fiocruz.br</td>
+                    <td style='text-align:center'>mariaversiani@yahoo.com.br</td> 
+                    <td style='text-align:center'>ENSP</td>
+                    
+
+                    <td style='text-align:center'>FERNANDA MENDES LAGES RIBEIRO</td>
+                    <td style='text-align:center'>05301371789</td>
+                    <td style='text-align:center'>Bolsista Fiotec</td>
+                    <td style='text-align:center'>21994999454</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>21994999454</td>
+                    <td style='text-align:center'>21994999454</td>
+                    <td style='text-align:center'>maria.britto@fiocruz.br</td>
+                    <td style='text-align:center'>mariaversiani@yahoo.com.br</td> 
+                    <td style='text-align:center'>ENSP</td>
+                    
+
+                    <td style='text-align:center'>Registro da Violência Armada na Fiocruz: Construindo Metodologias para Registro e Proteção.</td> 
+                    <td style='text-align:center'>Ciências da Saúde</td> 
+                    <td style='text-align:center'>Saúde Coletiva</td> 
+                    <td style='text-align:center'>Promoção da Saúde</td> 
+                    <td style='text-align:center'>19.9. Violência e seu impacto na qualidade de vida e na saúde</td> 
+                    <td style='text-align:center'>Refletindo sobre a Violência Armada e seus impactos biopsicossociais Iniciação Científica Manguinhos</td> 
+
+                    
+                    <td style='text-align:center'>IC MAnguinhos</td>
+                    <td style='text-align:center'>Não desejo participar de cotas afirmativas!</td>
+                    <td style='text-align:center'>Ativo</td>      
+                    <td style='text-align:center'>IC Manguinhos - Nova</td>      
+                    <td style='text-align:center'>Aceito</td>
+                    <td style='text-align:center'>Aceito</td>
+                    <td style='text-align:center'>Opcional</td>
+
+                    <td style='text-align:center'>Não Informado</td> 
+                    <td style='text-align:center'>Sim</td> 
+                    <td style='text-align:center'>Nova</td>
+
+                </tr><tr>
+                    <td style='text-align:center'>14463</td>
+                    <td style='text-align:center'>ERICKA KATHELLIN DOS SANTOS AMARO</td>
+                    <td style='text-align:center'>17750990755</td>
+                    <td style='text-align:center'>RG</td>
+                    <td style='text-align:center'>273000968</td>
+                    <td style='text-align:center'>Detran </td>
+                    <td style='text-align:center'>21975517656</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>21 96783-1198</td>
+                    <td style='text-align:center'>21 96783-1198</td>
+                    
+                    <td style='text-align:center'>maria.britto@fiocruz.br</td>
+                    <td style='text-align:center'>mariaversiani@yahoo.com.br</td>
+                    <td style='text-align:center'>Feminino</td>
+                    <td style='text-align:center'>Parda</td>
+                    <td style='text-align:center'>Não</td>
+
+                    <td style='text-align:center'>NATASHA BERENDONK HANDAM</td>
+                    <td style='text-align:center'>13325099750</td>
+                    <td style='text-align:center'>Bolsista Fiotec</td>
+                    <td style='text-align:center'>21982109897</td>
+                    <td style='text-align:center'>(21) 98210-9897</td>
+                    <td style='text-align:center'>(21)982109897</td>
+                    <td style='text-align:center'>(21)982109897</td>
+                    <td style='text-align:center'>maria.britto@fiocruz.br</td>
+                    <td style='text-align:center'>mariaversiani@yahoo.com.br</td> 
+                    <td style='text-align:center'>ENSP</td>
+                    
+
+                    <td style='text-align:center'>ADRIANA SOTERO MARTINS</td>
+                    <td style='text-align:center'>99663040700</td>
+                    <td style='text-align:center'>Pesquisador 40h</td>
+                    <td style='text-align:center'>21 99855-2001</td>
+                    <td style='text-align:center'>21-2502-1983</td>
+                    <td style='text-align:center'>21- 9855-2001</td>
+                    <td style='text-align:center'>21- 9855-2001</td>
+                    <td style='text-align:center'>maria.britto@fiocruz.br</td>
+                    <td style='text-align:center'>mariaversiani@yahoo.com.br</td> 
+                    <td style='text-align:center'>ENSP</td>
+                    
+
+                    <td style='text-align:center'>Condições de saneamento e saúde ambiental e ações educação popular em comunidades na favela de Manguinhos, RJ</td> 
+                    <td style='text-align:center'>Ciências da Saúde</td> 
+                    <td style='text-align:center'>Saúde Coletiva</td> 
+                    <td style='text-align:center'>Não Informado</td> 
+                    <td style='text-align:center'>Não Informado</td> 
+                    <td style='text-align:center'>Avaliação da Percepção dos Moradores da Favela do Manguinhos, RJ, sobre as Condições do Saneamento e Saúde Ambiental do Território</td> 
+
+                    
+                    <td style='text-align:center'>IC MAnguinhos</td>
+                    <td style='text-align:center'>Não desejo participar de cotas afirmativas!</td>
+                    <td style='text-align:center'>Ativo</td>      
+                    <td style='text-align:center'>IC Manguinhos - Nova</td>      
+                    <td style='text-align:center'>Aceito</td>
+                    <td style='text-align:center'>Aceito</td>
+                    <td style='text-align:center'>Obrigatório</td>
+
+                    <td style='text-align:center'>Não Informado</td> 
+                    <td style='text-align:center'>Sim</td> 
+                    <td style='text-align:center'>Nova</td>
+
+                </tr><tr>
+                    <td style='text-align:center'>14462</td>
+                    <td style='text-align:center'>ANA LUCIA NASCIMENTO DA COSTA</td>
+                    <td style='text-align:center'>12657562795</td>
+                    <td style='text-align:center'>RG</td>
+                    <td style='text-align:center'>305076838</td>
+                    <td style='text-align:center'>DETRAN </td>
+                    <td style='text-align:center'>21999323214</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>21999323214</td>
+                    <td style='text-align:center'>21999323214</td>
+                    
+                    <td style='text-align:center'>maria.britto@fiocruz.br</td>
+                    <td style='text-align:center'>mariaversiani@yahoo.com.br</td>
+                    <td style='text-align:center'>Feminino</td>
+                    <td style='text-align:center'>Preta</td>
+                    <td style='text-align:center'>Não</td>
+
+                    <td style='text-align:center'>PABLO DIAS FORTES</td>
+                    <td style='text-align:center'>07293788703</td>
+                    <td style='text-align:center'>Pesquisador 40h</td>
+                    <td style='text-align:center'>21 98639 5419</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>21 98639 5419</td>
+                    <td style='text-align:center'>21 98639 5419</td>
+                    <td style='text-align:center'>maria.britto@fiocruz.br</td>
+                    <td style='text-align:center'>mariaversiani@yahoo.com.br</td> 
+                    <td style='text-align:center'>ENSP</td>
+                    
+
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>Não Informado</td> 
+                    <td style='text-align:center'>Não Informado</td>
+                    
+
+                    <td style='text-align:center'>Parâmetros éticos e bioéticos para a eliminação da  tuberculose como problema de saúde pública no Brasil</td> 
+                    <td style='text-align:center'>Ciências da Saúde</td> 
+                    <td style='text-align:center'>Saúde Coletiva</td> 
+                    <td style='text-align:center'>Sociologia, Antropologia, Filosofia e Saúde, Cultura e Sociedade</td> 
+                    <td style='text-align:center'>22.5. Ética aplicada e bioética, normas e valores na ciência</td> 
+                    <td style='text-align:center'>Balanço crítico da produção bibliográfica relacionada aos parâmetros éticos e bioéticos para a eliminação da TB como problema de saúde pública no Brasil</td> 
+
+                    
+                    <td style='text-align:center'>IC MAnguinhos</td>
+                    <td style='text-align:center'>Pessoas Negras (Pretos/Pardos)</td>
+                    <td style='text-align:center'>Ativo</td>      
+                    <td style='text-align:center'>IC Manguinhos - Nova</td>      
+                    <td style='text-align:center'>Aceito</td>
+                    <td style='text-align:center'>Coorientador Não Informado</td>
+                    <td style='text-align:center'>Opcional</td>
+
+                    <td style='text-align:center'>Não Informado</td> 
+                    <td style='text-align:center'>Sim</td> 
+                    <td style='text-align:center'>Nova</td>
+
+                </tr><tr>
+                    <td style='text-align:center'>14483</td>
+                    <td style='text-align:center'>FABIANA DA SILVA DOS SANTOS</td>
+                    <td style='text-align:center'>17052479702</td>
+                    <td style='text-align:center'>RG</td>
+                    <td style='text-align:center'>298517228</td>
+                    <td style='text-align:center'>Detran</td>
+                    <td style='text-align:center'>21978593325</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>21978593325</td>
+                    <td style='text-align:center'>21978593325</td>
+                    
+                    <td style='text-align:center'>maria.britto@fiocruz.br</td>
+                    <td style='text-align:center'>mariaversiani@yahoo.com.br</td>
+                    <td style='text-align:center'>Feminino</td>
+                    <td style='text-align:center'>Preta</td>
+                    <td style='text-align:center'>Não</td>
+
+                    <td style='text-align:center'>PAULO REDNER</td>
+                    <td style='text-align:center'>04321009707</td>
+                    <td style='text-align:center'>Pesquisador 40h</td>
+                    <td style='text-align:center'>21995388367</td>
+                    <td style='text-align:center'>21995388367</td>
+                    <td style='text-align:center'>21995388367</td>
+                    <td style='text-align:center'>21995388367</td>
+                    <td style='text-align:center'>maria.britto@fiocruz.br</td>
+                    <td style='text-align:center'>mariaversiani@yahoo.com.br</td> 
+                    <td style='text-align:center'>ENSP</td>
+                    
+
+                    <td style='text-align:center'>Fatima Cristina O. Fandinho Montes</td>
+                    <td style='text-align:center'>87507668720</td>
+                    <td style='text-align:center'>Externo</td>
+                    <td style='text-align:center'>(21) 2448-6834</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>(21)993740099</td>
+                    <td style='text-align:center'>(21)993740099</td>
+                    <td style='text-align:center'>maria.britto@fiocruz.br</td>
+                    <td style='text-align:center'>mariaversiani@yahoo.com.br</td> 
+                    <td style='text-align:center'>ENSP</td>
+                    
+
+                    <td style='text-align:center'>Avaliação do do teste molecular Xpert MTB/XDR na detecção rápida de tuberculose resistente. Um estudo multicêntrico em quatro capitais brasileiras.</td> 
+                    <td style='text-align:center'>Ciências Biológicas</td> 
+                    <td style='text-align:center'>Microbiologia</td> 
+                    <td style='text-align:center'>Pesquisa e Desenvolvimento de Diagnósticos</td> 
+                    <td style='text-align:center'>27.6. Pesquisa, Desenvolvimento de novas tecnologias para diagnósticos rápidos, miniaturizados, automação, moleculares, biossensores, nanotecnologias para diagnóstico</td> 
+                    <td style='text-align:center'>Avaliação do teste molecular Xpert MTB/XDR na detecção rápida de tuberculose resistente.</td> 
+
+                    
+                    <td style='text-align:center'>IC MAnguinhos</td>
+                    <td style='text-align:center'>Pessoas Negras (Pretos/Pardos)</td>
+                    <td style='text-align:center'>Ativo</td>      
+                    <td style='text-align:center'>IC Manguinhos - Nova</td>      
+                    <td style='text-align:center'>Aceito</td>
+                    <td style='text-align:center'>Aceito</td>
+                    <td style='text-align:center'>Opcional</td>
+
+                    <td style='text-align:center'>Não Informado</td> 
+                    <td style='text-align:center'>Sim</td> 
+                    <td style='text-align:center'>Nova</td>
+
+                </tr><tr>
+                    <td style='text-align:center'>14423</td>
+                    <td style='text-align:center'>BRENO RODRIGO CARNEIRO DE FREITAS</td>
+                    <td style='text-align:center'>18363935719</td>
+                    <td style='text-align:center'>RG</td>
+                    <td style='text-align:center'>298348277</td>
+                    <td style='text-align:center'>DETRAN</td>
+                    <td style='text-align:center'>2138603768</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>21967034879</td>
+                    <td style='text-align:center'>21967034879</td>
+                    
+                    <td style='text-align:center'>maria.britto@fiocruz.br</td>
+                    <td style='text-align:center'>mariaversiani@yahoo.com.br</td>
+                    <td style='text-align:center'>Masculinos</td>
+                    <td style='text-align:center'>Preta</td>
+                    <td style='text-align:center'>Não</td>
+
+                    <td style='text-align:center'>PAULO RUBENS GUIMARAES BARROCAS</td>
+                    <td style='text-align:center'>00893701718</td>
+                    <td style='text-align:center'>Pesquisador 40h</td>
+                    <td style='text-align:center'>(25) 9825-74</td>
+                    <td style='text-align:center'>21-2463-3947</td>
+                    <td style='text-align:center'>21-971295892</td>
+                    <td style='text-align:center'>21-971295892</td>
+                    <td style='text-align:center'>maria.britto@fiocruz.br</td>
+                    <td style='text-align:center'>mariaversiani@yahoo.com.br</td> 
+                    <td style='text-align:center'>ENSP</td>
+                    
+
+                    <td style='text-align:center'>ANA CAROLINA CHAVES FORTES</td>
+                    <td style='text-align:center'>01891177370</td>
+                    <td style='text-align:center'>Pesquisador Visitante</td>
+                    <td style='text-align:center'>21980843432</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>21980843432</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>maria.britto@fiocruz.br</td>
+                    <td style='text-align:center'>mariaversiani@yahoo.com.br</td> 
+                    <td style='text-align:center'>ENSP</td>
+                    
+
+                    <td style='text-align:center'>AVALIAÇÃO DA EFETIVIDADE DOS PRESTADORES DE SERVIÇO DE ABASTECIMENTO DE ÁGUA PARA CONSUMO HUMANO NO BRASIL</td> 
+                    <td style='text-align:center'>Ciências da Saúde</td> 
+                    <td style='text-align:center'>Saúde Coletiva</td> 
+                    <td style='text-align:center'>Ambiente, Ecologia e Saúde</td> 
+                    <td style='text-align:center'>14.5. Saneamento e saúde ambiental, inclusive infantil</td> 
+                    <td style='text-align:center'>Monitoramento da evolução do acesso aos serviços de saneamento no Brasil para o cumprimento do ODS 6 e seus impactos na saúde</td> 
+
+                    
+                    <td style='text-align:center'>IC MAnguinhos</td>
+                    <td style='text-align:center'>Pessoas Negras (Pretos/Pardos)</td>
+                    <td style='text-align:center'>Ativo</td>      
+                    <td style='text-align:center'>IC Manguinhos - Nova</td>      
+                    <td style='text-align:center'>Aceito</td>
+                    <td style='text-align:center'>Aceito</td>
+                    <td style='text-align:center'>Opcional</td>
+
+                    <td style='text-align:center'>Não Informado</td> 
+                    <td style='text-align:center'>Sim</td> 
+                    <td style='text-align:center'>Nova</td>
+
+                </tr><tr>
+                    <td style='text-align:center'>14459</td>
+                    <td style='text-align:center'>JOAO MARCOS CARDOZO DOS SANTOS</td>
+                    <td style='text-align:center'>19036670705</td>
+                    <td style='text-align:center'>RG</td>
+                    <td style='text-align:center'>313361164</td>
+                    <td style='text-align:center'>DETRAN </td>
+                    <td style='text-align:center'>21 3420-0418</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>21 990583286</td>
+                    <td style='text-align:center'>21 990583286</td>
+                    
+                    <td style='text-align:center'>maria.britto@fiocruz.br</td>
+                    <td style='text-align:center'>mariaversiani@yahoo.com.br</td>
+                    <td style='text-align:center'>Masculinos</td>
+                    <td style='text-align:center'>Parda</td>
+                    <td style='text-align:center'>Não</td>
+
+                    <td style='text-align:center'>PAULO VICTOR DE SOUSA VIANA</td>
+                    <td style='text-align:center'>90880145234</td>
+                    <td style='text-align:center'>Pesquisador 40h</td>
+                    <td style='text-align:center'>21969016521</td>
+                    <td style='text-align:center'>21969016521</td>
+                    <td style='text-align:center'>21969016521</td>
+                    <td style='text-align:center'>21969016521</td>
+                    <td style='text-align:center'>maria.britto@fiocruz.br</td>
+                    <td style='text-align:center'>mariaversiani@yahoo.com.br</td> 
+                    <td style='text-align:center'>ENSP</td>
+                    
+
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>Não Informado</td> 
+                    <td style='text-align:center'>Não Informado</td>
+                    
+
+                    <td style='text-align:center'>Perfil clínico-epidemiológico dos casos e óbitos por tuberculose no município do Rio de Janeiro no período de 2015 a 2022</td> 
+                    <td style='text-align:center'>Ciências da Saúde</td> 
+                    <td style='text-align:center'>Saúde Coletiva</td> 
+                    <td style='text-align:center'>Epidemiologia, métodos estatísticos e quantitativos</td> 
+                    <td style='text-align:center'>15.5. Epidemiologia de doenças transmissíveis</td> 
+                    <td style='text-align:center'>Distribuição geográfica e perfil da mortalidade por tuberculose no Rio de Janeiro (2014-2022)</td> 
+
+                    
+                    <td style='text-align:center'>IC MAnguinhos</td>
+                    <td style='text-align:center'>Não desejo participar de cotas afirmativas!</td>
+                    <td style='text-align:center'>Ativo</td>      
+                    <td style='text-align:center'>IC Manguinhos - Nova</td>      
+                    <td style='text-align:center'>Aceito</td>
+                    <td style='text-align:center'>Coorientador Não Informado</td>
+                    <td style='text-align:center'>Opcional</td>
+
+                    <td style='text-align:center'>Não Informado</td> 
+                    <td style='text-align:center'>Sim</td> 
+                    <td style='text-align:center'>Nova</td>
+
+                </tr><tr>
+                    <td style='text-align:center'>14511</td>
+                    <td style='text-align:center'>ERICK SMITH DA SILVA PEREIRA</td>
+                    <td style='text-align:center'>19995712741</td>
+                    <td style='text-align:center'>RG</td>
+                    <td style='text-align:center'>300939840</td>
+                    <td style='text-align:center'>DETRAN</td>
+                    <td style='text-align:center'>21974939105</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>21974939105</td>
+                    <td style='text-align:center'>21974939105</td>
+                    
+                    <td style='text-align:center'>maria.britto@fiocruz.br</td>
+                    <td style='text-align:center'>mariaversiani@yahoo.com.br</td>
+                    <td style='text-align:center'>Masculinos</td>
+                    <td style='text-align:center'>Preta</td>
+                    <td style='text-align:center'>Não</td>
+
+                    <td style='text-align:center'>Raphael Mendonça Guimarães</td>
+                    <td style='text-align:center'>05346854711</td>
+                    <td style='text-align:center'>Pesquisador 40h</td>
+                    <td style='text-align:center'>(21) 3865-9700</td>
+                    <td style='text-align:center'>2135461447</td>
+                    <td style='text-align:center'>995859859</td>
+                    <td style='text-align:center'>995859859</td>
+                    <td style='text-align:center'>maria.britto@fiocruz.br</td>
+                    <td style='text-align:center'>mariaversiani@yahoo.com.br</td> 
+                    <td style='text-align:center'>ENSP</td>
+                    
+
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>Não Informado</td> 
+                    <td style='text-align:center'>Não Informado</td>
+                    
+
+                    <td style='text-align:center'>DETERMINANTES OBSTÉTRICOS, SOCIOECONÔMICOS E ASSISTENCIAIS DO EXCESSO DE CESÁREAS NO BRASIL</td> 
+                    <td style='text-align:center'>Ciências da Saúde</td> 
+                    <td style='text-align:center'>Saúde Coletiva</td> 
+                    <td style='text-align:center'>Saúde Perinatal, da Criança e do Adolescente</td> 
+                    <td style='text-align:center'>13.13. Estudos sobre morbi-mortalidade materna, infantil, determinantes sociais, educação em saúde e saúde escolar</td> 
+                    <td style='text-align:center'>OCORRÊNCIA DE CESÁREAS SEGUNDO A CLASSIFICAÇÃO DE ROBSON NO BRASIL, 2014-2023</td> 
+
+                    
+                    <td style='text-align:center'>IC MAnguinhos</td>
+                    <td style='text-align:center'>Pessoas Negras (Pretos/Pardos)</td>
+                    <td style='text-align:center'>Ativo</td>      
+                    <td style='text-align:center'>IC Manguinhos - Nova</td>      
+                    <td style='text-align:center'>Aceito</td>
+                    <td style='text-align:center'>Coorientador Não Informado</td>
+                    <td style='text-align:center'>Opcional</td>
+
+                    <td style='text-align:center'>Não Informado</td> 
+                    <td style='text-align:center'>Sim</td> 
+                    <td style='text-align:center'>Nova</td>
+
+                </tr><tr>
+                    <td style='text-align:center'>14450</td>
+                    <td style='text-align:center'>JAQUELINE BALBINO RIBEIRO NETTO</td>
+                    <td style='text-align:center'>13362323740</td>
+                    <td style='text-align:center'>RG</td>
+                    <td style='text-align:center'>248964447</td>
+                    <td style='text-align:center'>detran</td>
+                    <td style='text-align:center'>99999999999999999999</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>21982424391</td>
+                    <td style='text-align:center'>21982424391</td>
+                    
+                    <td style='text-align:center'>maria.britto@fiocruz.br</td>
+                    <td style='text-align:center'>mariaversiani@yahoo.com.br</td>
+                    <td style='text-align:center'>Feminino</td>
+                    <td style='text-align:center'>Parda</td>
+                    <td style='text-align:center'>Não</td>
+
+                    <td style='text-align:center'>RENATO MARCULLO BORGES</td>
+                    <td style='text-align:center'>08325813725</td>
+                    <td style='text-align:center'>Pesquisador 40h</td>
+                    <td style='text-align:center'>2125982983</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>21983029326</td>
+                    <td style='text-align:center'>21983029326</td>
+                    <td style='text-align:center'>maria.britto@fiocruz.br</td>
+                    <td style='text-align:center'>mariaversiani@yahoo.com.br</td> 
+                    <td style='text-align:center'>ENSP</td>
+                    
+
+                    <td style='text-align:center'>MARIA DE FATIMA RAMOS MOREIRA</td>
+                    <td style='text-align:center'>45269203715</td>
+                    <td style='text-align:center'>Pesquisador 40h</td>
+                    <td style='text-align:center'>21-36206701</td>
+                    <td style='text-align:center'>21-2598-2434</td>
+                    <td style='text-align:center'>21-999846515</td>
+                    <td style='text-align:center'>21-999846515</td>
+                    <td style='text-align:center'>maria.britto@fiocruz.br</td>
+                    <td style='text-align:center'>mariaversiani@yahoo.com.br</td> 
+                    <td style='text-align:center'>ENSP</td>
+                    
+
+                    <td style='text-align:center'>AVALIAÇÃO DA EXPOSIÇÃO À METAIS EM AMBIENTES INTERNOS NOS MUNICÍPIOS DA REGIÃO METROPOLITANA DO RIO DE JANEIRO UTILIZANDO A POEIRA DOMÉSTICA COMO INDICADOR DE CONTAMINAÇÃO DO AR</td> 
+                    <td style='text-align:center'>Ciências Exatas e da Terra</td> 
+                    <td style='text-align:center'>Química</td> 
+                    <td style='text-align:center'>Vigilância em Saúde</td> 
+                    <td style='text-align:center'>16.4. Toxicologia e saúde, avaliação de contaminantes, poluentes e resíduos, e seus impactos sobre a saúde da população</td> 
+                    <td style='text-align:center'>AVALIAÇÃO DA CONCENTRAÇÃO DE METAIS NO AR ATRAVÉS DA POEIRA DOMÉSTICA NOS MUNÍCÍPIOS DA REGIÃO METROLPOLITANA DO RIO DE JANEIRO</td> 
+
+                    
+                    <td style='text-align:center'>IC MAnguinhos</td>
+                    <td style='text-align:center'>Não desejo participar de cotas afirmativas!</td>
+                    <td style='text-align:center'>Ativo</td>      
+                    <td style='text-align:center'>IC Manguinhos - Nova</td>      
+                    <td style='text-align:center'>Aceito</td>
+                    <td style='text-align:center'>Pendente</td>
+                    <td style='text-align:center'>Opcional</td>
+
+                    <td style='text-align:center'>Não Informado</td> 
+                    <td style='text-align:center'>Sim</td> 
+                    <td style='text-align:center'>Nova</td>
+
+                </tr><tr>
+                    <td style='text-align:center'>14473</td>
+                    <td style='text-align:center'>IARA DOS SANTOS SOUZA</td>
+                    <td style='text-align:center'>16899487799</td>
+                    <td style='text-align:center'>RG</td>
+                    <td style='text-align:center'>297262669</td>
+                    <td style='text-align:center'>DETRAN</td>
+                    <td style='text-align:center'>21992748141</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>21992748141</td>
+                    <td style='text-align:center'>21992748141</td>
+                    
+                    <td style='text-align:center'>maria.britto@fiocruz.br</td>
+                    <td style='text-align:center'>mariaversiani@yahoo.com.br</td>
+                    <td style='text-align:center'>Feminino</td>
+                    <td style='text-align:center'>Branca</td>
+                    <td style='text-align:center'>Não</td>
+
+                    <td style='text-align:center'>RITA DE CASSIA OLIVEIRA DA COSTA MATTOS</td>
+                    <td style='text-align:center'>61294314734</td>
+                    <td style='text-align:center'>Pesquisador 40h</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>21-2541-8471</td>
+                    <td style='text-align:center'>21-9988-5036</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>maria.britto@fiocruz.br</td>
+                    <td style='text-align:center'>mariaversiani@yahoo.com.br</td> 
+                    <td style='text-align:center'>ENSP</td>
+                    
+
+                    <td style='text-align:center'>LEANDRO VARGAS BARRETO DE CARVALHO</td>
+                    <td style='text-align:center'>09440838701</td>
+                    <td style='text-align:center'>Pesquisador 40h</td>
+                    <td style='text-align:center'>21993057749</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>21993057749</td>
+                    <td style='text-align:center'>21993057749</td>
+                    <td style='text-align:center'>maria.britto@fiocruz.br</td>
+                    <td style='text-align:center'>mariaversiani@yahoo.com.br</td> 
+                    <td style='text-align:center'>ENSP</td>
+                    
+
+                    <td style='text-align:center'> Estudo de coorte sobre morbimortalidade relacionada à condição pós-COVID-19 em trabalhadores Offshore</td> 
+                    <td style='text-align:center'>Ciências da Saúde</td> 
+                    <td style='text-align:center'>Saúde Coletiva</td> 
+                    <td style='text-align:center'>Vigilância em Saúde</td> 
+                    <td style='text-align:center'>16.4. Toxicologia e saúde, avaliação de contaminantes, poluentes e resíduos, e seus impactos sobre a saúde da população</td> 
+                    <td style='text-align:center'>AVALIAÇÃO DOS NÍVEIS DE ESTRESSE OXIDATIVO EM TRABALHADORES EXPOSTOS A BTEX EM PLATAFORMAS DE EXPLORAÇÃO DE PETRÓLEO </td> 
+
+                    
+                    <td style='text-align:center'>IC MAnguinhos</td>
+                    <td style='text-align:center'>Não desejo participar de cotas afirmativas!</td>
+                    <td style='text-align:center'>Ativo</td>      
+                    <td style='text-align:center'>IC Manguinhos - Nova</td>      
+                    <td style='text-align:center'>Aceito</td>
+                    <td style='text-align:center'>Aceito</td>
+                    <td style='text-align:center'>Opcional</td>
+
+                    <td style='text-align:center'>Não Informado</td> 
+                    <td style='text-align:center'>Sim</td> 
+                    <td style='text-align:center'>Nova</td>
+
+                </tr><tr>
+                    <td style='text-align:center'>14515</td>
+                    <td style='text-align:center'>PRISCILA VIANNA RAMOS</td>
+                    <td style='text-align:center'>52892032814</td>
+                    <td style='text-align:center'>RG</td>
+                    <td style='text-align:center'>357394477</td>
+                    <td style='text-align:center'>Detran </td>
+                    <td style='text-align:center'>21973708052</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>21973708052</td>
+                    <td style='text-align:center'>21973708052</td>
+                    
+                    <td style='text-align:center'>maria.britto@fiocruz.br</td>
+                    <td style='text-align:center'>mariaversiani@yahoo.com.br</td>
+                    <td style='text-align:center'>Feminino</td>
+                    <td style='text-align:center'>Preta</td>
+                    <td style='text-align:center'>Não</td>
+
+                    <td style='text-align:center'>Roberta Gondim de Oliveira</td>
+                    <td style='text-align:center'>16660234268</td>
+                    <td style='text-align:center'>Pesquisador 40h</td>
+                    <td style='text-align:center'>25982602</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>982858598</td>
+                    <td style='text-align:center'>982858598</td>
+                    <td style='text-align:center'>maria.britto@fiocruz.br</td>
+                    <td style='text-align:center'>mariaversiani@yahoo.com.br</td> 
+                    <td style='text-align:center'>ENSP</td>
+                    
+
+                    <td style='text-align:center'>ANA CLAUDIA BARBOSA</td>
+                    <td style='text-align:center'>00447238736</td>
+                    <td style='text-align:center'>Externo</td>
+                    <td style='text-align:center'>21992685270</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>21992685270</td>
+                    <td style='text-align:center'>21992685270</td>
+                    <td style='text-align:center'>maria.britto@fiocruz.br</td>
+                    <td style='text-align:center'>mariaversiani@yahoo.com.br</td> 
+                    <td style='text-align:center'>Não Informado</td>
+                    
+
+                    <td style='text-align:center'>Nas trilhas das vulnerabilizações e desigualdades: mulheres negras e os enredos de precarização em espaços de exclusão - uma perspectiva interseccional do feminismo negro decolonial</td> 
+                    <td style='text-align:center'>Ciências da Saúde</td> 
+                    <td style='text-align:center'>Saúde Coletiva</td> 
+                    <td style='text-align:center'>Sociologia, Antropologia, Filosofia e Saúde, Cultura e Sociedade</td> 
+                    <td style='text-align:center'>22.3. Saúde e reprodução de desigualdades sociais</td> 
+                    <td style='text-align:center'>Formação Técnico-Política: Saúde das Mulheres Negras e o Racismo como Determinação Social da Saúde</td> 
+
+                    
+                    <td style='text-align:center'>IC MAnguinhos</td>
+                    <td style='text-align:center'>Pessoas Negras (Pretos/Pardos)</td>
+                    <td style='text-align:center'>Ativo</td>      
+                    <td style='text-align:center'>IC Manguinhos - Nova</td>      
+                    <td style='text-align:center'>Aceito</td>
+                    <td style='text-align:center'>Aceito</td>
+                    <td style='text-align:center'>Opcional</td>
+
+                    <td style='text-align:center'>Não Informado</td> 
+                    <td style='text-align:center'>Sim</td> 
+                    <td style='text-align:center'>Nova</td>
+
+                </tr><tr>
+                    <td style='text-align:center'>14519</td>
+                    <td style='text-align:center'>STEFANE RIBEIRO REIS ADRIANO</td>
+                    <td style='text-align:center'>17212481700</td>
+                    <td style='text-align:center'>RG</td>
+                    <td style='text-align:center'>30.469.361-7</td>
+                    <td style='text-align:center'>DETRAN </td>
+                    <td style='text-align:center'>21992899854</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>21992899854</td>
+                    <td style='text-align:center'>21992899854</td>
+                    
+                    <td style='text-align:center'>maria.britto@fiocruz.br</td>
+                    <td style='text-align:center'>mariaversiani@yahoo.com.br</td>
+                    <td style='text-align:center'>Feminino</td>
+                    <td style='text-align:center'>Preta</td>
+                    <td style='text-align:center'>Não</td>
+
+                    <td style='text-align:center'>RONDINELI MENDES DA SILVA</td>
+                    <td style='text-align:center'>03260566708</td>
+                    <td style='text-align:center'>Pesquisador 40h</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>21981063925</td>
+                    <td style='text-align:center'>21981063925</td>
+                    <td style='text-align:center'>maria.britto@fiocruz.br</td>
+                    <td style='text-align:center'>mariaversiani@yahoo.com.br</td> 
+                    <td style='text-align:center'>ENSP</td>
+                    
+
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>Não Informado</td> 
+                    <td style='text-align:center'>Não Informado</td>
+                    
+
+                    <td style='text-align:center'>Microcusteio do diagnóstico genômico para Erros Inatos da Imunidade: uma revisão de literatura </td> 
+                    <td style='text-align:center'>Ciências da Saúde</td> 
+                    <td style='text-align:center'>Saúde Coletiva</td> 
+                    <td style='text-align:center'>Não Informado</td> 
+                    <td style='text-align:center'>Não Informado</td> 
+                    <td style='text-align:center'>Delineamento para execução do Microcusteio do diagnóstico genômico para Erros Inatos da Imunidade </td> 
+
+                    
+                    <td style='text-align:center'>IC MAnguinhos</td>
+                    <td style='text-align:center'>Pessoas Negras (Pretos/Pardos)</td>
+                    <td style='text-align:center'>Ativo</td>      
+                    <td style='text-align:center'>IC Manguinhos - Nova</td>      
+                    <td style='text-align:center'>Aceito</td>
+                    <td style='text-align:center'>Coorientador Não Informado</td>
+                    <td style='text-align:center'>Opcional</td>
+
+                    <td style='text-align:center'>Não Informado</td> 
+                    <td style='text-align:center'>Sim</td> 
+                    <td style='text-align:center'>Nova</td>
+
+                </tr><tr>
+                    <td style='text-align:center'>14419</td>
+                    <td style='text-align:center'>DIEGO GOMES VIEIRA</td>
+                    <td style='text-align:center'>15790135706</td>
+                    <td style='text-align:center'>RG</td>
+                    <td style='text-align:center'>258527092</td>
+                    <td style='text-align:center'>DETRAN </td>
+                    <td style='text-align:center'>Não possuo </td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>21981077682</td>
+                    <td style='text-align:center'>21981077682</td>
+                    
+                    <td style='text-align:center'>maria.britto@fiocruz.br</td>
+                    <td style='text-align:center'>mariaversiani@yahoo.com.br</td>
+                    <td style='text-align:center'>Masculinos</td>
+                    <td style='text-align:center'>Preta</td>
+                    <td style='text-align:center'>Não</td>
+
+                    <td style='text-align:center'>VANIA REIS GIRIANELLI</td>
+                    <td style='text-align:center'>96720735772</td>
+                    <td style='text-align:center'>Pesquisador 40h</td>
+                    <td style='text-align:center'>(21) 964234381</td>
+                    <td style='text-align:center'>(21) 964234381</td>
+                    <td style='text-align:center'>(21) 964234381</td>
+                    <td style='text-align:center'>(21) 964234381</td>
+                    <td style='text-align:center'>maria.britto@fiocruz.br</td>
+                    <td style='text-align:center'>mariaversiani@yahoo.com.br</td> 
+                    <td style='text-align:center'>ENSP</td>
+                    
+
+                    <td style='text-align:center'>ALDILENE ABREU DE AZEVEDO</td>
+                    <td style='text-align:center'>04134776732</td>
+                    <td style='text-align:center'>Não informado</td>
+                    <td style='text-align:center'>(21)999201001</td>
+                    <td style='text-align:center'>(21)999201001</td>
+                    <td style='text-align:center'>(21)999201001</td>
+                    <td style='text-align:center'>(21)999201001</td>
+                    <td style='text-align:center'>maria.britto@fiocruz.br</td>
+                    <td style='text-align:center'>mariaversiani@yahoo.com.br</td> 
+                    <td style='text-align:center'>ENSP</td>
+                    
+
+                    <td style='text-align:center'>Trabalho escravo contemporâneo: apreciação dos processos judiciais e notificações de violência interpessoal nos estados brasileiros</td> 
+                    <td style='text-align:center'>Ciências da Saúde</td> 
+                    <td style='text-align:center'>Saúde Coletiva</td> 
+                    <td style='text-align:center'>Políticas Públicas, Planejamento e Gestão em saúde</td> 
+                    <td style='text-align:center'>17.13. Direito, saúde e cidadania</td> 
+                    <td style='text-align:center'>Acurácia dos descritores para identificação dos processos judiciais sobre trabalho escravo contemporâneo impetrados nos estados brasileiros no período de 2011 a 2023</td> 
+
+                    
+                    <td style='text-align:center'>IC MAnguinhos</td>
+                    <td style='text-align:center'>Pessoas Negras (Pretos/Pardos)</td>
+                    <td style='text-align:center'>Ativo</td>      
+                    <td style='text-align:center'>IC Manguinhos - Nova</td>      
+                    <td style='text-align:center'>Aceito</td>
+                    <td style='text-align:center'>Aceito</td>
+                    <td style='text-align:center'>Opcional</td>
+
+                    <td style='text-align:center'>Não Informado</td> 
+                    <td style='text-align:center'>Sim</td> 
+                    <td style='text-align:center'>Nova</td>
+
+                </tr><tr>
+                    <td style='text-align:center'>14465</td>
+                    <td style='text-align:center'>RAIANE DE SOUZA AUGUSTO REINA</td>
+                    <td style='text-align:center'>14815697752</td>
+                    <td style='text-align:center'>RG</td>
+                    <td style='text-align:center'>321161903</td>
+                    <td style='text-align:center'>DETRAN RJ</td>
+                    <td style='text-align:center'>21964242912</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>21964242912</td>
+                    <td style='text-align:center'>21964242912</td>
+                    
+                    <td style='text-align:center'>maria.britto@fiocruz.br</td>
+                    <td style='text-align:center'>mariaversiani@yahoo.com.br</td>
+                    <td style='text-align:center'>Feminino</td>
+                    <td style='text-align:center'>Branca</td>
+                    <td style='text-align:center'>Não</td>
+
+                    <td style='text-align:center'>Vera Lucia Marques da Silva</td>
+                    <td style='text-align:center'>01158629788</td>
+                    <td style='text-align:center'>Pesquisador 40h</td>
+                    <td style='text-align:center'>21991684242</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>21-99168-4242</td>
+                    <td style='text-align:center'>21-99168-4242</td>
+                    <td style='text-align:center'>maria.britto@fiocruz.br</td>
+                    <td style='text-align:center'>mariaversiani@yahoo.com.br</td> 
+                    <td style='text-align:center'>ENSP</td>
+                    
+
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>Não Informado</td>
+                    <td style='text-align:center'>Não Informado</td> 
+                    <td style='text-align:center'>Não Informado</td>
+                    
+
+                    <td style='text-align:center'>VIOLÊNCIA POLÍTICA DE GÊNERO, DISCURSOS DE ÓDIO E DESINFORMAÇÃO EM INTERFACE COM A SAÚDE </td> 
+                    <td style='text-align:center'>Outros</td> 
+                    <td style='text-align:center'>Ciências Sociais</td> 
+                    <td style='text-align:center'>Saúde e Gênero, Saúde do Idoso</td> 
+                    <td style='text-align:center'>12.1.   Gênero e saúde, sexualidade e saúde reprodutiva</td> 
+                    <td style='text-align:center'>Estratégias latino-americanas de enfrentamento à violência política de gênero</td> 
+
+                    
+                    <td style='text-align:center'>IC MAnguinhos</td>
+                    <td style='text-align:center'>Não desejo participar de cotas afirmativas!</td>
+                    <td style='text-align:center'>Ativo</td>      
+                    <td style='text-align:center'>IC Manguinhos - Nova</td>      
+                    <td style='text-align:center'>Aceito</td>
+                    <td style='text-align:center'>Coorientador Não Informado</td>
+                    <td style='text-align:center'>Opcional</td>
+
+                    <td style='text-align:center'>Não Informado</td> 
+                    <td style='text-align:center'>Sim</td> 
+                    <td style='text-align:center'>Nova</td>
+
+                </tr></table>

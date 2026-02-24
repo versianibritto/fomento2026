@@ -1,0 +1,687 @@
+<?php
+$naoInformado = '<span class="badge border border-danger text-danger bg-transparent fw-normal">Nao informado</span>';
+$filhosMap = [
+    '0' => 'Nao possui filhos, ou sao maiores de 5 anos',
+    '1' => 'Possui um filho menor de 5 anos',
+    '2' => 'Possui mais de um filho menor de 5 anos',
+];
+$origemAtual = strtoupper((string)($origemAtual ?? ($inscricao->origem ?? '')));
+$ehYoda = !empty($this->request->getAttribute('identity')['yoda']);
+$isRenovacao = $origemAtual === 'R';
+$mostrarReferenciaAnterior = in_array($origemAtual, ['R', 'S', 'A'], true);
+$referenciaAnteriorValor = null;
+if ($origemAtual === 'R') {
+    $referenciaAnteriorValor = $inscricao->referencia_inscricao_anterior ?? null;
+} elseif (in_array($origemAtual, ['S', 'A'], true)) {
+    $referenciaAnteriorValor = $inscricao->bolsista_anterior ?? null;
+}
+$referenciaAnteriorId = (is_numeric((string)$referenciaAnteriorValor) && (int)$referenciaAnteriorValor > 0)
+    ? (int)$referenciaAnteriorValor
+    : null;
+$dataInicioTexto = null;
+$dataFimTexto = null;
+$temDataInicio = !empty($inscricao->data_inicio);
+$temDataFim = !empty($inscricao->data_fim);
+if (!$temDataInicio && !$temDataFim) {
+    $dataInicioTexto = 'Nao implantado';
+    $dataFimTexto = 'Nao implantado';
+} elseif ($temDataInicio && !$temDataFim) {
+    if ($inscricao->data_inicio instanceof \Cake\I18n\FrozenTime) {
+        $dataInicioTexto = $inscricao->data_inicio->i18nFormat('dd/MM/yyyy');
+    } else {
+        $tsInicio = strtotime((string)$inscricao->data_inicio);
+        $dataInicioTexto = $tsInicio ? date('d/m/Y', $tsInicio) : 'Nao informado';
+    }
+    $dataFimTexto = ((int)($inscricao->vigente ?? 0) === 1) ? 'Ainda vigente' : 'Encerrada';
+} else {
+    if ($inscricao->data_inicio instanceof \Cake\I18n\FrozenTime) {
+        $dataInicioTexto = $inscricao->data_inicio->i18nFormat('dd/MM/yyyy');
+    } else {
+        $tsInicio = strtotime((string)$inscricao->data_inicio);
+        $dataInicioTexto = $tsInicio ? date('d/m/Y', $tsInicio) : 'Nao informado';
+    }
+    if ($inscricao->data_fim instanceof \Cake\I18n\FrozenTime) {
+        $dataFimTexto = $inscricao->data_fim->i18nFormat('dd/MM/yyyy');
+    } else {
+        $tsFim = strtotime((string)$inscricao->data_fim);
+        $dataFimTexto = $tsFim ? date('d/m/Y', $tsFim) : 'Nao informado';
+    }
+}
+?>
+<style>
+    .nav-pills.tabs-visualizacao {
+        gap: 0.5rem;
+        border-bottom: 1px solid #e9ecef;
+        padding-bottom: 0.75rem;
+        margin-bottom: 1rem;
+    }
+    .nav-pills.tabs-visualizacao .nav-link {
+        border: 1px solid #d7dde4;
+        border-radius: 999px;
+        color: #344054;
+        background: #f3f5f7;
+        font-weight: 600;
+        padding: 0.45rem 0.9rem;
+        transition: all 0.15s ease-in-out;
+    }
+    .nav-pills.tabs-visualizacao .nav-link:hover {
+        border-color: #9aa4b2;
+        color: #1f2937;
+        background: #e9edf2;
+    }
+    .nav-pills.tabs-visualizacao .nav-link.active {
+        color: #fff;
+        background: #0b5ed7;
+        border-color: #0b5ed7;
+        box-shadow: 0 1px 4px rgba(11, 94, 215, 0.22);
+    }
+    .resumo-principal {
+        line-height: 1.45;
+    }
+    .resumo-principal > div {
+        margin-bottom: 0.2rem;
+    }
+    .resumo-principal strong {
+        color: #344054;
+        font-weight: 600;
+    }
+    .anexos-lista {
+        list-style: none;
+        padding-left: 0;
+        margin-bottom: 0;
+    }
+    .anexos-lista li {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        border: 1px solid #e9ecef;
+        border-radius: 0.5rem;
+        background: #fff;
+        padding: 0.45rem 0.6rem;
+        margin-bottom: 0.4rem;
+    }
+    .anexos-lista li:last-child {
+        margin-bottom: 0;
+    }
+    .anexos-lista .anexo-titulo {
+        min-width: 0;
+    }
+    .anexos-lista .anexo-tipo {
+        display: block;
+        color: #495057;
+    }
+    .anexos-lista .anexo-arquivo {
+        display: block;
+        color: #6c757d;
+        font-size: 0.8rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .historico-lista {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+    .historico-item {
+        border: 1px solid #e9ecef;
+        border-radius: 0.5rem;
+        background: #fff;
+        padding: 0.75rem;
+    }
+    .historico-item .meta {
+        color: #6c757d;
+        font-size: 0.85rem;
+        margin-bottom: 0.35rem;
+    }
+</style>
+<div class="container mt-4">
+    <h4 class="mb-2">
+        Visualizacao da <?= $isRenovacao ? 'Renovacao' : 'Inscricao' ?> #<?= (int)$inscricao->id ?>
+        <?php if ((int)($inscricao->deleted ?? 0) === 1): ?>
+            <span class="badge bg-danger ms-2">Deletado</span>
+        <?php endif; ?>
+    </h4>
+    <?php
+        $faseAtual = (int)($inscricao->fase_id ?? 0);
+        $controllerFluxo = (string)($controllerFluxo ?? ($isRenovacao ? 'Renovacoes' : 'Inscricoes'));
+        $identityTela = $this->request->getAttribute('identity');
+        $ehTIVisualizacao = !empty($identityTela->yoda) || !empty($identityTela->jedi);
+    ?>
+    <div class="d-flex flex-wrap gap-2 mb-3">
+        <?php if (in_array($faseAtual, [1, 3], true)): ?>
+            <?= $this->Html->link('Editar', [
+                'controller' => $controllerFluxo,
+                'action' => 'direcionarAcao',
+                (int)$edital->id,
+                (int)$inscricao->id,
+                'E',
+            ], ['class' => 'btn btn-sm btn-outline-secondary']) ?>
+            <?= $this->Html->link('Termo', [
+                'controller' => $controllerFluxo,
+                'action' => 'direcionarAcao',
+                (int)$edital->id,
+                (int)$inscricao->id,
+                'T',
+            ], ['class' => 'btn btn-sm btn-outline-secondary']) ?>
+        <?php endif; ?>
+
+        <?php if (in_array($faseAtual, [5], true)): ?>
+            <?= $this->Html->link('Finalizar', [
+                'controller' => $controllerFluxo,
+                'action' => 'direcionarAcao',
+                (int)$edital->id,
+                (int)$inscricao->id,
+                'F',
+            ], ['class' => 'btn btn-sm btn-outline-secondary']) ?>
+        <?php endif; ?>
+
+        <?php if (in_array($faseAtual, [11, 18, 19], true)): ?>
+            <?= $this->Html->link('Cancelar', [
+                'controller' => 'Padrao',
+                'action' => 'cancelar',
+                (int)$inscricao->id,
+            ], ['class' => 'btn btn-sm btn-outline-secondary']) ?>
+        <?php endif; ?>
+
+        <?php if (in_array($faseAtual, [11, 22, 16], true)): ?>
+            <?= $this->Html->link('Substituir', [
+                'controller' => 'Padrao',
+                'action' => 'substituir',
+                (int)$inscricao->id,
+            ], ['class' => 'btn btn-sm btn-outline-secondary']) ?>
+        <?php endif; ?>
+
+        <?php if ($ehTIVisualizacao && in_array($faseAtual, [14], true)): ?>
+            <?= $this->Html->link('Reativar', [
+                'controller' => 'Padrao',
+                'action' => 'reativar',
+                (int)$inscricao->id,
+            ], ['class' => 'btn btn-sm btn-outline-secondary']) ?>
+        <?php endif; ?>
+    </div>
+    <div class="card mb-3">
+        <div class="card-body">
+            <div class="row g-2 resumo-principal">
+                <?php if ($mostrarReferenciaAnterior): ?>
+                    <div class="col-md-6">
+                        <strong>Data da inscricao:</strong>
+                        <?= !empty($inscricao->created) ? h($inscricao->created->i18nFormat('dd/MM/yyyy')) : $naoInformado ?>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Referencia anterior:</strong>
+                        <?php if ($referenciaAnteriorId !== null): ?>
+                            <a href="<?= $this->Url->build([
+                                'controller' => 'Padrao',
+                                'action' => 'visualizar',
+                                $referenciaAnteriorId,
+                            ]) ?>" target="_blank" class="text-decoration-none fw-semibold">
+                                #<?= h((string)$referenciaAnteriorId) ?>
+                            </a>
+                        <?php elseif ($referenciaAnteriorValor !== null && $referenciaAnteriorValor !== ''): ?>
+                            <?= h((string)$referenciaAnteriorValor) ?>
+                        <?php else: ?>
+                            <?= $naoInformado ?>
+                        <?php endif; ?>
+                    </div>
+                <?php else: ?>
+                    <div class="col-md-12">
+                        <strong>Data da inscricao:</strong>
+                        <?= !empty($inscricao->created) ? h($inscricao->created->i18nFormat('dd/MM/yyyy')) : $naoInformado ?>
+                    </div>
+                <?php endif; ?>
+                <div class="col-md-6"><strong>Edital:</strong> <?= !empty($edital->nome) ? h($edital->nome) : $naoInformado ?></div>
+                <div class="col-md-6">
+                    <strong>Situacao:</strong>
+                    <?php if (!empty($inscricao->fase->nome)): ?>
+                        <?php if ((int)($inscricao->vigente ?? 0) === 1): ?>
+                            <span class="badge bg-success"><?= h($inscricao->fase->nome) ?></span>
+                        <?php else: ?>
+                            <?= h($inscricao->fase->nome) ?>
+                        <?php endif; ?>
+                    <?php else: ?>
+                        <?= $naoInformado ?>
+                    <?php endif; ?>
+                </div>
+                <div class="col-md-6"><strong>Cota:</strong> <?= !empty($cotas[(string)($inscricao->cota ?? '')]) ? h($cotas[(string)($inscricao->cota ?? '')]) : $naoInformado ?></div>
+                <div class="col-md-6"><strong>Origem:</strong> <?= !empty($origens[(string)($inscricao->origem ?? '')]) ? h($origens[(string)($inscricao->origem ?? '')]) : $naoInformado ?></div>
+                <?php if ($isRenovacao): ?>
+                    <div class="col-md-6">
+                        <strong>Autorizacao da revista:</strong>
+                        <?= in_array((string)($inscricao->autorizacao ?? ''), ['0', '1'], true) ? ((int)$inscricao->autorizacao === 1 ? 'Sim' : 'Nao') : $naoInformado ?>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Alteracao do subprojeto:</strong>
+                        <?php
+                            $subRenovacao = strtoupper(trim((string)($inscricao->subprojeto_renovacao ?? '')));
+                            echo $subRenovacao === 'I'
+                                ? 'Manteve o subprojeto original'
+                                : ($subRenovacao === 'D' ? 'Novo subprojeto cadastrado' : $naoInformado);
+                        ?>
+                    </div>
+                <?php endif; ?>
+                <div class="col-md-12"><strong>Orientador:</strong> <?= !empty($inscricao->orientadore->nome) ? h($inscricao->orientadore->nome) : $naoInformado ?></div>
+                <div class="col-md-12"><strong>Bolsista:</strong> <?= !empty($inscricao->bolsista_usuario->nome) ? h($inscricao->bolsista_usuario->nome) : $naoInformado ?></div>
+                <div class="col-md-12"><strong>Coorientador:</strong> <?= !empty($inscricao->coorientadore->nome) ? h($inscricao->coorientadore->nome) : $naoInformado ?></div>
+                <div class="col-md-12"><strong>Projeto:</strong> <?= !empty($inscricao->sp_titulo) ? h($inscricao->sp_titulo) : $naoInformado ?></div>
+                <div class="col-md-12"><strong>Subprojeto:</strong> <?= !empty($inscricao->sp_titulo) ? h($inscricao->sp_titulo) : $naoInformado ?></div>
+                <div class="col-md-6 mt-2"><strong>Data inicio:</strong> <?= !empty($dataInicioTexto) ? h($dataInicioTexto) : $naoInformado ?></div>
+                <div class="col-md-6 mt-2"><strong>Data fim:</strong> <?= !empty($dataFimTexto) ? h($dataFimTexto) : $naoInformado ?></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <ul class="nav nav-pills tabs-visualizacao mb-3" id="tabs-visualizacao-padrao" role="tablist">
+                <li class="nav-item" role="presentation"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-bolsista" type="button">Dados do Bolsista</button></li>
+                <?php if (!$isRenovacao): ?>
+                    <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-sumula" type="button">Sumula</button></li>
+                <?php endif; ?>
+                <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-projeto" type="button">Projeto</button></li>
+                <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-subprojeto" type="button">Subprojeto/Relatorio</button></li>
+                <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-coorientador" type="button">Coorientador</button></li>
+                <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-avaliacao" type="button">Avaliacao</button></li>
+                <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-historico" type="button">Historico</button></li>
+                <?php if ($ehYoda): ?>
+                    <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-gestao" type="button">Gestao</button></li>
+                <?php endif; ?>
+            </ul>
+
+            <div class="tab-content">
+                <div class="tab-pane fade show active" id="tab-bolsista">
+                    <?php if (empty($inscricao->bolsista_usuario)): ?>
+                        <p><span class="badge bg-danger">Bolsista nao informado</span></p>
+                    <?php else: ?>
+                        <p><strong>Nome:</strong> <?= !empty($inscricao->bolsista_usuario->nome) ? h($inscricao->bolsista_usuario->nome) : $naoInformado ?></p>
+                        <p><strong>Universidade:</strong> <?= !empty($inscricao->bolsista_usuario->instituicao_curso) ? h($inscricao->bolsista_usuario->instituicao_curso) : $naoInformado ?></p>
+                        <p><strong>Curso:</strong> <?= !empty($inscricao->bolsista_usuario->curso) ? h($inscricao->bolsista_usuario->curso) : $naoInformado ?></p>
+                    <?php endif; ?>
+                    <p><strong>Primeiro periodo:</strong> <?= $inscricao->primeiro_periodo === null ? $naoInformado : ((int)$inscricao->primeiro_periodo === 1 ? 'Sim' : 'Nao') ?></p>
+                    <hr>
+                    <h6>Anexos do Bolsista</h6>
+                    <?php if (empty($anexosPorBloco['B'])): ?>
+                        <p><span class="badge bg-danger">Nenhum anexo encontrado</span></p>
+                    <?php else: ?>
+                        <ul class="anexos-lista">
+                            <?php foreach ($anexosPorBloco['B'] as $anexo): ?>
+                                <li>
+                                    <div class="anexo-titulo">
+                                        <span class="anexo-tipo"><?= h($anexo['tipo_nome']) ?></span>
+                                        <span class="anexo-arquivo"><?= !empty($anexo['arquivo']) ? h($anexo['arquivo']) : 'arquivo' ?></span>
+                                    </div>
+                                    <a href="/uploads/anexos/<?= h($anexo['arquivo']) ?>" target="_blank" class="btn btn-light border btn-sm py-0 px-2" title="Download">
+                                        <i class="fa fa-download"></i>
+                                    </a>
+                                </li>
+                            <?php endforeach; ?>
+                        </ul>
+                    <?php endif; ?>
+                </div>
+
+                <?php if (!$isRenovacao): ?>
+                    <div class="tab-pane fade" id="tab-sumula">
+                        <?php $mostrarFilhosOrientadora = strtoupper((string)($inscricao->orientadore->sexo ?? '')) === 'F'; ?>
+                        <?php if ($mostrarFilhosOrientadora): ?>
+                            <?php $filhosKey = $inscricao->filhos_menor !== null ? (string)$inscricao->filhos_menor : ''; ?>
+                            <p>
+                                <strong>Orientadora, possui filhos menores de 5 anos?</strong>
+                                <?= isset($filhosMap[$filhosKey]) ? h($filhosMap[$filhosKey]) : $naoInformado ?>
+                            </p>
+                        <?php endif; ?>
+                        <h6 class="mb-2">Itens de Sumula</h6>
+                        <?php if (empty($sumulasEdital) || $sumulasEdital->count() === 0): ?>
+                            <p><span class="badge bg-danger">Nenhum item de sumula encontrado</span></p>
+                        <?php else: ?>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-striped align-middle">
+                                    <thead>
+                                        <tr>
+                                            <th>Sumula</th>
+                                            <th>Parametro</th>
+                                            <th>Quantidade</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($sumulasEdital as $sumula): ?>
+                                            <?php $qtdSumula = $quantidadesSumula[(int)$sumula->id] ?? null; ?>
+                                            <tr>
+                                                <td><?= h((string)$sumula->sumula) ?></td>
+                                                <td><?= h((string)$sumula->parametro) ?></td>
+                                                <td><?= $qtdSumula !== null && $qtdSumula !== '' ? h((string)$qtdSumula) : $naoInformado ?></td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                <?php endif; ?>
+
+                <div class="tab-pane fade" id="tab-projeto">
+                    <div class="card border-0 bg-light">
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-12">
+                                    <div class="border rounded p-2 bg-white h-100">
+                                        <div class="small text-muted">Titulo do projeto</div>
+                                        <div><?= !empty($inscricao->projeto->titulo) ? h($inscricao->projeto->titulo) : $naoInformado ?></div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="border rounded p-2 bg-white h-100">
+                                        <div class="small text-muted">Grande area CNPQ</div>
+                                        <div><?= !empty($inscricao->projeto->area->grandes_area->nome) ? h($inscricao->projeto->area->grandes_area->nome) : $naoInformado ?></div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="border rounded p-2 bg-white h-100">
+                                        <div class="small text-muted">Area CNPQ</div>
+                                        <div><?= !empty($inscricao->projeto->area->nome) ? h($inscricao->projeto->area->nome) : $naoInformado ?></div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="border rounded p-2 bg-white h-100">
+                                        <div class="small text-muted">Area de pesquisa FIOCRUZ</div>
+                                        <div><?= !empty($inscricao->projeto->linha->areas_fiocruz->nome) ? h($inscricao->projeto->linha->areas_fiocruz->nome) : $naoInformado ?></div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="border rounded p-2 bg-white h-100">
+                                        <div class="small text-muted">Linha de pesquisa FIOCRUZ</div>
+                                        <div><?= !empty($inscricao->projeto->linha->nome) ? h($inscricao->projeto->linha->nome) : $naoInformado ?></div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="border rounded p-2 bg-white h-100">
+                                        <div class="small text-muted">Instituicoes financiadoras</div>
+                                        <div><?= !empty($inscricao->projeto->financiamento) ? h($inscricao->projeto->financiamento) : $naoInformado ?></div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="border rounded p-2 bg-white h-100">
+                                        <div class="small text-muted">Palavras-chave</div>
+                                        <div><?= !empty($inscricao->projeto->palavras_chaves) ? h($inscricao->projeto->palavras_chaves) : $naoInformado ?></div>
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <details class="border rounded p-2 bg-white">
+                                        <summary class="fw-semibold">Resumo do projeto</summary>
+                                        <div class="mt-2" style="white-space: pre-line;"><?= !empty($inscricao->projeto->resumo) ? h($inscricao->projeto->resumo) : $naoInformado ?></div>
+                                    </details>
+                                </div>
+                            </div>
+                            <hr>
+                            <h6 class="mb-2">Anexos do Projeto</h6>
+                            <?php if (empty($anexosPorBloco['P'])): ?>
+                                <p><span class="badge bg-danger">Nenhum anexo encontrado</span></p>
+                            <?php else: ?>
+                                <ul class="anexos-lista">
+                                    <?php foreach ($anexosPorBloco['P'] as $anexo): ?>
+                                        <li>
+                                            <div class="anexo-titulo">
+                                                <span class="anexo-tipo"><?= h($anexo['tipo_nome']) ?></span>
+                                                <span class="anexo-arquivo"><?= !empty($anexo['arquivo']) ? h($anexo['arquivo']) : 'arquivo' ?></span>
+                                            </div>
+                                            <a href="/uploads/anexos/<?= h($anexo['arquivo']) ?>" target="_blank" class="btn btn-light border btn-sm py-0 px-2" title="Download">
+                                                <i class="fa fa-download"></i>
+                                            </a>
+                                        </li>
+                                    <?php endforeach; ?>
+                                </ul>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tab-pane fade" id="tab-subprojeto">
+                    <div class="card border-0 bg-light">
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-12">
+                                    <div class="border rounded p-2 bg-white h-100">
+                                        <div class="small text-muted">Titulo do subprojeto</div>
+                                        <div><?= !empty($inscricao->sp_titulo) ? h($inscricao->sp_titulo) : $naoInformado ?></div>
+                                    </div>
+                                </div>
+                                <?php if ($isRenovacao): ?>
+                                    <div class="col-md-6">
+                                        <div class="border rounded p-2 bg-white h-100">
+                                            <div class="small text-muted">Tipo de subprojeto</div>
+                                            <div>
+                                                <?php
+                                                    $subRenovacaoAba = strtoupper(trim((string)($inscricao->subprojeto_renovacao ?? '')));
+                                                    echo $subRenovacaoAba === 'I'
+                                                        ? 'Manteve o subprojeto original'
+                                                        : ($subRenovacaoAba === 'D' ? 'Novo subprojeto cadastrado' : $naoInformado);
+                                                ?>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="border rounded p-2 bg-white h-100">
+                                            <div class="small text-muted">Autorizacao da revista</div>
+                                            <div><?= in_array((string)($inscricao->autorizacao ?? ''), ['0', '1'], true) ? ((int)$inscricao->autorizacao === 1 ? 'Sim' : 'Nao') : $naoInformado ?></div>
+                                        </div>
+                                    </div>
+                                    <div class="col-12">
+                                        <details class="border rounded p-2 bg-white">
+                                            <summary class="fw-semibold">Justificativa da alteracao</summary>
+                                            <div class="mt-2" style="white-space: pre-line;"><?= !empty($inscricao->justificativa_alteracao) ? h($inscricao->justificativa_alteracao) : $naoInformado ?></div>
+                                        </details>
+                                    </div>
+                                <?php endif; ?>
+                                <div class="col-12">
+                                    <details class="border rounded p-2 bg-white">
+                                        <summary class="fw-semibold">Resumo do subprojeto</summary>
+                                        <div class="mt-2" style="white-space: pre-line;"><?= !empty($inscricao->sp_resumo) ? h($inscricao->sp_resumo) : $naoInformado ?></div>
+                                    </details>
+                                </div>
+                                <?php if ($isRenovacao): ?>
+                                    <div class="col-12">
+                                        <details class="border rounded p-2 bg-white">
+                                            <summary class="fw-semibold">Resumo do relatorio</summary>
+                                            <div class="mt-2" style="white-space: pre-line;"><?= !empty($inscricao->resumo_relatorio) ? h($inscricao->resumo_relatorio) : $naoInformado ?></div>
+                                        </details>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                            <hr>
+                            <h6>Anexos do Subprojeto/Relatorio</h6>
+                            <?php if (empty($anexosPorBloco['S'])): ?>
+                                <p><span class="badge bg-danger">Nenhum anexo encontrado</span></p>
+                            <?php else: ?>
+                                <ul class="anexos-lista">
+                                    <?php foreach ($anexosPorBloco['S'] as $anexo): ?>
+                                        <li>
+                                            <div class="anexo-titulo">
+                                                <span class="anexo-tipo"><?= h($anexo['tipo_nome']) ?></span>
+                                                <span class="anexo-arquivo"><?= !empty($anexo['arquivo']) ? h($anexo['arquivo']) : 'arquivo' ?></span>
+                                            </div>
+                                            <a href="/uploads/anexos/<?= h($anexo['arquivo']) ?>" target="_blank" class="btn btn-light border btn-sm py-0 px-2" title="Download">
+                                                <i class="fa fa-download"></i>
+                                            </a>
+                                        </li>
+                                    <?php endforeach; ?>
+                                </ul>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tab-pane fade" id="tab-coorientador">
+                    <?php if (empty($inscricao->coorientadore)): ?>
+                        <p><span class="badge bg-danger">Coorientador nao informado</span></p>
+                    <?php else: ?>
+                        <p><strong>Nome:</strong> <?= !empty($inscricao->coorientadore->nome) ? h($inscricao->coorientadore->nome) : $naoInformado ?></p>
+                        <div class="row g-2">
+                            <div class="col-md-6"><strong>Curso:</strong> <?= !empty($inscricao->coorientadore->curso) ? h($inscricao->coorientadore->curso) : $naoInformado ?></div>
+                            <div class="col-md-6"><strong>Universidade:</strong> <?= !empty($inscricao->coorientadore->instituicao_curso) ? h($inscricao->coorientadore->instituicao_curso) : $naoInformado ?></div>
+                            <div class="col-md-6"><strong>Escolaridade:</strong> <?= !empty($inscricao->coorientadore->escolaridade->nome) ? h($inscricao->coorientadore->escolaridade->nome) : $naoInformado ?></div>
+                            <div class="col-md-6"><strong>Vinculo:</strong> <?= !empty($inscricao->coorientadore->vinculo->nome) ? h($inscricao->coorientadore->vinculo->nome) : $naoInformado ?></div>
+                        </div>
+                    <?php endif; ?>
+                    <hr>
+                    <h6>Anexos do Coorientador</h6>
+                    <?php if (empty($anexosPorBloco['C'])): ?>
+                        <p><span class="badge bg-danger">Nenhum anexo encontrado</span></p>
+                    <?php else: ?>
+                        <ul class="anexos-lista">
+                            <?php foreach ($anexosPorBloco['C'] as $anexo): ?>
+                                <li>
+                                    <div class="anexo-titulo">
+                                        <span class="anexo-tipo"><?= h($anexo['tipo_nome']) ?></span>
+                                        <span class="anexo-arquivo"><?= !empty($anexo['arquivo']) ? h($anexo['arquivo']) : 'arquivo' ?></span>
+                                    </div>
+                                    <a href="/uploads/anexos/<?= h($anexo['arquivo']) ?>" target="_blank" class="btn btn-light border btn-sm py-0 px-2" title="Download">
+                                        <i class="fa fa-download"></i>
+                                    </a>
+                                </li>
+                            <?php endforeach; ?>
+                        </ul>
+                    <?php endif; ?>
+                </div>
+
+                <div class="tab-pane fade" id="tab-avaliacao">
+                    <p>
+                        <strong>Resultado final:</strong>
+                        <?= !empty($resultadoMap[(string)($inscricao->resultado ?? '')]) ? h($resultadoMap[(string)$inscricao->resultado]) : $naoInformado ?>
+                    </p>
+                    <?php if (!empty($avaliacoes) && $avaliacoes->count() > 0): ?>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-striped align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>Avaliador</th>
+                                        <th>Status</th>
+                                        <th>Nota</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($avaliacoes as $av): ?>
+                                        <tr>
+                                            <td>
+                                                <?= !empty($av->avaliador->usuario->nome) ? h($av->avaliador->usuario->nome) : 'Avaliador #' . (int)$av->avaliador_id ?>
+                                            </td>
+                                            <td>
+                                                <?= !empty($statusAvaliacaoMap[(string)($av->situacao ?? '')]) ? h($statusAvaliacaoMap[(string)$av->situacao]) : (!empty($av->situacao) ? h((string)$av->situacao) : $naoInformado) ?>
+                                            </td>
+                                            <td>
+                                                <?= $av->nota !== null ? h((string)$av->nota) : $naoInformado ?>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    <?php else: ?>
+                        <p class="text-muted">Nenhum avaliador vinculado.</p>
+                    <?php endif; ?>
+                </div>
+
+                <div class="tab-pane fade" id="tab-historico">
+                    <?php if ($historicos->count() === 0): ?>
+                        <p class="text-muted">Nenhum historico localizado.</p>
+                    <?php else: ?>
+                        <div class="historico-lista">
+                            <?php foreach ($historicos as $h): ?>
+                                <?php $justificativa = trim((string)($h->justificativa ?? '')); ?>
+                                <div class="historico-item">
+                                    <div class="meta">
+                                        <?php $dataHistoricoTela = !empty($h->created) ? $h->created->subHours(3) : null; ?>
+                                        <strong>Data:</strong> <?= $dataHistoricoTela ? h($dataHistoricoTela->i18nFormat('dd/MM/yyyy HH:mm')) : $naoInformado ?>
+                                        <?php if (!empty($h->usuario)): ?>
+                                            <span class="ms-2"><strong>Por:</strong> <?= h($h->usuario->nome) ?></span>
+                                        <?php endif; ?>
+                                    </div>
+                                    <?php
+                                        $faseOriginalNome = !empty($h->fase_original_ref->nome) ? (string)$h->fase_original_ref->nome : '';
+                                        $faseAtualNome = !empty($h->fase_atual_ref->nome) ? (string)$h->fase_atual_ref->nome : '';
+                                    ?>
+                                    <?php if ($faseOriginalNome !== '' || $faseAtualNome !== ''): ?>
+                                        <div class="mb-2">
+                                            <span class="badge bg-secondary"><?= $faseOriginalNome !== '' ? h($faseOriginalNome) : '-' ?></span>
+                                            <span class="mx-1">→</span>
+                                            <span class="badge bg-success"><?= $faseAtualNome !== '' ? h($faseAtualNome) : '-' ?></span>
+                                        </div>
+                                    <?php endif; ?>
+                                    <?php if ($justificativa === ''): ?>
+                                        <div><strong>Justificativa:</strong> <?= $naoInformado ?></div>
+                                    <?php elseif (strlen($justificativa) > 180): ?>
+                                        <details>
+                                            <summary class="fw-semibold">Justificativa (clique para expandir)</summary>
+                                            <div class="mt-2" style="white-space: pre-line;"><?= h($justificativa) ?></div>
+                                        </details>
+                                    <?php else: ?>
+                                        <div><strong>Justificativa:</strong> <?= h($justificativa) ?></div>
+                                    <?php endif; ?>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
+                </div>
+
+                <?php if ($ehYoda): ?>
+                    <div class="tab-pane fade" id="tab-gestao">
+                        <div class="d-flex align-items-center gap-2 mb-3">
+                            <h6 class="mb-0 text-uppercase text-muted">Ações exclusivas da gestão</h6>
+                        </div>
+                        <div class="card">
+                            <div class="card-body">
+                                <div class="row g-3 align-items-center">
+                                    <div class="col-md-4">
+                                        <?= $this->Html->link(
+                                            'Suspender',
+                                            ['controller' => 'Gestao', 'action' => 'suspender', (int)$inscricao->id],
+                                            ['class' => 'btn btn-outline-danger w-100']
+                                        ) ?>
+                                    </div>
+                                    <div class="col-md-8">
+                                        <p class="mb-0 text-muted">
+                                            Utilize esta ação para registrar suspensões por licença médica ou maternidade.
+                                            O histórico será atualizado e a suspensão ficará registrada na inscrição.
+                                        </p>
+                                    </div>
+                                </div>
+                                <hr class="my-3">
+                                <div class="row g-3 align-items-center">
+                                    <div class="col-md-4">
+                                        <?= $this->Html->link(
+                                            'Alterar Fonte',
+                                            ['controller' => 'Gestao', 'action' => 'fonte', (int)$inscricao->id],
+                                            ['class' => 'btn btn-outline-primary w-100']
+                                        ) ?>
+                                    </div>
+                                    <div class="col-md-8">
+                                        <p class="mb-1 text-muted">
+                                            <?php
+                                                $fonteAtual = (string)($inscricao->tipo_bolsa ?? '');
+                                                $fonteNome = $fontes[$fonteAtual] ?? $fonteAtual;
+                                            ?>
+                                            <strong class="text-body">Fonte atual: <?= h($fonteNome !== '' ? $fonteNome : '-') ?></strong>
+                                        </p>
+                                        <p class="mb-0 text-muted">
+                                            Alteração de fonte pagadora.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
+    <?php if ($ehTIVisualizacao && in_array($faseAtual, [1, 3], true)): ?>
+        <div class="d-flex justify-content-end mt-3">
+            <?= $this->Html->link('Deletar inscrição', [
+                'controller' => 'Padrao',
+                'action' => 'deletar',
+                (int)$inscricao->id,
+            ], [
+                'class' => 'btn btn-link btn-sm text-danger p-0',
+            ]) ?>
+        </div>
+    <?php endif; ?>
+</div>
