@@ -15,7 +15,6 @@ use Authentication\AuthenticationServiceProviderInterface;
 use Authentication\AuthenticationService;
 use Cake\Core\Configure;
 use Cake\Routing\Router;
-use Authentication\Identifier\PasswordIdentifier;
 
 
 
@@ -76,26 +75,6 @@ class Application extends BaseApplication implements AuthenticationServiceProvid
             'queryParam' => 'redirect',
         ]);
 
-        
-        $service->loadIdentifier('Authentication.Password', [
-            'fields' => [
-                'username' => 'cpf',
-                'password' => 'password',
-            ],
-            'resolver' => [
-                'className' => 'Authentication.Orm',
-                'userModel' => 'Usuarios'
-            ]
-        ]);
-        
-
-        $identifier = new PasswordIdentifier([
-            'fields' => [
-                'username' => 'cpf',
-                'password' => 'password',
-            ],
-        ]);
-
         // Autenticadores
         $service->loadAuthenticator('Authentication.Session'); // via sessão
         $service->loadAuthenticator('Authentication.Form', [
@@ -104,11 +83,17 @@ class Application extends BaseApplication implements AuthenticationServiceProvid
                 'password' => 'password',
             ],
             'loginUrl' => Router::url('/login'),
+            'identifier' => [
+                'className' => 'Authentication.Password',
+                'fields' => [
+                    'username' => 'cpf',
+                    'password' => 'password',
+                ],
+            ],
             'resolver' => [
                 'className' => 'Authentication.Orm',
                 'userModel' => 'Usuarios'
             ],
-            'identifiers' => [$identifier],
         ]);
 
         return $service;
