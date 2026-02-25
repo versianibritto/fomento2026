@@ -890,3 +890,41 @@ VIEW `dashdetalhes` AS
         LEFT JOIN `fases` `f` ON ((`f`.`id` = `pdj`.`fase_id`)))
         LEFT JOIN `editais` `e` ON ((`e`.`id` = `pdj`.`editai_id`)))
         LEFT JOIN `programas` `p` ON ((`p`.`id` = `e`.`programa_id`)));
+
+
+-- ajustes na pb
+ALTER TABLE `projeto_bolsistas` 
+ADD COLUMN `troca_projeto` TINYINT NULL DEFAULT 0 AFTER `primeiro_periodo`,
+ADD COLUMN `heranca` TINYINT NULL DEFAULT 0 AFTER `troca_projeto`;
+
+ALTER TABLE `projeto_bolsistas` 
+ADD COLUMN `pontos_bolsista` DOUBLE(6,2) NULL AFTER `heranca`,
+ADD COLUMN `area_pdj` INT NULL AFTER `pontos_bolsista`;
+
+ALTER TABLE `projeto_bolsistas` 
+CHANGE COLUMN `deleted` `deleted_2` INT NOT NULL DEFAULT '0' ;
+
+ALTER TABLE `projeto_bolsistas` 
+ADD COLUMN `deleted` TIMESTAMP NULL AFTER `area_pdj`;
+
+ALTER TABLE `projeto_bolsistas` 
+ADD COLUMN `matriz` INT NULL AFTER `deleted`;
+
+-- atualizando o campo matriz
+--///////////////////////////////////
+select bolsista, orientador, projeto_id, min(id) 
+from projeto_bolsistas group by bolsista, orientador, projeto_id;
+
+UPDATE projeto_bolsistas pb
+JOIN (
+  SELECT bolsista, orientador, projeto_id, MIN(id) AS matriz_id
+  FROM projeto_bolsistas
+  GROUP BY bolsista, orientador, projeto_id
+) m
+  ON m.bolsista   = pb.bolsista
+ AND m.orientador = pb.orientador
+ AND m.projeto_id = pb.projeto_id
+SET pb.matriz = m.matriz_id where pb.id>0;
+
+select id, orientador, bolsista, projeto_id, created from projeto_bolsistas where matriz is null
+-- //////////////////////////////////////////////

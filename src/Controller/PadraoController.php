@@ -214,7 +214,7 @@ class PadraoController extends AppController
             return $this->redirect(['controller' => 'Index', 'action' => 'dashdetalhes', 'V']);
         }
 
-        if ((int)$inscricao->deleted === 1) {
+        if ((int)$inscricao->deleted_2 === 1) {
             $this->Flash->error('Registro inativado. Nao e possivel cancelar.');
             return $this->redirect(['action' => 'visualizar', (int)$inscricao->id]);
         }
@@ -281,14 +281,14 @@ class PadraoController extends AppController
                         $renovacaoEmAndamento = $tblProjetoBolsistas->find()
                             ->where([
                                 'ProjetoBolsistas.referencia_inscricao_anterior' => (int)$inscricao->id,
-                                'ProjetoBolsistas.deleted' => 0,
+                                'ProjetoBolsistas.deleted_2' => 0,
                             ])
                             ->orderBy(['ProjetoBolsistas.id' => 'DESC'])
                             ->first();
                         if ($renovacaoEmAndamento) {
                             $faseRenovacao = (int)$renovacaoEmAndamento->fase_id;
                             $renovacaoPatch = $tblProjetoBolsistas->patchEntity($renovacaoEmAndamento, [
-                                'deleted' => 1,
+                                'deleted_2' => 1,
                                 'justificativa_cancelamento' => $justificativa,
                                 'data_cancelamento' => date('Y-m-d H:i:s'),
                             ]);
@@ -346,7 +346,7 @@ class PadraoController extends AppController
 
         $conditions = [
             'ProjetoBolsistas.id' => (int)$inscricaoId,
-            'ProjetoBolsistas.deleted' => 0,
+            'ProjetoBolsistas.deleted_2' => 0,
         ];
         if (!$this->ehTi()) {
             $conditions['ProjetoBolsistas.orientador'] = (int)$identity->id;
@@ -414,7 +414,7 @@ class PadraoController extends AppController
         }
 
         $erros = [];
-        if ((int)$inscricao->deleted === 1) {
+        if ((int)$inscricao->deleted_2 === 1) {
             $erros[] = 'Este registro ja foi inativado anteriormente.';
         }
         if ((int)$inscricao->vigente === 1) {
@@ -446,7 +446,7 @@ class PadraoController extends AppController
                 $tblProjetoBolsistas->getConnection()->transactional(function () use ($tblProjetoBolsistas, $inscricao, $motivoCancelamentoId, $justificativa, $identity) {
                     $faseOriginal = (int)$inscricao->fase_id;
                     $inscricaoPatch = $tblProjetoBolsistas->patchEntity($inscricao, [
-                        'deleted' => 1,
+                        'deleted_2' => 1,
                         'vigente' => 0,
                         'motivo_cancelamento_id' => $motivoCancelamentoId,
                         'justificativa_cancelamento' => $justificativa,
@@ -465,7 +465,7 @@ class PadraoController extends AppController
                         $referencia = $tblProjetoBolsistas->find()
                             ->where([
                                 'ProjetoBolsistas.id' => (int)$inscricao->referencia_inscricao_anterior,
-                                'ProjetoBolsistas.deleted' => 0,
+                                'ProjetoBolsistas.deleted_2' => 0,
                             ])
                             ->first();
                         if ($referencia && (int)$referencia->fase_id === 19) {
@@ -487,7 +487,7 @@ class PadraoController extends AppController
                         $inscricaoAnterior = $tblProjetoBolsistas->find()
                             ->where([
                                 'ProjetoBolsistas.id' => (int)$inscricao->bolsista_anterior,
-                                'ProjetoBolsistas.deleted' => 0,
+                                'ProjetoBolsistas.deleted_2' => 0,
                             ])
                             ->first();
                         if ($inscricaoAnterior) {
@@ -557,14 +557,14 @@ class PadraoController extends AppController
 
         $faseOriginal = (int)$inscricao->fase_id;
         $erros = [];
-        if ((int)$inscricao->deleted === 1) {
+        if ((int)$inscricao->deleted_2 === 1) {
             $erros[] = 'O registro esta inativado. Nao pode ser alterado.';
         }
         if ($faseOriginal === 14) {
             $contaSubstituto = $tblProjetoBolsistas->find()
                 ->where([
                     'ProjetoBolsistas.bolsista_anterior' => (int)$inscricao->id,
-                    'ProjetoBolsistas.deleted' => 0,
+                    'ProjetoBolsistas.deleted_2' => 0,
                 ])
                 ->count();
             if ($contaSubstituto > 0) {

@@ -44,6 +44,10 @@ class ProjetoBolsistasTable extends Table
         $this->belongsTo('MotivoCancelamentos', [
             'foreignKey' => 'motivo_cancelamento_id',
         ]);
+        $this->belongsTo('Areas', [
+            'foreignKey' => 'area_pdj',
+            'joinType' => 'LEFT',
+        ]);
         $this->belongsTo('Bolsistas', [
             'className' => 'Usuarios',
             'foreignKey' => 'bolsista',
@@ -84,6 +88,12 @@ class ProjetoBolsistasTable extends Table
             'className' => 'ProjetoBolsistas',
             'foreignKey' => 'referencia_inscricao_anterior',
             'joinType' => 'LEFT',
+        ]);
+        $this->belongsTo('Matrizes', [
+            'className' => 'ProjetoBolsistas',
+            'foreignKey' => 'matriz',
+            'joinType' => 'LEFT',
+            'propertyName' => 'matriz_projeto_bolsista',
         ]);
 
         // $this->belongsTo('ProjetosDados', [
@@ -288,6 +298,31 @@ class ProjetoBolsistasTable extends Table
             ->allowEmptyString('primeiro_periodo');
 
         $validator
+            ->boolean('troca_projeto')
+            ->allowEmptyString('troca_projeto');
+
+        $validator
+            ->boolean('heranca')
+            ->allowEmptyString('heranca');
+
+        $validator
+            ->numeric('pontos_bolsista')
+            ->greaterThanOrEqual('pontos_bolsista', 0)
+            ->allowEmptyString('pontos_bolsista');
+
+        $validator
+            ->integer('area_pdj')
+            ->allowEmptyString('area_pdj');
+
+        $validator
+            ->dateTime('deleted')
+            ->allowEmptyDateTime('deleted');
+
+        $validator
+            ->integer('matriz')
+            ->allowEmptyString('matriz');
+
+        $validator
             ->boolean('vigente')
             ->notEmptyString('vigente');
 
@@ -304,8 +339,8 @@ class ProjetoBolsistasTable extends Table
             ->allowEmptyString('atestado');
 
         $validator
-            ->integer('deleted')
-            ->notEmptyString('deleted');
+            ->integer('deleted_2')
+            ->notEmptyString('deleted_2');
 
         $validator
             ->integer('autorizacao')
@@ -422,6 +457,8 @@ class ProjetoBolsistasTable extends Table
     {
         $rules->add($rules->existsIn('editai_id', 'Editais'), ['errorField' => 'editai_id']);
         $rules->add($rules->existsIn('projeto_id', 'Projetos'), ['errorField' => 'projeto_id']);
+        $rules->add($rules->existsIn('area_pdj', 'Areas'), ['errorField' => 'area_pdj']);
+        $rules->add($rules->existsIn('matriz', 'Matrizes'), ['errorField' => 'matriz']);
      
 
         return $rules;

@@ -1061,7 +1061,7 @@ class UsersController extends AppController
                     ->select(['vigente', 'fase_id'])
                     ->where([
                         'ProjetoBolsistas.bolsista' => (int)$usuario->id,
-                        'ProjetoBolsistas.deleted' => 0,
+                        'ProjetoBolsistas.deleted_2' => 0,
                     ])
                     ->all()
                     ->toList();
@@ -1074,7 +1074,7 @@ class UsersController extends AppController
                 $temVigente = $bolsasTable->find()
                     ->where([
                         'ProjetoBolsistas.bolsista' => (int)$usuario->id,
-                        'ProjetoBolsistas.deleted' => 0,
+                        'ProjetoBolsistas.deleted_2' => 0,
                         'ProjetoBolsistas.vigente' => 1,
                         'ProjetoBolsistas.fase_id' => 11,
                     ])
@@ -1082,7 +1082,7 @@ class UsersController extends AppController
                 $temAndamento = $bolsasTable->find()
                     ->where([
                         'ProjetoBolsistas.bolsista' => (int)$usuario->id,
-                        'ProjetoBolsistas.deleted' => 0,
+                        'ProjetoBolsistas.deleted_2' => 0,
                         'ProjetoBolsistas.fase_id <' => 10,
                     ])
                     ->count();

@@ -46,7 +46,7 @@ class GestaoController extends AppController
             $erros[] = 'Somente uma bolsa ativa pode ser suspensa';
         }
 
-        if ((int)$bolsista->deleted === 1) {
+        if ((int)$bolsista->deleted_2 === 1) {
             $erros[] = 'O registro esta inativado. Não podde ser suspensa';
         }
 
@@ -194,7 +194,7 @@ class GestaoController extends AppController
             ])
             ->where([
                 'ProjetoBolsistas.fase_id IN' => $fases,
-                'ProjetoBolsistas.deleted' => 0,
+                'ProjetoBolsistas.deleted_2' => 0,
             ])
             ->orderBy(['ProjetoBolsistas.id' => 'DESC']);
 
@@ -258,7 +258,7 @@ class GestaoController extends AppController
 
         $fasesFiltro = [4, 6, 7];
         $conditions = [
-            'ProjetoBolsistas.deleted' => 0,
+            'ProjetoBolsistas.deleted_2' => 0,
             'Editais.inicio_vigencia >' => $agora,
         ];
 

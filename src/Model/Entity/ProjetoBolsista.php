@@ -57,7 +57,7 @@ use Cake\ORM\Entity;
  * @property string|null $cota
  * @property string|null $atestado
  * @property \Cake\I18n\DateTime|null $created
- * @property int $deleted
+ * @property int $deleted_2
  * @property int|null $projetos_dado_id
  * @property string|null $relatorio_final
  * @property int|null $revista_id
@@ -87,11 +87,19 @@ use Cake\ORM\Entity;
  * @property int|null $fase_id
  * @property int|null $programa_id
  * @property int|null $primeiro_periodo
+ * @property bool|null $troca_projeto
+ * @property bool|null $heranca
+ * @property float|null $pontos_bolsista
+ * @property int|null $area_pdj
+ * @property \Cake\I18n\DateTime|null $deleted
+ * @property int|null $matriz
  *
  * @property \App\Model\Entity\Editai $editai
  * @property \App\Model\Entity\Projeto $projeto
  * @property \App\Model\Entity\Usuario $usuario
  * @property \App\Model\Entity\MotivoCancelamento $motivo_cancelamento
+ * @property \App\Model\Entity\Area $area
+ * @property \App\Model\Entity\ProjetoBolsista $matriz_projeto_bolsista
  * @property \App\Model\Entity\ProjetosDado $projetos_dado
  * @property \App\Model\Entity\Revista $revista
  * @property \App\Model\Entity\FonteHistorico[] $fonte_historicos
@@ -162,7 +170,7 @@ class ProjetoBolsista extends Entity
         'cota' => true,
         'atestado' => true,
         'created' => true,
-        'deleted' => true,
+        'deleted_2' => true,
         'projetos_dado_id' => true,
         'relatorio_final' => true,
         'revista_id' => true,
@@ -192,10 +200,18 @@ class ProjetoBolsista extends Entity
         'fase_id' => true,
         'programa_id' => true,
         'primeiro_periodo' => true,
+        'troca_projeto' => true,
+        'heranca' => true,
+        'pontos_bolsista' => true,
+        'area_pdj' => true,
+        'deleted' => true,
+        'matriz' => true,
         'editai' => true,
         'projeto' => true,
         'usuario' => true,
         'motivo_cancelamento' => true,
+        'area' => true,
+        'matriz_projeto_bolsista' => true,
         'projetos_dado' => true,
         'revista' => true,
         'fonte_historicos' => true,
