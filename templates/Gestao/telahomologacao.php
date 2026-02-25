@@ -388,8 +388,8 @@
             <hr class="my-4 border-0 border-top border-2 border-secondary-subtle opacity-100">
 
             <?php if (!$homologacaoPermitida): ?>
-                <div class="alert alert-warning mb-0">
-                    Somente inscrições nas fases 4, 6 ou 7 podem ser homologadas ou não homologadas.
+                <div class="alert alert-danger mb-0 fw-semibold border-2">
+                    Somente inscrições nas fases Finalizada, Homologada ou Não homologada podem ser homologadas ou não homologadas.
                 </div>
             <?php else: ?>
                 <div class="d-flex flex-wrap gap-2 justify-content-end">

@@ -666,6 +666,26 @@ if (!$temDataInicio && !$temDataFim) {
                                         </p>
                                     </div>
                                 </div>
+                                <?php if (in_array($faseAtual, [4, 6, 7], true)): ?>
+                                    <hr class="my-3">
+                                    <div class="row g-3 align-items-center">
+                                        <div class="col-md-4">
+                                            <?= $this->Html->link(
+                                                'Homologação',
+                                                ['controller' => 'Gestao', 'action' => 'telahomologacao', (int)$inscricao->id],
+                                                ['class' => 'btn btn-outline-success w-100']
+                                            ) ?>
+                                        </div>
+                                        <div class="col-md-8">
+                                            <p class="mb-1 text-muted">
+                                                <strong class="text-body">Situação atual: <?= !empty($inscricao->fase->nome) ? h($inscricao->fase->nome) : '-' ?></strong>
+                                            </p>
+                                            <p class="mb-0 text-muted">
+                                                Acesse a tela de homologação para verificar anexos/dados e registrar homologação ou não homologação.
+                                            </p>
+                                        </div>
+                                    </div>
+                                <?php endif; ?>
                             </div>
                         </div>
                     </div>

@@ -3,6 +3,7 @@ namespace App\Controller;
 
 use App\Controller\AppController;
 use Cake\Event\EventInterface;
+use Cake\ORM\TableRegistry;
 
 class RestritoController extends AppController
 {
@@ -71,6 +72,131 @@ class RestritoController extends AppController
         ];
 
         $this->set(compact('atalhos'));
+    }
+
+    public function replicarAnexos()
+    {
+        $this->request->allowMethod(['post']);
+
+        $tblBolsistas = TableRegistry::getTableLocator()->get('ProjetoBolsistas');
+        $tblAnexos = TableRegistry::getTableLocator()->get('Anexos');
+
+        $falta = $tblBolsistas->find()
+            ->select(['id', 'origem', 'bolsista_anterior'])
+            ->where([
+                'origem IN' => ['S', 'A'],
+                'vigente' => 1,
+                'id NOT IN' => $tblAnexos->find()
+                    ->select('projeto_bolsista_id')
+                    ->where(['deleted IS' => null, 'anexos_tipo_id' => 20]),
+            ])
+            ->all();
+
+        if ($falta->isEmpty()) {
+            $this->Flash->info('Não há registros para processar.');
+            return $this->redirect($this->referer());
+        }
+
+        try {
+            $connection = $tblBolsistas->getConnection();
+            $connection->transactional(function () use ($falta, $tblAnexos) {
+                foreach ($falta as $registro) {
+                    $anexoAnterior = $tblAnexos->find()
+                        ->where([
+                            'projeto_bolsista_id' => $registro->bolsista_anterior,
+                            'anexos_tipo_id' => 20,
+                            'deleted IS' => null,
+                        ])
+                        ->first();
+
+                    if ($anexoAnterior) {
+                        $novoAnexo = $tblAnexos->newEntity($anexoAnterior->toArray());
+                        $novoAnexo->projeto_bolsista_id = $registro->id;
+                        $novoAnexo->projeto_id = $anexoAnterior->projeto_id;
+                        $novoAnexo->anexos_tipo_id = $anexoAnterior->anexos_tipo_id;
+                        $novoAnexo->anexo = $anexoAnterior->anexo;
+                        $novoAnexo->created = $anexoAnterior->created;
+                        $novoAnexo->modified = $anexoAnterior->modified;
+                        $novoAnexo->deleted = $anexoAnterior->deleted;
+                        $novoAnexo->usuario_id = $anexoAnterior->usuario_id;
+                        $novoAnexo->raic_id = $anexoAnterior->raic_id;
+
+                        if (!$tblAnexos->save($novoAnexo)) {
+                            throw new \Exception("Erro ao replicar anexo para o projeto bolsista ID {$registro->id}");
+                        }
+                    }
+                }
+            });
+
+            $this->Flash->success('Anexos replicados com sucesso!');
+        } catch (\Exception $e) {
+            $this->Flash->error('Erro na replicação dos anexos: ' . $e->getMessage());
+        }
+
+        return $this->redirect($this->referer());
+    }
+
+    public function replicarAnexosRenova()
+    {
+        $this->request->allowMethod(['post']);
+
+        $tblBolsistas = TableRegistry::getTableLocator()->get('ProjetoBolsistas');
+        $tblAnexos = TableRegistry::getTableLocator()->get('Anexos');
+
+        $falta = $tblBolsistas->find()
+            ->select(['id', 'referencia_inscricao_anterior'])
+            ->where([
+                'situacao' => 'F',
+                'editai_id IN' => [29, 30],
+                'deleted' => 0,
+                'id NOT IN' => $tblAnexos->find()
+                    ->select('projeto_bolsista_id')
+                    ->where(['deleted IS' => null, 'anexos_tipo_id' => 20]),
+            ])
+            ->all();
+
+        if ($falta->isEmpty()) {
+            $this->Flash->info('Não há registros para processar.');
+            return $this->redirect($this->referer());
+        }
+
+        try {
+            $connection = $tblBolsistas->getConnection();
+            $connection->transactional(function () use ($falta, $tblAnexos) {
+                foreach ($falta as $registro) {
+                    $anexoAnterior = $tblAnexos->find()
+                        ->where([
+                            'projeto_bolsista_id' => $registro->referencia_inscricao_anterior,
+                            'anexos_tipo_id' => 20,
+                            'deleted IS' => null,
+                        ])
+                        ->first();
+
+                    if ($anexoAnterior) {
+                        $novoAnexo = $tblAnexos->newEntity($anexoAnterior->toArray());
+                        $novoAnexo->projeto_bolsista_id = $registro->id;
+                        $novoAnexo->projeto_id = $anexoAnterior->projeto_id;
+                        $novoAnexo->anexos_tipo_id = $anexoAnterior->anexos_tipo_id;
+                        $novoAnexo->anexo = $anexoAnterior->anexo;
+                        $novoAnexo->created = $anexoAnterior->created;
+                        $novoAnexo->modified = $anexoAnterior->modified;
+                        $novoAnexo->deleted = $anexoAnterior->deleted;
+                        $novoAnexo->usuario_id = $anexoAnterior->usuario_id;
+                        $novoAnexo->raic_id = $anexoAnterior->raic_id;
+
+                        if (!$tblAnexos->save($novoAnexo)) {
+                            throw new \Exception("Erro ao replicar anexo para o projeto bolsista ID {$registro->id}");
+                        }
+                    }
+                }
+            });
+
+            $this->Flash->success('Anexos replicados com sucesso!');
+        } catch (\Exception $e) {
+            $this->Flash->error('Erro na replicação dos anexos: ' . $e->getMessage());
+        }
+
+        return $this->redirect($this->referer());
     }
 
     public function erros()

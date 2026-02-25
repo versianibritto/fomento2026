@@ -36,6 +36,35 @@
                             Nenhum atalho configurado para esta area.
                         </div>
                     <?php endif; ?>
+
+                    <hr class="my-4">
+
+                    <div class="card border">
+                        <div class="card-body">
+                            <h5 class="card-title mb-2">Replicação de Anexos</h5>
+                            <p class="text-muted mb-3">
+                                Executa rotinas de replicação do anexo tipo 20 para substituição e renovação.
+                            </p>
+                            <div class="d-flex flex-wrap gap-2">
+                                <?= $this->Form->postLink(
+                                    'Replicar Anexos (Substituição)',
+                                    ['controller' => 'Restrito', 'action' => 'replicarAnexos'],
+                                    [
+                                        'class' => 'btn btn-outline-primary',
+                                        'confirm' => 'Confirma a replicação de anexos para inscrições de substituição?',
+                                    ]
+                                ) ?>
+                                <?= $this->Form->postLink(
+                                    'Replicar Anexos (Renovação)',
+                                    ['controller' => 'Restrito', 'action' => 'replicarAnexosRenova'],
+                                    [
+                                        'class' => 'btn btn-outline-success',
+                                        'confirm' => 'Confirma a replicação de anexos para inscrições de renovação?',
+                                    ]
+                                ) ?>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

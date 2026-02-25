@@ -369,7 +369,7 @@ class GestaoController extends AppController
                 return $this->redirect(['controller' => 'Gestao', 'action' => 'listahomologacao']);
             }
             if (!$homologacaoPermitida) {
-                $this->Flash->error('Somente inscrições nas fases 4, 6 ou 7 podem ser homologadas ou não homologadas.');
+                $this->Flash->error('Somente inscrições nas fases Finalizada, Homologada ou Não homologada podem ser homologadas ou não homologadas.');
                 return $this->redirect(['controller' => 'Gestao', 'action' => 'telahomologacao', (int)$inscricao->id]);
             }
             $acaoHomologacao = strtolower(trim((string)($this->request->getData('acao_homologacao') ?? '')));
