@@ -139,7 +139,7 @@ if (!$temDataInicio && !$temDataFim) {
 <div class="container mt-4">
     <h4 class="mb-2">
         Visualizacao da <?= $isRenovacao ? 'Renovacao' : 'Inscricao' ?> #<?= (int)$inscricao->id ?>
-        <?php if ((int)($inscricao->deleted_2 ?? 0) === 1): ?>
+        <?php if (!empty($inscricao->deleted)): ?>
             <span class="badge bg-danger ms-2">Deletado</span>
         <?php endif; ?>
     </h4>

@@ -65,6 +65,49 @@
                             </div>
                         </div>
                     </div>
+
+                    <hr class="my-4">
+
+                    <div class="card border">
+                        <div class="card-body">
+                            <h5 class="card-title mb-2">Migração PDJ → Projeto Bolsistas</h5>
+                            <p class="text-muted mb-3">
+                                Cria inscrições em projeto_bolsistas a partir de registros em pdj_inscricoes.
+                            </p>
+                            <div class="d-flex flex-wrap gap-2">
+                                <?= $this->Form->postLink(
+                                    'Executar Migração PDJ',
+                                    ['controller' => 'Restrito', 'action' => 'migrarPdjParaProjetoBolsistas'],
+                                    [
+                                        'class' => 'btn btn-outline-warning',
+                                        'confirm' => 'Confirma a migração de pdj_inscricoes para projeto_bolsistas?',
+                                    ]
+                                ) ?>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <div class="card border">
+                        <div class="card-body">
+                            <h5 class="card-title mb-2">Atualizar Deleted (Timestamp)</h5>
+                            <p class="text-muted mb-3">
+                                Preenche deleted com a maior data entre created, modified e data_cancelamento
+                                quando data_cancelamento está preenchida.
+                            </p>
+                            <div class="d-flex flex-wrap gap-2">
+                                <?= $this->Form->postLink(
+                                    'Atualizar Deleted (Timestamp)',
+                                    ['controller' => 'Restrito', 'action' => 'atualizarDeletedTimestamp'],
+                                    [
+                                        'class' => 'btn btn-outline-secondary',
+                                        'confirm' => 'Confirma a atualização de deleted (timestamp) para registros com data_cancelamento preenchida?',
+                                    ]
+                                ) ?>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

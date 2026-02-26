@@ -227,13 +227,13 @@ class AppController extends Controller
 
             
             if($usuario->yoda) {
-                $canc = TableRegistry::getTableLocator()->get('ProjetoBolsistas')->find()->where(['situacao in' => ['C', 'W'], 'deleted_2'=>0])->count();
+                $canc = TableRegistry::getTableLocator()->get('ProjetoBolsistas')->find()->where(['situacao in' => ['C', 'W'], 'deleted IS' => null])->count();
                 $canc_pdj = TableRegistry::getTableLocator()->get('PdjInscricoes')->find()->where(['situacao in' => ['C', 'W'], 'deleted IS NULL'])->count();
 
-                $subs = TableRegistry::getTableLocator()->get('ProjetoBolsistas')->find()->where(['situacao' => 'U' , 'deleted_2'=>0])->count();
+                $subs = TableRegistry::getTableLocator()->get('ProjetoBolsistas')->find()->where(['situacao' => 'U' , 'deleted IS' => null])->count();
                 $subs_pdj = TableRegistry::getTableLocator()->get('PdjInscricoes')->find()->where(['situacao' => 'U' , 'deleted IS NULL'])->count();
 
-                $atv = TableRegistry::getTableLocator()->get('ProjetoBolsistas')->find()->where(['vigente' => 1,  'deleted_2'=>0])->count();
+                $atv = TableRegistry::getTableLocator()->get('ProjetoBolsistas')->find()->where(['vigente' => 1,  'deleted IS' => null])->count();
                 $atv_pdj = TableRegistry::getTableLocator()->get('PdjInscricoes')->find()->where(['vigente' => 1,  'deleted IS NULL'])->count();
 
                 $feedback = TableRegistry::getTableLocator()->get('Feedbacks')->find()->where(['situacao' => 'N'])->count();
@@ -247,21 +247,21 @@ class AppController extends Controller
                     ->join(['table'=>'usuarios',
                     'alias'=>'AB','type'=>'INNER', 
                     'conditions'=>'AB.id = ProjetoBolsistas.orientador'])
-                    ->where(['situacao in' => ['C', 'W'], 'deleted_2'=>0,
+                    ->where(['situacao in' => ['C', 'W'], 'deleted IS' => null,
                     'AB.unidade_id'=>$this->request->getAttribute('identity')['unidade_id']])
                     ->count();
                 $subs = TableRegistry::getTableLocator()->get('ProjetoBolsistas')->find()
                     ->join(['table'=>'usuarios',
                     'alias'=>'AB','type'=>'INNER', 
                     'conditions'=>'AB.id = ProjetoBolsistas.orientador'])
-                    ->where(['situacao' => 'U' , 'deleted_2'=>0,
+                    ->where(['situacao' => 'U' , 'deleted IS' => null,
                     'AB.unidade_id'=>$this->request->getAttribute('identity')['unidade_id']])
                     ->count();
                 $atv = TableRegistry::getTableLocator()->get('ProjetoBolsistas')->find()
                 ->join(['table'=>'usuarios',
                 'alias'=>'AB','type'=>'INNER', 
                 'conditions'=>'AB.id = ProjetoBolsistas.orientador'])
-                ->where(['vigente' => 1,  'deleted_2'=>0,
+                ->where(['vigente' => 1,  'deleted IS' => null,
                 'AB.unidade_id'=>$this->request->getAttribute('identity')['unidade_id']])
                 ->count();
                 $atv_pdj = TableRegistry::getTableLocator()->get('PdjInscricoes')->find()
@@ -532,7 +532,7 @@ class AppController extends Controller
             ->where([
                 'ProjetoBolsistas.id' => (int)$inscricaoId,
                 'ProjetoBolsistas.editai_id' => (int)$edital->id,
-                'ProjetoBolsistas.deleted_2' => 0,
+                'ProjetoBolsistas.deleted IS' => null,
             ])
             ->first();
 
@@ -846,7 +846,7 @@ class AppController extends Controller
         if ((int)$programaId === 1) {
             $condicoesInscricaoBase[] = 'deleted IS NULL';
         } elseif ((int)$programaId > 1) {
-            $condicoesInscricaoBase['deleted_2'] = 0;
+            $condicoesInscricaoBase['deleted IS'] = null;
         } 
         if ((int)$programaId > 0) {
             $condicoesInscricaoBase['programa_id'] = (int)$programaId;

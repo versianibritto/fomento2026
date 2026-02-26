@@ -75,7 +75,7 @@ class RenovacoesController extends AppController
         $conditions = [
             'ProjetoBolsistas.id' => (int)$inscricaoId,
             'ProjetoBolsistas.editai_id' => (int)$edital->id,
-            'ProjetoBolsistas.deleted_2' => 0,
+            'ProjetoBolsistas.deleted IS' => null,
         ];
         if (!$ehTI) {
             $conditions['ProjetoBolsistas.orientador'] = (int)$identity->id;
@@ -97,7 +97,7 @@ class RenovacoesController extends AppController
 
         try {
             $faseAtual = (int)$inscricao->fase_id;
-            $inscricaoPatch = $tblProjetoBolsistas->patchEntity($inscricao, ['deleted_2' => 1]);
+            $inscricaoPatch = $tblProjetoBolsistas->patchEntity($inscricao, ['deleted' => date('Y-m-d H:i:s')]);
             $tblProjetoBolsistas->saveOrFail($inscricaoPatch);
             $this->historico((int)$inscricao->id, $faseAtual, $faseAtual, 'Exclusao da inscricao pelo orientador', true);
         } catch (\Throwable $e) {
@@ -131,7 +131,7 @@ class RenovacoesController extends AppController
             ->where([
                 'ProjetoBolsistas.orientador' => (int)$identity->id,
                 'ProjetoBolsistas.programa_id' => (int)$edital->programa_id,
-                'ProjetoBolsistas.deleted_2' => 0,
+                'ProjetoBolsistas.deleted IS' => null,
                 'ProjetoBolsistas.fase_id <' => 10,
                 'ProjetoBolsistas.origem' => 'N',
 
@@ -147,7 +147,7 @@ class RenovacoesController extends AppController
             ->where([
                 'ProjetoBolsistas.orientador' => (int)$identity->id,
                 'ProjetoBolsistas.programa_id' => (int)$edital->programa_id,
-                'ProjetoBolsistas.deleted_2' => 0,
+                'ProjetoBolsistas.deleted IS' => null,
                 'ProjetoBolsistas.fase_id' => 11,
                 'ProjetoBolsistas.vigente' => 1,
             ])
@@ -185,7 +185,7 @@ class RenovacoesController extends AppController
                 'ProjetoBolsistas.id' => $referenciaId,
                 'ProjetoBolsistas.orientador' => (int)$identity->id,
                 'ProjetoBolsistas.programa_id' => (int)$edital->programa_id,
-                'ProjetoBolsistas.deleted_2' => 0,
+                'ProjetoBolsistas.deleted IS' => null,
                 'ProjetoBolsistas.vigente' => 1,
                 'ProjetoBolsistas.fase_id' => 11,
             ])
@@ -199,13 +199,14 @@ class RenovacoesController extends AppController
         $inscricao = $projetoBolsistas->find()
             ->where([
                 'ProjetoBolsistas.referencia_inscricao_anterior' => $referenciaValidaId,
-                'ProjetoBolsistas.deleted_2' => 0,
+                'ProjetoBolsistas.deleted IS' => null,
             ])
             ->orderBy(['ProjetoBolsistas.id' => 'DESC'])
             ->first();
         if ($inscricao) {
             try {
-                if ((int)$referencia->fase_id !== 19) {
+                $inscricaoFase = (int)$inscricao->fase_id;
+                if (in_array($inscricaoFase, [1, 3], true) && (int)$referencia->fase_id !== 19) {
                     $faseOriginalReferencia = (int)$referencia->fase_id;
                     $referenciaAtualizada = $projetoBolsistas->patchEntity($referencia, [
                         'fase_id' => 19,
@@ -234,13 +235,14 @@ class RenovacoesController extends AppController
             'origem' => 'R',
             'fase_id' => 3,
             'vigente' => 0,
-            'deleted_2' => 0,
+            'deleted' => null,
             'autorizacao' => 0,
             'prorrogacao' => 0,
             'referencia_inscricao_anterior' => $referenciaValidaId,
             'bolsista' => $referencia->bolsista,
             'projeto_id' => $referencia->projeto_id,
             'cota' => $referencia->cota,
+            'matriz' => $referencia->matriz,
         ]);
 
         try {
@@ -359,6 +361,21 @@ class RenovacoesController extends AppController
             return $this->redirect(['controller' => 'Index', 'action' => 'index']);
         }
 
+        if (!empty($inscricaoId)) {
+            $inscricaoBase = $this->fetchTable('ProjetoBolsistas')->find()
+                ->select(['id', 'fase_id', 'origem'])
+                ->where([
+                    'ProjetoBolsistas.id' => (int)$inscricaoId,
+                    'ProjetoBolsistas.editai_id' => (int)$edital->id,
+                    'ProjetoBolsistas.deleted IS' => null,
+                ])
+                ->first();
+
+            if ($inscricaoBase && (int)$inscricaoBase->fase_id === 11 && strtoupper((string)$inscricaoBase->origem) !== 'R') {
+                return $this->criarOuCarregarRenovacao($edital, $identity, (int)$inscricaoBase->id);
+            }
+        }
+
         $inscricaoContext = $this->loadInscricaoEditavel([
             'edital' => $edital,
             'identity' => $identity,
@@ -377,7 +394,7 @@ class RenovacoesController extends AppController
             ->where([
                 'ProjetoBolsistas.id' => (int)$inscricaoContext['inscricao']->id,
                 'ProjetoBolsistas.editai_id' => (int)$edital->id,
-                'ProjetoBolsistas.deleted_2' => 0,
+                'ProjetoBolsistas.deleted IS' => null,
 
             ])
             ->first();
@@ -622,7 +639,7 @@ class RenovacoesController extends AppController
         $temVigente = $projetoBolsistas->find()
             ->where([
                 'ProjetoBolsistas.bolsista' => $usuarioId,
-                'ProjetoBolsistas.deleted_2' => 0,
+                'ProjetoBolsistas.deleted IS' => null,
                 'ProjetoBolsistas.vigente' => 1,
                 'ProjetoBolsistas.fase_id' => 11,
             ])
@@ -631,7 +648,7 @@ class RenovacoesController extends AppController
         $temAndamento = $projetoBolsistas->find()
             ->where([
                 'ProjetoBolsistas.bolsista' => $usuarioId,
-                'ProjetoBolsistas.deleted_2' => 0,
+                'ProjetoBolsistas.deleted IS' => null,
                 'ProjetoBolsistas.fase_id <' => 10,
             ])
             ->count();
@@ -665,7 +682,7 @@ class RenovacoesController extends AppController
             ->where([
                 'ProjetoBolsistas.orientador' => (int)$identity->id,
                 'ProjetoBolsistas.programa_id' => (int)$edital->programa_id,
-                'ProjetoBolsistas.deleted_2' => 0,
+                'ProjetoBolsistas.deleted IS' => null,
                 'ProjetoBolsistas.fase_id' => 11,
                 'ProjetoBolsistas.vigente' => 1,
             ])
@@ -1153,7 +1170,7 @@ class RenovacoesController extends AppController
                 ->select(['id', 'sp_titulo', 'sp_resumo'])
                 ->where([
                     'ProjetoBolsistas.id' => $referenciaId,
-                    'ProjetoBolsistas.deleted_2' => 0,
+                    'ProjetoBolsistas.deleted IS' => null,
                 ])
                 ->first();
 
@@ -1394,7 +1411,7 @@ class RenovacoesController extends AppController
                 'ProjetoBolsistas.id' => (int)$inscricaoContext['inscricao']->id,
                 'ProjetoBolsistas.editai_id' => (int)$edital->id,
                 'ProjetoBolsistas.orientador' => (int)$identity->id,
-                'ProjetoBolsistas.deleted_2' => 0,
+                'ProjetoBolsistas.deleted IS' => null,
             ])
             ->first();
 
@@ -1574,7 +1591,7 @@ class RenovacoesController extends AppController
             ->where([
                 'ProjetoBolsistas.id' => (int)$inscricaoId,
                 'ProjetoBolsistas.editai_id' => (int)$edital->id,
-                'ProjetoBolsistas.deleted_2' => 0,
+                'ProjetoBolsistas.deleted IS' => null,
 
             ])
             ->first();
@@ -2020,7 +2037,7 @@ class RenovacoesController extends AppController
             ->where([
                 'ProjetoBolsistas.id' => (int)$inscricaoId,
                 'ProjetoBolsistas.editai_id' => (int)$edital->id,
-                'ProjetoBolsistas.deleted_2' => 0,
+                'ProjetoBolsistas.deleted IS' => null,
             ])
             ->first();
         if (!$inscricao) {
@@ -2104,7 +2121,7 @@ class RenovacoesController extends AppController
             ->where([
                 'ProjetoBolsistas.id' => (int)$inscricaoId,
                 'ProjetoBolsistas.editai_id' => (int)$edital->id,
-                'ProjetoBolsistas.deleted_2' => 0,
+                'ProjetoBolsistas.deleted IS' => null,
             ])
             ->first();
         if (!$inscricao) {

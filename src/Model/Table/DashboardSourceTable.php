@@ -43,7 +43,7 @@ class DashboardSourceTable extends Table
             FROM projeto_bolsistas pb
             LEFT JOIN fases f ON f.id = pb.fase_id
             LEFT JOIN editais e on e.id=pb.editai_id
-            WHERE pb.deleted_2 = 0 AND e.fim_vigencia + INTERVAL 1 DAY > NOW()
+            WHERE pb.deleted IS NULL AND e.fim_vigencia + INTERVAL 1 DAY > NOW()
             group by pb.bolsista, pb.orientador, pb.coorientador, pb.fase_id, f.bloco, pb.vigente, e.inicio_vigencia, e.fim_vigencia
 
             UNION ALL
@@ -98,7 +98,7 @@ class DashboardSourceTable extends Table
             FROM projeto_bolsistas pb
             LEFT JOIN fases f ON f.id = pb.fase_id
             LEFT JOIN editais e on e.id=pb.editai_id
-            WHERE pb.deleted_2 = 0 AND e.fim_vigencia + INTERVAL 1 DAY > NOW()
+            WHERE pb.deleted IS NULL AND e.fim_vigencia + INTERVAL 1 DAY > NOW()
             group by pb.fase_id, f.bloco, pb.vigente, e.inicio_vigencia, e.fim_vigencia, e.programa_id
 
             UNION ALL
@@ -163,7 +163,7 @@ class DashboardSourceTable extends Table
             LEFT JOIN fases f ON f.id = pb.fase_id
             LEFT JOIN editais e on e.id=pb.editai_id
             LEFT JOIN programas p on p.id=e.programa_id
-            WHERE pb.deleted_2 = 0
+            WHERE pb.deleted IS NULL
 
             UNION ALL
 

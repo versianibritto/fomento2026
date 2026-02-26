@@ -95,6 +95,10 @@ class ProjetoBolsistasTable extends Table
             'joinType' => 'LEFT',
             'propertyName' => 'matriz_projeto_bolsista',
         ]);
+        $this->belongsTo('PdjInscricoes', [
+            'foreignKey' => 'pdj_inscricoe_id',
+            'joinType' => 'LEFT',
+        ]);
 
         // $this->belongsTo('ProjetosDados', [
         //     'foreignKey' => 'projetos_dado_id',
@@ -323,6 +327,10 @@ class ProjetoBolsistasTable extends Table
             ->allowEmptyString('matriz');
 
         $validator
+            ->integer('pdj_inscricoe_id')
+            ->allowEmptyString('pdj_inscricoe_id');
+
+        $validator
             ->boolean('vigente')
             ->notEmptyString('vigente');
 
@@ -338,9 +346,6 @@ class ProjetoBolsistasTable extends Table
             ->scalar('atestado')
             ->allowEmptyString('atestado');
 
-        $validator
-            ->integer('deleted_2')
-            ->notEmptyString('deleted_2');
 
         $validator
             ->integer('autorizacao')
@@ -459,6 +464,7 @@ class ProjetoBolsistasTable extends Table
         $rules->add($rules->existsIn('projeto_id', 'Projetos'), ['errorField' => 'projeto_id']);
         $rules->add($rules->existsIn('area_pdj', 'Areas'), ['errorField' => 'area_pdj']);
         $rules->add($rules->existsIn('matriz', 'Matrizes'), ['errorField' => 'matriz']);
+        $rules->add($rules->existsIn('pdj_inscricoe_id', 'PdjInscricoes'), ['errorField' => 'pdj_inscricoe_id']);
      
 
         return $rules;

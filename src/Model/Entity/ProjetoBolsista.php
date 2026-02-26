@@ -57,7 +57,6 @@ use Cake\ORM\Entity;
  * @property string|null $cota
  * @property string|null $atestado
  * @property \Cake\I18n\DateTime|null $created
- * @property int $deleted_2
  * @property int|null $projetos_dado_id
  * @property string|null $relatorio_final
  * @property int|null $revista_id
@@ -93,6 +92,7 @@ use Cake\ORM\Entity;
  * @property int|null $area_pdj
  * @property \Cake\I18n\DateTime|null $deleted
  * @property int|null $matriz
+ * @property int|null $pdj_inscricoe_id
  *
  * @property \App\Model\Entity\Editai $editai
  * @property \App\Model\Entity\Projeto $projeto
@@ -100,6 +100,7 @@ use Cake\ORM\Entity;
  * @property \App\Model\Entity\MotivoCancelamento $motivo_cancelamento
  * @property \App\Model\Entity\Area $area
  * @property \App\Model\Entity\ProjetoBolsista $matriz_projeto_bolsista
+ * @property \App\Model\Entity\PdjInscrico $pdj_inscrico
  * @property \App\Model\Entity\ProjetosDado $projetos_dado
  * @property \App\Model\Entity\Revista $revista
  * @property \App\Model\Entity\FonteHistorico[] $fonte_historicos
@@ -170,7 +171,6 @@ class ProjetoBolsista extends Entity
         'cota' => true,
         'atestado' => true,
         'created' => true,
-        'deleted_2' => true,
         'projetos_dado_id' => true,
         'relatorio_final' => true,
         'revista_id' => true,
@@ -206,12 +206,14 @@ class ProjetoBolsista extends Entity
         'area_pdj' => true,
         'deleted' => true,
         'matriz' => true,
+        'pdj_inscricoe_id' => true,
         'editai' => true,
         'projeto' => true,
         'usuario' => true,
         'motivo_cancelamento' => true,
         'area' => true,
         'matriz_projeto_bolsista' => true,
+        'pdj_inscrico' => true,
         'projetos_dado' => true,
         'revista' => true,
         'fonte_historicos' => true,

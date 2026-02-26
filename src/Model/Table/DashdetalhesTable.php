@@ -137,6 +137,10 @@ class DashdetalhesTable extends Table
             ->allowEmptyDateTime('data_fim');
 
         $validator
+            ->integer('programa_id')
+            ->allowEmptyString('programa_id');
+
+        $validator
             ->dateTime('fim_vigencia')
             ->allowEmptyDateTime('fim_vigencia');
 

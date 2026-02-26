@@ -148,7 +148,7 @@ class RestritoController extends AppController
             ->where([
                 'situacao' => 'F',
                 'editai_id IN' => [29, 30],
-                'deleted' => 0,
+                'deleted IS' => null,
                 'id NOT IN' => $tblAnexos->find()
                     ->select('projeto_bolsista_id')
                     ->where(['deleted IS' => null, 'anexos_tipo_id' => 20]),
@@ -194,6 +194,176 @@ class RestritoController extends AppController
             $this->Flash->success('Anexos replicados com sucesso!');
         } catch (\Exception $e) {
             $this->Flash->error('Erro na replicação dos anexos: ' . $e->getMessage());
+        }
+
+        return $this->redirect($this->referer());
+    }
+
+    public function migrarPdjParaProjetoBolsistas()
+    {
+        $this->request->allowMethod(['post']);
+
+        $tblBolsistas = TableRegistry::getTableLocator()->get('ProjetoBolsistas');
+        $connection = $tblBolsistas->getConnection();
+
+        $sql = "
+            INSERT INTO projeto_bolsistas (
+                editai_id, projeto_id, bolsista, data_primeira, data_inicio, data_fim,
+                orientador, coorientador, estagio_previo, provoc, pibi_antes, matricula,
+                historico, cr_acumulado, sp_titulo, sp_resumo, palavras_chaves, sp_objetivos,
+                sp_projeto, anexo, codigo_declaracao, relatorio, egresso, relatorio_entregue,
+                situacao, bolsista_anterior, data_substituicao, substituicao_confirmador,
+                data_sub_confirmacao, nota_final, pontos_orientador, justificativa,
+                segunda_cota, motivo_cancelamento_id, justificativa_cancelamento,
+                data_cancelamento, data_cancela_confirmacao, cancelamento_confirmador,
+                premiado, tipo_bolsa, origem, programa, modified, vigente, resultado,
+                cota, atestado, created, deleted, projetos_dado_id, relatorio_final,
+                revista_id, autorizacao, autorizacao_anexo, data_resposta_bolsista,
+                data_inclusao_bolsista, resposta_bolsista, justificativa_recusa_bolsista,
+                data_resposta_coorientador, resposta_coorientador,
+                justificativa_recusa_coorientador, revista_orientador, revista_bolsista,
+                anexo_rg, filhos_menor, referencia_raic, anexo_rg_responsavel,
+                data_fim_cancelamento, apresentar_raic, referencia_inscricao_anterior,
+                subprojeto_renovacao, justificativa_alteracao, ordem, prorrogacao,
+                resumo_relatorio, fase_id, programa_id, primeiro_periodo, troca_projeto,
+                heranca, pontos_bolsista, area_pdj, matriz, pdj_inscricoe_id
+            )
+            SELECT
+                pdj.editai_id,
+                pdj.projeto_id,
+                pdj.bolsista,
+                NULL,
+                pdj.data_inicio,
+                pdj.data_fim,
+                pdj.orientador,
+                pdj.coorientador,
+                NULL,
+                NULL,
+                NULL,
+                NULL,
+                NULL,
+                NULL,
+                NULL,
+                NULL,
+                NULL,
+                NULL,
+                NULL,
+                NULL,
+                NULL,
+                NULL,
+                NULL,
+                NULL,
+                pdj.situacao,
+                pdj.bolsista_anterior,
+                NULL,
+                NULL,
+                NULL,
+                NULL,
+                pdj.pontos_orientador,
+                NULL,
+                NULL,
+                pdj.motivo_cancelamento_id,
+                pdj.justificativa_cancelamento,
+                NULL,
+                NULL,
+                NULL,
+                NULL,
+                NULL,
+                pdj.origem,
+                NULL,
+                pdj.modified,
+                COALESCE(pdj.vigente, 0),
+                pdj.resultado,
+                pdj.cota,
+                NULL,
+                pdj.created,
+                pdj.deleted,
+                NULL,
+                NULL,
+                NULL,
+                NULL,
+                NULL,
+                NULL,
+                NULL,
+                NULL,
+                NULL,
+                NULL,
+                NULL,
+                NULL,
+                NULL,
+                NULL,
+                NULL,
+                NULL,
+                NULL,
+                NULL,
+                NULL,
+                NULL,
+                pdj.referencia_inscricao_anterior,
+                NULL,
+                NULL,
+                pdj.ordem,
+                pdj.prorrogacao,
+                NULL,
+                pdj.fase_id,
+                pdj.programa_id,
+                NULL,
+                NULL,
+                NULL,
+                pdj.pontos_bolsista,
+                pdj.area_id,
+                NULL,
+                pdj.id
+            FROM pdj_inscricoes pdj
+            WHERE NOT EXISTS (
+                SELECT 1
+                FROM projeto_bolsistas pb
+                WHERE pb.editai_id = pdj.editai_id
+                  AND pb.projeto_id = pdj.projeto_id
+                  AND pb.bolsista = pdj.bolsista
+                  AND pb.orientador = pdj.orientador
+                  AND (pb.coorientador <=> pdj.coorientador)
+                  AND (pb.fase_id <=> pdj.fase_id)
+                  AND (pb.origem <=> pdj.origem)
+                  AND (pb.programa_id <=> pdj.programa_id)
+            )
+        ";
+
+        try {
+            $result = $connection->execute($sql);
+            $this->Flash->success('Migração concluída. Linhas inseridas: ' . $result->rowCount());
+        } catch (\Throwable $e) {
+            $this->Flash->error('Erro na migração PDJ → ProjetoBolsistas: ' . $e->getMessage());
+        }
+
+        return $this->redirect($this->referer());
+    }
+
+    public function atualizarDeletedTimestamp()
+    {
+        $this->request->allowMethod(['post']);
+
+        $tblBolsistas = TableRegistry::getTableLocator()->get('ProjetoBolsistas');
+        $connection = $tblBolsistas->getConnection();
+
+        $sql = "
+            UPDATE projeto_bolsistas
+            SET deleted = CASE
+                WHEN created IS NULL AND modified IS NULL AND data_cancelamento IS NULL THEN NULL
+                ELSE GREATEST(
+                    COALESCE(created, '1970-01-01 00:00:00'),
+                    COALESCE(modified, '1970-01-01 00:00:00'),
+                    COALESCE(data_cancelamento, '1970-01-01 00:00:00')
+                )
+            END
+            WHERE deleted IS NULL
+              AND data_cancelamento IS NOT NULL
+        ";
+
+        try {
+            $result = $connection->execute($sql);
+            $this->Flash->success('Atualização concluída. Linhas afetadas: ' . $result->rowCount());
+        } catch (\Throwable $e) {
+            $this->Flash->error('Erro ao atualizar deleted (timestamp): ' . $e->getMessage());
         }
 
         return $this->redirect($this->referer());

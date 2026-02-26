@@ -26,6 +26,7 @@ use Cake\ORM\Entity;
  * @property string|null $nome_programa
  * @property \Cake\I18n\DateTime|null $data_inicio
  * @property \Cake\I18n\DateTime|null $data_fim
+ * @property int|null $programa_id
  * @property \Cake\I18n\DateTime|null $fim_vigencia
  * @property int $ativo
  *
@@ -63,6 +64,7 @@ class Dashdetalhe extends Entity
         'nome_programa' => true,
         'data_inicio' => true,
         'data_fim' => true,
+        'programa_id' => true,
         'fim_vigencia' => true,
         'ativo' => true,
         'projeto' => true,
