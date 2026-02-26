@@ -206,11 +206,11 @@ if (!$temDataInicio && !$temDataFim) {
             <div class="row g-2 resumo-principal">
                 <?php if ($mostrarReferenciaAnterior): ?>
                     <div class="col-md-6">
-                        <strong>Data da inscricao:</strong>
+                        <strong>Data da inscrição:</strong>
                         <?= !empty($inscricao->created) ? h($inscricao->created->i18nFormat('dd/MM/yyyy')) : $naoInformado ?>
                     </div>
                     <div class="col-md-6">
-                        <strong>Referencia anterior:</strong>
+                        <strong>Referência anterior:</strong>
                         <?php if ($referenciaAnteriorId !== null): ?>
                             <a href="<?= $this->Url->build([
                                 'controller' => 'Padrao',
@@ -233,7 +233,7 @@ if (!$temDataInicio && !$temDataFim) {
                 <?php endif; ?>
                 <div class="col-md-6"><strong>Edital:</strong> <?= !empty($edital->nome) ? h($edital->nome) : $naoInformado ?></div>
                 <div class="col-md-6">
-                    <strong>Situacao:</strong>
+                    <strong>Situação:</strong>
                     <?php if (!empty($inscricao->fase->nome)): ?>
                         <?php if ((int)($inscricao->vigente ?? 0) === 1): ?>
                             <span class="badge bg-success"><?= h($inscricao->fase->nome) ?></span>
@@ -244,15 +244,18 @@ if (!$temDataInicio && !$temDataFim) {
                         <?= $naoInformado ?>
                     <?php endif; ?>
                 </div>
-                <div class="col-md-6"><strong>Cota:</strong> <?= !empty($cotas[(string)($inscricao->cota ?? '')]) ? h($cotas[(string)($inscricao->cota ?? '')]) : $naoInformado ?></div>
+                <div class="col-md-6"><strong>Cota:</strong> <?php
+                    $cotaValor = (string)($inscricao->cota ?? '');
+                    echo !empty($cotas[$cotaValor]) ? h($cotas[$cotaValor]) : ($cotaValor !== '' ? h($cotaValor) : $naoInformado);
+                ?></div>
                 <div class="col-md-6"><strong>Origem:</strong> <?= !empty($origens[(string)($inscricao->origem ?? '')]) ? h($origens[(string)($inscricao->origem ?? '')]) : $naoInformado ?></div>
                 <?php if ($isRenovacao): ?>
                     <div class="col-md-6">
-                        <strong>Autorizacao da revista:</strong>
+                        <strong>Autorização da revista:</strong>
                         <?= in_array((string)($inscricao->autorizacao ?? ''), ['0', '1'], true) ? ((int)$inscricao->autorizacao === 1 ? 'Sim' : 'Nao') : $naoInformado ?>
                     </div>
                     <div class="col-md-6">
-                        <strong>Alteracao do subprojeto:</strong>
+                        <strong>Alteração do subprojeto:</strong>
                         <?php
                             $subRenovacao = strtoupper(trim((string)($inscricao->subprojeto_renovacao ?? '')));
                             echo $subRenovacao === 'I'
@@ -264,9 +267,22 @@ if (!$temDataInicio && !$temDataFim) {
                 <div class="col-md-12"><strong>Orientador:</strong> <?= !empty($inscricao->orientadore->nome) ? h($inscricao->orientadore->nome) : $naoInformado ?></div>
                 <div class="col-md-12"><strong>Bolsista:</strong> <?= !empty($inscricao->bolsista_usuario->nome) ? h($inscricao->bolsista_usuario->nome) : $naoInformado ?></div>
                 <div class="col-md-12"><strong>Coorientador:</strong> <?= !empty($inscricao->coorientadore->nome) ? h($inscricao->coorientadore->nome) : $naoInformado ?></div>
-                <div class="col-md-12"><strong>Projeto:</strong> <?= !empty($inscricao->sp_titulo) ? h($inscricao->sp_titulo) : $naoInformado ?></div>
-                <div class="col-md-12"><strong>Subprojeto:</strong> <?= !empty($inscricao->sp_titulo) ? h($inscricao->sp_titulo) : $naoInformado ?></div>
-                <div class="col-md-6 mt-2"><strong>Data inicio:</strong> <?= !empty($dataInicioTexto) ? h($dataInicioTexto) : $naoInformado ?></div>
+                <div class="col-md-12"><strong>Projeto:</strong> <?php
+                    if (!empty($inscricao->projeto->titulo)) {
+                        echo h($inscricao->projeto->titulo);
+                    } elseif (!empty($inscricao->projeto_id)) {
+                        echo 'ID ' . h((string)$inscricao->projeto_id);
+                    } else {
+                    }
+                ?></div>
+                <div class="col-md-12"><strong>Subprojeto:</strong> <?php
+                    if (!empty($inscricao->sp_titulo)) {
+                        echo h($inscricao->sp_titulo);
+                    } elseif (!empty($inscricao->projeto_id)) {
+                        echo $naoInformado;
+                    } 
+                ?></div>
+                <div class="col-md-6 mt-2"><strong>Data início:</strong> <?= !empty($dataInicioTexto) ? h($dataInicioTexto) : $naoInformado ?></div>
                 <div class="col-md-6 mt-2"><strong>Data fim:</strong> <?= !empty($dataFimTexto) ? h($dataFimTexto) : $naoInformado ?></div>
             </div>
         </div>
@@ -371,13 +387,13 @@ if (!$temDataInicio && !$temDataFim) {
                                 </div>
                                 <div class="col-md-6">
                                     <div class="border rounded p-2 bg-white h-100">
-                                        <div class="small text-muted">Grande area CNPQ</div>
+                                        <div class="small text-muted">Grande área CNPQ</div>
                                         <div><?= !empty($inscricao->projeto->area->grandes_area->nome) ? h($inscricao->projeto->area->grandes_area->nome) : $naoInformado ?></div>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="border rounded p-2 bg-white h-100">
-                                        <div class="small text-muted">Area CNPQ</div>
+                                        <div class="small text-muted">Área CNPQ</div>
                                         <div><?= !empty($inscricao->projeto->area->nome) ? h($inscricao->projeto->area->nome) : $naoInformado ?></div>
                                     </div>
                                 </div>
@@ -461,7 +477,7 @@ if (!$temDataInicio && !$temDataFim) {
                                     </div>
                                     <div class="col-md-6">
                                         <div class="border rounded p-2 bg-white h-100">
-                                            <div class="small text-muted">Autorizacao da revista</div>
+                                            <div class="small text-muted">Autorização da revista</div>
                                             <div><?= in_array((string)($inscricao->autorizacao ?? ''), ['0', '1'], true) ? ((int)$inscricao->autorizacao === 1 ? 'Sim' : 'Nao') : $naoInformado ?></div>
                                         </div>
                                     </div>
