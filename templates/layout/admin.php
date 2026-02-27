@@ -149,7 +149,7 @@
                         </a>
                     </li>
                     <li class="sidebar-item">
-                        <a href="/listas/limpar/buscaVigentes/vigentes" class="sidebar-link">
+                        <a href="/listas/busca/V" class="sidebar-link">
                             * Bolsas ativas
                             <span class="badge badge-info right">IC: <?=$atv?></span>
                             <span class="badge badge-info right">PDJ:<?=$atv_pdj?></span>
@@ -157,12 +157,12 @@
                         </a>
                     </li>
                     <li class="sidebar-item">
-                        <a href="/listas/limpar/buscaLista/listainscricoes" class="sidebar-link">
+                        <a href="/listas/busca/A" class="sidebar-link">
                            * Inscrições em andamento
                         </a>
                     </li>
                     <li class="sidebar-item">
-                        <a href="/listas/limpar/buscaLista/listastatus" class="sidebar-link">
+                        <a href="/listas/busca/T" class="sidebar-link">
                            * Lista por Status
                         </a>
                     </li>

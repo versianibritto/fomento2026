@@ -174,7 +174,7 @@ document.addEventListener('DOMContentLoaded', function () {
                                 <i class="bi bi-bar-chart-line"></i> Gráficos
                             </a>
 
-                            <a href="<?= $this->Url->build(['action' => 'exportExcel', 'andamento']) ?>"
+                            <a href="<?= $this->Url->build(['controller' => 'Listas', 'action' => 'resultado', 'A', '?' => ['acao' => 'excel']]) ?>"
                                class="btn btn-outline-success btn-sm">
                                 <i class="bi bi-file-earmark-excel"></i> Exportar
                             </a>
@@ -228,7 +228,15 @@ document.addEventListener('DOMContentLoaded', function () {
                                 <i class="bi bi-bar-chart-line me-1"></i>Gráficos
                             </a>
 
-                            <a href="<?= $this->Url->build(['action' => 'exportExcel', 'homologacoes']) ?>"
+                            <a href="<?= $this->Url->build([
+                                'controller' => 'Gestao',
+                                'action' => 'listahomologacao',
+                                '?' => [
+                                    'programa_id' => 0,
+                                    'fase_id' => 0,
+                                    'acao' => 'excel',
+                                ],
+                            ]) ?>"
                             class="btn btn-outline-success btn-sm">
                                 <i class="bi bi-file-earmark-excel me-1"></i>Exportar
                             </a>
@@ -338,7 +346,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         Total de bolsas vigentes
                     </small>
 
-                    <a href="<?= $this->Url->build(['action' => 'exportExcel', 'vigentes']) ?>"
+                    <a href="<?= $this->Url->build(['controller' => 'Listas', 'action' => 'resultado', 'V', '?' => ['acao' => 'excel']]) ?>"
                        class="btn btn-outline-success btn-sm">
                         <i class="bi bi-file-earmark-excel me-1"></i>Exportar Excel
                     </a>

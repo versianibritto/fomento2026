@@ -110,6 +110,24 @@ class AppController extends Controller
         return $identity;
     }
 
+    protected function normalizeCsvValue($value): string
+    {
+        if ($value === null) {
+            return '';
+        }
+        if (is_object($value) && method_exists($value, 'format')) {
+            $value = $value->format('Y-m-d H:i:s');
+        } elseif (is_bool($value)) {
+            $value = $value ? '1' : '0';
+        } elseif (is_array($value)) {
+            $value = json_encode($value, JSON_UNESCAPED_UNICODE);
+        }
+        $text = (string)$value;
+        $text = str_replace(["\r\n", "\n", "\r", "\t"], ' ', $text);
+        $text = str_replace("\0", '', $text);
+        return $text;
+    }
+
     protected function ehYoda(): bool
     {
         $identity = $this->getIdentityAtual();

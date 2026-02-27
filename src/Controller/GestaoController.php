@@ -311,14 +311,14 @@ class GestaoController extends AppController
 
             foreach ($rows as $item) {
                 $row = [
-                    $item->id ?? '',
-                    $item->editai->nome ?? '',
-                    $item->editai->programa->sigla ?? ($item->editai->programa_id ?? ''),
-                    $item->fase->nome ?? '',
-                    $item->bolsista_usuario->nome ?? '',
-                    $item->orientadore->nome ?? '',
-                    $item->orientadore->unidade->sigla ?? '',
-                    $item->created ? $item->created->format('d/m/Y H:i:s') : '',
+                    $this->normalizeCsvValue($item->id ?? ''),
+                    $this->normalizeCsvValue($item->editai->nome ?? ''),
+                    $this->normalizeCsvValue($item->editai->programa->sigla ?? ($item->editai->programa_id ?? '')),
+                    $this->normalizeCsvValue($item->fase->nome ?? ''),
+                    $this->normalizeCsvValue($item->bolsista_usuario->nome ?? ''),
+                    $this->normalizeCsvValue($item->orientadore->nome ?? ''),
+                    $this->normalizeCsvValue($item->orientadore->unidade->sigla ?? ''),
+                    $this->normalizeCsvValue($item->created ? $item->created->format('d/m/Y H:i:s') : ''),
                 ];
                 fputcsv($fh, $row, ';');
             }
