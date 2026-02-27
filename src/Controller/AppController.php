@@ -859,7 +859,7 @@ class AppController extends Controller
 
         $condicoesInscricaoBase = [
             'coorientador' => $coorientadorId,
-            'fase_id <' => 5,
+            'fase_id <' => 10,
         ];
         if ((int)$programaId === 1) {
             $condicoesInscricaoBase[] = 'deleted IS NULL';
