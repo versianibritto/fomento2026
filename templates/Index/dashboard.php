@@ -145,87 +145,7 @@ document.addEventListener('DOMContentLoaded', function () {
 <?php } ?>
 
 
-<!-- ===================== Editais ===================== -->
-
-<div class="container">
-
-    <div class="card shadow-sm mb-4">
-    <div class="card-header bg-white border-0 pb-0">
-        <h4 class="fw-bold text-primary">📢 Editais Abertos</h4>
-    </div>
-
-    <div class="card-body">
-        <div class="row">
-
-            <?php foreach ($editais as $edital): ?>
-                <?php
-                $controllerLink = trim((string)($edital->controller ?? ''));
-                $actionLink = trim((string)($edital->link ?? ''));
-
-                if ($controllerLink !== '' && $actionLink !== '') {
-                    $inscricaoUrl = $this->Url->build([
-                        'controller' => $controllerLink,
-                        'action' => $actionLink,
-                        $edital->id,
-                    ]);
-                } elseif ($actionLink !== '') {
-                    $inscricaoUrl = rtrim($actionLink, '/') . '/' . $edital->id;
-                } else {
-                    $inscricaoUrl = $this->Url->build([
-                        'controller' => 'Projetos',
-                        'action' => 'testepag',
-                        $edital->id,
-                    ]);
-                }
-                ?>
-                <div class="col-md-4 mb-4">
-                    <div class="card shadow-sm p-3 card-edital d-flex flex-column justify-content-between h-100">
-
-                        <div>
-                            <h5 class="font-weight-bold">
-                                <?= h($edital->nome) ?>
-                            </h5>
-
-                            
-                        </div>
-
-                        <div>
-                            <?php if (!empty($edital->arquivo)): ?>
-
-                              <?php if ($edital->origem === 'V'): ?>
-                                  <a href="/uploads/editais/<?= h($edital->arquivo) ?>"
-                                    target="_blank"
-                                    class="btn btn-modern btn-download mb-2">
-                                      <i class="fa fa-file-pdf"></i> Regulamento
-                                  </a>
-                              <?php else: ?>
-                                  <a href="/uploads/editais/<?= h($edital->arquivo) ?>"
-                                    target="_blank"
-                                    class="btn btn-modern btn-download mb-2">
-                                      <i class="fa fa-file-pdf"></i> Download
-                                  </a>
-                              <?php endif; ?>
-
-                          <?php endif; ?>
-
-
-                            <?php if (!empty($edital->id)): ?>
-                                <a href="<?= h($inscricaoUrl) ?>"
-                                   class="btn btn-modern btn-inscrever">
-                                    <i class="fa fa-edit"></i> Inscreva-se
-                                </a>
-                            <?php endif; ?>
-                        </div>
-
-                    </div>
-                </div>
-            <?php endforeach; ?>
-
-        </div>
-    </div>
-</div>
-
-    <!-- ===================== CARDS DO DASHBOARD ===================== -->
+<!-- ===================== CARDS DO DASHBOARD ===================== -->
     <div class="row g-4">
 
         <!-- INSCRIÇÕES EM ANDAMENTO -->
@@ -295,3 +215,113 @@ document.addEventListener('DOMContentLoaded', function () {
 
 </body>
 </html>
+
+<!-- ===================== Editais ===================== -->
+
+<div class="container">
+
+    <div class="card shadow-sm mb-4">
+    <div class="card-header bg-white border-0 pb-0">
+        <h4 class="fw-bold text-primary">📢 Editais Abertos</h4>
+    </div>
+
+    <div class="card-body">
+        <?php if ($editais->all()->isEmpty()): ?>
+            <div class="alert alert-info text-center mb-0">Nenhum edital com inscrição aberta no momento.</div>
+        <?php else: ?>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Edital</th>
+                            <th>Unidade</th>
+                            <th>Inscrições até</th>
+                            <th>Ações</th>
+                            <th>Erratas</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($editais as $edital): ?>
+                            <?php
+                                $controllerLink = trim((string)($edital->controller ?? ''));
+                                $actionLink = trim((string)($edital->link ?? ''));
+
+                                if ($controllerLink !== '' && $actionLink !== '') {
+                                    $inscricaoUrl = $this->Url->build([
+                                        'controller' => $controllerLink,
+                                        'action' => $actionLink,
+                                        $edital->id,
+                                    ]);
+                                } elseif ($actionLink !== '') {
+                                    $inscricaoUrl = rtrim($actionLink, '/') . '/' . $edital->id;
+                                } else {
+                                    $inscricaoUrl = $this->Url->build([
+                                        'controller' => 'Projetos',
+                                        'action' => 'testepag',
+                                        $edital->id,
+                                    ]);
+                                }
+
+                                $unidade = $edital->unidade_id === null
+                                    ? 'Toda a FIOCRUZ'
+                                    : ($edital->unidade->sigla ?? (string)$edital->unidade_id);
+                            ?>
+                            <tr>
+                                <td><?= h($edital->nome) ?></td>
+                                <td><?= h($unidade) ?></td>
+                                <td>
+                                    <?php
+                                        $fim = $edital->fim_inscricao ?? null;
+                                        if ($fim instanceof \Cake\I18n\FrozenTime) {
+                                            echo h($fim->i18nFormat('dd/MM/yyyy'));
+                                        } else {
+                                            echo h($fim ? date('d/m/Y', strtotime((string)$fim)) : '-');
+                                        }
+                                    ?>
+                                </td>
+                                <td>
+                                    <?php if (!empty($edital->arquivo)): ?>
+                                        <?php if ($edital->origem === 'V'): ?>
+                                            <a href="/uploads/editais/<?= h($edital->arquivo) ?>"
+                                               target="_blank"
+                                               class="btn btn-sm btn-outline-primary me-2">
+                                                Regulamento
+                                            </a>
+                                        <?php else: ?>
+                                            <a href="/uploads/editais/<?= h($edital->arquivo) ?>"
+                                               target="_blank"
+                                               class="btn btn-sm btn-outline-primary me-2">
+                                                Download
+                                            </a>
+                                        <?php endif; ?>
+                                    <?php endif; ?>
+                                    <?php if (!empty($edital->id)): ?>
+                                        <a href="<?= h($inscricaoUrl) ?>"
+                                           class="btn btn-sm btn-outline-success">
+                                            Inscreva-se
+                                        </a>
+                                    <?php endif; ?>
+                                </td>
+                                <td>
+                                    <?php if (!empty($edital->erratas)): ?>
+                                        <?php foreach ($edital->erratas as $errata): ?>
+                                            <a href="/uploads/editais/<?= h($errata->arquivo) ?>"
+                                               target="_blank"
+                                               class="btn btn-sm btn-outline-danger me-1 mb-1">
+                                                Errata #<?= h($errata->id) ?>
+                                            </a>
+                                        <?php endforeach; ?>
+                                    <?php else: ?>
+                                        <span class="text-muted">-</span>
+                                    <?php endif; ?>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php endif; ?>
+    </div>
+</div>
+
+    

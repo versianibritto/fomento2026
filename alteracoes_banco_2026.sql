@@ -1091,7 +1091,6 @@ SELECT
     p.primeiro_periodo as primeiro_periodo,
     p.resultado as resultado,
         DATE_FORMAT(p.created + INTERVAL 3 HOUR, '%d/%m/%Y') AS created,
-
     DATE_FORMAT(entrada.data_inicio + INTERVAL 3 HOUR, '%d/%m/%Y') AS data_inicio,
     p.vigente AS vigente,
     p.tipo_bolsa as tipo_bolsa,
@@ -1139,3 +1138,4 @@ INSERT INTO `editais_sumulas_blocos` (`nome`, `deleted`) VALUES ('Produção Cie
 INSERT INTO `editais_sumulas_blocos` (`nome`, `deleted`) VALUES ('Formação de recursos\nhumanos para pesquisa', NULL);
 
 UPDATE `anexos_tipos` SET `cota` = 'N' WHERE (`id` = '21');
+UPDATE `anexos_tipos` SET `deleted` = '0' WHERE (`id` = '21');

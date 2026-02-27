@@ -143,7 +143,9 @@ class IndexController extends AppController
             'deleted' => 0,
             'fim_inscricao >= NOW()',
         ])
-        ->contain(['Erratas' => ['sort' => ['Erratas.id' => 'DESC']]])
+        ->contain([
+            'Erratas' => ['sort' => ['Erratas.id' => 'DESC']],
+        ])
         ->orderBy(['fim_inscricao' => 'DESC']);
 
 

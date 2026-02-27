@@ -77,14 +77,12 @@ if ($tipo === 'V') {
                             <?php
                                 $nome = explode(' ', (string)($b->nome_bolsista ?? ''));
                                 $nome_o = explode(' ', (string)($b->nome_orientador ?? ''));
-                                $caminho = (($b->programa_nome ?? '') === 'J' ? 'detalhepdj' : 'detalhesubprojeto');
-                                $caminho_controller = (($b->programa_nome ?? '') === 'J' ? 'Pdj' : 'Projetos');
                             ?>
                             <tr>
                                 <td>
                                     <?=$this->Html->link(
                                         '#' . ($b->id ?? ''),
-                                        ['controller'=>$caminho_controller,'action' => $caminho, $b->id],
+                                        ['controller' => 'Padrao', 'action' => 'visualizar', $b->id],
                                         ['class' => 'btn btn-sm btn-outline-primary']
                                     )?>
                                 </td>
@@ -101,7 +99,7 @@ if ($tipo === 'V') {
                                         <?php
                                             $acaoCancelar = ($tipo === 'V') || ($tipo === 'T' && (int)($b->vigente ?? 0) === 1);
                                             $acaoHomologar = (
-                                                (int)($b->fase_id ?? 0) === 5
+                                                in_array((int)($b->fase_id ?? 0), [4, 6, 7], true)
                                                 && (($tipo === 'A') || ($tipo === 'T' && (int)($b->vigente ?? 0) !== 1))
                                             );
                                         ?>

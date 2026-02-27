@@ -43,6 +43,10 @@
                         <?php endif; ?>
                         <th class="sortable" data-sort="orientador">Orientador <i class="fa fa-sort ms-1 text-muted"></i></th>
                         <th class="sortable" data-sort="unidade">Unidade <i class="fa fa-sort ms-1 text-muted"></i></th>
+                        <?php if ($tipo === 'C'): ?>
+                            <th class="sortable" data-sort="edital">Edital <i class="fa fa-sort ms-1 text-muted"></i></th>
+                            <th class="sortable" data-sort="deleted">Deleted <i class="fa fa-sort ms-1 text-muted"></i></th>
+                        <?php endif; ?>
                         <th class="sortable" data-sort="data">Data Solicitação <i class="fa fa-sort ms-1 text-muted"></i></th>
                         <th class="sortable" data-sort="cota">Cota <i class="fa fa-sort ms-1 text-muted"></i></th>
                         <th></th>
@@ -76,6 +80,22 @@
                                 <td>
                                     <?= h($i['unidade'] ?? '-') ?>
                                 </td>
+                                <?php if ($tipo === 'C'): ?>
+                                    <td><?= h($i['edital'] ?? '-') ?></td>
+                                    <td>
+                                        <?php
+                                            $deletedVal = $i['deleted'] ?? null;
+                                            if ($deletedVal instanceof \Cake\I18n\FrozenTime) {
+                                                echo 'Sim (' . h($deletedVal->i18nFormat('dd/MM/yyyy')) . ')';
+                                            } elseif (!empty($deletedVal)) {
+                                                $ts = strtotime((string)$deletedVal);
+                                                echo $ts ? ('Sim (' . h(date('d/m/Y', $ts)) . ')') : 'Sim';
+                                            } else {
+                                                echo 'Não';
+                                            }
+                                        ?>
+                                    </td>
+                                <?php endif; ?>
                                 <td>
                                     <?php
                                         $data = $i['data_solicitacao'] ?? null;
@@ -126,7 +146,7 @@
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="<?= $tipo === 'S' ? 8 : 7 ?>" class="text-center text-muted fw-bold">Nenhum registro encontrado.</td>
+                            <td colspan="<?= $tipo === 'S' ? 8 : 9 ?>" class="text-center text-muted fw-bold">Nenhum registro encontrado.</td>
                         </tr>
                     <?php endif; ?>
                 </tbody>

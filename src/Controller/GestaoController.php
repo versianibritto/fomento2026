@@ -191,12 +191,13 @@ class GestaoController extends AppController
                 'Bolsistas',
                 'Orientadores' => ['Unidades'],
                 'Substitutos' => ['Bolsistas'],
+                'Editais',
             ])
-            ->where([
-                'ProjetoBolsistas.fase_id IN' => $fases,
-                'ProjetoBolsistas.deleted IS' => null,
-            ])
+            ->where(['ProjetoBolsistas.fase_id IN' => $fases])
             ->orderBy(['ProjetoBolsistas.id' => 'DESC']);
+        if ($tipo !== 'C') {
+            $icQuery->where(['ProjetoBolsistas.deleted IS' => null]);
+        }
 
         foreach ($icQuery as $item) {
             $dataSolicitacao = $item->data_cancelamento ?? $item->created ?? $item->modified ?? null;
@@ -211,6 +212,8 @@ class GestaoController extends AppController
                 'data_solicitacao' => $dataSolicitacao,
                 'cota' => (string)($item->cota ?? ''),
                 'programa' => (string)($item->programa ?? ''),
+                'edital' => (string)($item->editai->nome ?? ''),
+                'deleted' => $item->deleted ?? null,
             ];
         }
 
@@ -220,17 +223,39 @@ class GestaoController extends AppController
                 'Bolsistas',
                 'Orientadores' => ['Unidades'],
                 'Substitutospdj' => ['Bolsistas'],
+                'Editais',
             ])
-            ->where([
-                'PdjInscricoes.fase_id IN' => $fases,
-                'PdjInscricoes.deleted IS' => null,
-            ])
+            ->where(['PdjInscricoes.fase_id IN' => $fases])
             ->orderBy(['PdjInscricoes.id' => 'DESC']);
+        if ($tipo !== 'C') {
+            $pdjQuery->where(['PdjInscricoes.deleted IS' => null]);
+        }
 
-        foreach ($pdjQuery as $item) {
+        $pdjRows = $pdjQuery->all();
+        $mapPdjToPb = [];
+        if (!$pdjRows->isEmpty()) {
+            $pdjIds = [];
+            foreach ($pdjRows as $row) {
+                $pdjIds[] = (int)($row->id ?? 0);
+            }
+            $pdjIds = array_values(array_filter($pdjIds));
+            if (!empty($pdjIds)) {
+                $mapPdjToPb = $tblProjetoBolsistas->find()
+                    ->select(['id', 'pdj_inscricoe_id'])
+                    ->where(['pdj_inscricoe_id IN' => $pdjIds])
+                    ->enableHydration(false)
+                    ->all()
+                    ->combine('pdj_inscricoe_id', 'id')
+                    ->toArray();
+            }
+        }
+
+        foreach ($pdjRows as $item) {
             $dataSolicitacao = $item->data_cancelamento ?? $item->created ?? $item->modified ?? null;
+            $itemId = (int)($item->id ?? 0);
+            $idReferencia = $mapPdjToPb[$itemId] ?? $itemId;
             $registros[] = [
-                'id' => (int)$item->id,
+                'id' => (int)$idReferencia,
                 'fonte' => 'PDJ',
                 'programa_id' => (int)($item->programa_id ?? $item->programa ?? 0),
                 'bolsista_entrando' => $formatarNome($item->bolsista_usuario->nome ?? null),
@@ -240,6 +265,8 @@ class GestaoController extends AppController
                 'data_solicitacao' => $dataSolicitacao,
                 'cota' => (string)($item->cota ?? ''),
                 'programa' => (string)($item->programa ?? ''),
+                'edital' => (string)($item->editai->nome ?? ''),
+                'deleted' => $item->deleted ?? null,
             ];
         }
 

@@ -285,10 +285,6 @@ document.addEventListener('DOMContentLoaded', function () {
     </div>
 </div>
 
-
-
-
-
 <!-- BOLSAS VIGENTES -->
 <div class="card shadow-sm mb-4">
     <div class="card-header bg-light border-0 d-flex justify-content-between align-items-center">
