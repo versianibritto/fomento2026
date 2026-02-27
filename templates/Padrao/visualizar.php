@@ -138,7 +138,7 @@ if (!$temDataInicio && !$temDataFim) {
 </style>
 <div class="container mt-4">
     <h4 class="mb-2">
-        Visualizacao da <?= $isRenovacao ? 'Renovacao' : 'Inscricao' ?> #<?= (int)$inscricao->id ?>
+        Visualização da <?= $isRenovacao ? 'Renovação' : 'Inscrição' ?> #<?= (int)$inscricao->id ?>
         <?php if (!empty($inscricao->deleted)): ?>
             <span class="badge bg-danger ms-2">Deletado</span>
         <?php endif; ?>
@@ -296,12 +296,12 @@ if (!$temDataInicio && !$temDataFim) {
                     <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-sumula" type="button">Sumula</button></li>
                 <?php endif; ?>
                 <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-projeto" type="button">Projeto</button></li>
-                <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-subprojeto" type="button">Subprojeto/Relatorio</button></li>
+                <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-subprojeto" type="button">Subprojeto/Relatório</button></li>
                 <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-coorientador" type="button">Coorientador</button></li>
-                <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-avaliacao" type="button">Avaliacao</button></li>
-                <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-historico" type="button">Historico</button></li>
+                <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-avaliacao" type="button">Avaliação</button></li>
+                <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-historico" type="button">Histórico</button></li>
                 <?php if ($ehYoda): ?>
-                    <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-gestao" type="button">Gestao</button></li>
+                    <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-gestao" type="button">Gestão</button></li>
                 <?php endif; ?>
             </ul>
 
@@ -483,7 +483,7 @@ if (!$temDataInicio && !$temDataFim) {
                                     </div>
                                     <div class="col-12">
                                         <details class="border rounded p-2 bg-white">
-                                            <summary class="fw-semibold">Justificativa da alteracao</summary>
+                                            <summary class="fw-semibold">Justificativa da alteração</summary>
                                             <div class="mt-2" style="white-space: pre-line;"><?= !empty($inscricao->justificativa_alteracao) ? h($inscricao->justificativa_alteracao) : $naoInformado ?></div>
                                         </details>
                                     </div>
@@ -497,14 +497,14 @@ if (!$temDataInicio && !$temDataFim) {
                                 <?php if ($isRenovacao): ?>
                                     <div class="col-12">
                                         <details class="border rounded p-2 bg-white">
-                                            <summary class="fw-semibold">Resumo do relatorio</summary>
+                                            <summary class="fw-semibold">Resumo do relatório</summary>
                                             <div class="mt-2" style="white-space: pre-line;"><?= !empty($inscricao->resumo_relatorio) ? h($inscricao->resumo_relatorio) : $naoInformado ?></div>
                                         </details>
                                     </div>
                                 <?php endif; ?>
                             </div>
                             <hr>
-                            <h6>Anexos do Subprojeto/Relatorio</h6>
+                            <h6>Anexos do Subprojeto/Relatório</h6>
                             <?php if (empty($anexosPorBloco['S'])): ?>
                                 <p><span class="badge bg-danger">Nenhum anexo encontrado</span></p>
                             <?php else: ?>

@@ -2184,19 +2184,19 @@ class InscricoesController extends AppController
                         'fase_id' => 4,
                     ]);
                     $projetoBolsistasTable->saveOrFail($inscricaoPatch);
-                    $this->historico((int)$inscricao->id, $faseOriginal, 4, 'Finalizacao da inscricao com termo assinado', true);
+                    $this->historico((int)$inscricao->id, $faseOriginal, 4, 'Finalização da inscrição com termo assinado', true);
                 });
             } catch (\Throwable $e) {
                 $this->flashFriendlyException(
                     $e,
-                    'Erro no Sistema - finalizar inscricao com termo assinado',
+                    'Erro no Sistema - finalizar inscrição com termo assinado',
                     'Não foi possível finalizar a inscrição.'
                 );
                 return $this->redirect(['action' => 'finalizar', $edital->id, $inscricao->id]);
             }
 
             $this->Flash->success(
-                '<strong>Parabens!</strong> Sua inscricao foi finalizada com sucesso.<br>Boa sorte no processo seletivo!',
+                '<strong>Parabéns!</strong> Sua inscrição foi finalizada com sucesso.<br>Boa sorte no processo seletivo!',
                 ['escape' => false]
             );
             return $this->redirect(['controller' => 'Padrao', 'action' => 'visualizar', (int)$inscricao->id]);
