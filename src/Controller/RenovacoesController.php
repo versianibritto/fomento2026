@@ -935,7 +935,9 @@ class RenovacoesController extends AppController
         $grandesAreas = $this->fetchTable('GrandesAreas')->find('list', [
             'keyField' => 'id',
             'valueField' => 'nome',
-        ])->orderBy(['GrandesAreas.nome' => 'ASC'])->toArray();
+        ])->where(['GrandesAreas.id <' => 10])
+            ->orderBy(['GrandesAreas.nome' => 'ASC'])
+            ->toArray();
 
         $areasRows = $this->fetchTable('Areas')->find()
             ->select(['id', 'nome', 'grandes_area_id'])
