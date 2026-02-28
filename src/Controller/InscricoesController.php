@@ -777,7 +777,41 @@ class InscricoesController extends AppController
         $inscricaoSumulasTable = $this->fetchTable('InscricaoSumulas');
         if ($this->request->is(['post', 'put', 'patch'])) {
             $dados = $this->request->getData();
+            $tiposPermitidosAnexo = $this->fetchTable('AnexosTipos')->find()
+                ->select(['id'])
+                ->where(['AnexosTipos.deleted' => 0])
+                ->all()
+                ->extract('id')
+                ->map(fn($id) => (int)$id)
+                ->toList();
+            $acaoRapidaAnexo = $this->processarAcaoRapidaAnexoInscricao(
+                $dados,
+                $inscricao->projeto_id !== null ? (int)$inscricao->projeto_id : null,
+                (int)$inscricao->id,
+                $tiposPermitidosAnexo
+            );
+            if ($acaoRapidaAnexo !== null) {
+                return $this->redirect(['action' => 'sumula', $context['edital']->id, $inscricao->id]);
+            }
             $filhosMenor = array_key_exists('filhos_menor', $dados) ? (string)$dados['filhos_menor'] : '';
+            $anoDoutoradoRaw = trim((string)($dados['ano_doutorado'] ?? ''));
+            if ($anoDoutoradoRaw !== '') {
+                if (!ctype_digit($anoDoutoradoRaw)) {
+                    $this->Flash->error('Informe um ano válido de conclusão do doutorado.');
+                    return $this->redirect(['action' => 'sumula', $context['edital']->id, $inscricao->id]);
+                }
+                $anoDoutoradoInt = (int)$anoDoutoradoRaw;
+                $anoAtual = (int)date('Y');
+                if ($anoDoutoradoInt < 1900 || $anoDoutoradoInt > $anoAtual) {
+                    $this->Flash->error('O ano de conclusão do doutorado deve estar entre 1900 e o ano atual.');
+                    return $this->redirect(['action' => 'sumula', $context['edital']->id, $inscricao->id]);
+                }
+            }
+            $recemServidorRaw = array_key_exists('recem_servidor', $dados) ? (string)$dados['recem_servidor'] : '';
+            if ($recemServidorRaw !== '' && !in_array($recemServidorRaw, ['0', '1'], true)) {
+                $this->Flash->error('Informe corretamente a opção de ingresso na Fiocruz.');
+                return $this->redirect(['action' => 'sumula', $context['edital']->id, $inscricao->id]);
+            }
             if ($filhosMenor !== '' && !in_array($filhosMenor, ['0', '1', '2'], true)) {
                 $this->Flash->error('Informe corretamente a opção de filhos menores.');
                 return $this->redirect(['action' => 'sumula', $context['edital']->id, $inscricao->id]);
@@ -822,6 +856,8 @@ class InscricoesController extends AppController
                     $projetoBolsistas,
                     $inscricao,
                     $filhosMenor,
+                    $anoDoutoradoRaw,
+                    $recemServidorRaw,
                     $inscricaoSumulasTable,
                     $quantidadesValidas,
                     $sumulasPermitidas,
@@ -829,6 +865,8 @@ class InscricoesController extends AppController
                 ) {
                     $inscricaoAtualizada = $projetoBolsistas->patchEntity($inscricao, [
                         'filhos_menor' => $filhosMenor !== '' ? $filhosMenor : null,
+                        'ano_doutorado' => $anoDoutoradoRaw !== '' ? (int)$anoDoutoradoRaw : null,
+                        'recem_servidor' => $recemServidorRaw !== '' ? (int)$recemServidorRaw : null,
                     ]);
                     $projetoBolsistas->saveOrFail($inscricaoAtualizada);
 
@@ -869,6 +907,21 @@ class InscricoesController extends AppController
                 return $this->redirect(['action' => 'sumula', $context['edital']->id, $inscricao->id]);
             }
 
+            $anexosUpload = $dados['anexos'] ?? [];
+            if (!is_array($anexosUpload)) {
+                $anexosUpload = [];
+            }
+            $filhosInt = (int)$filhosMenor;
+            $recemServidorInt = (int)$recemServidorRaw;
+            $anexo27Upload = $anexosUpload[27] ?? null;
+            $anexo29Upload = $anexosUpload[29] ?? null;
+            if ($filhosInt > 0 && $anexo27Upload !== null) {
+                $this->anexarInscricao([27 => $anexo27Upload], $inscricao->projeto_id, $inscricao->id, null, true);
+            }
+            if ($recemServidorInt === 1 && $anexo29Upload !== null) {
+                $this->anexarInscricao([29 => $anexo29Upload], $inscricao->projeto_id, $inscricao->id, null, true);
+            }
+
             $faseAtual = (int)$inscricao->fase_id;
             $this->historico((int)$inscricao->id, $faseAtual, $faseAtual, 'Atualização da súmula da inscrição', true);
             $this->Flash->success('Súmula salva com sucesso.');
@@ -886,8 +939,38 @@ class InscricoesController extends AppController
             $quantidadesSalvas[(int)$itemSalvo->editais_sumula_id] = $itemSalvo->quantidade;
         }
 
+        $anexoTipo27 = $this->fetchTable('AnexosTipos')->find()
+            ->select(['id', 'nome'])
+            ->where(['AnexosTipos.id' => 27])
+            ->first();
+        $anexoTipo27Nome = $anexoTipo27 ? (string)$anexoTipo27->nome : 'Anexo tipo 27';
+        $anexoTipo29 = $this->fetchTable('AnexosTipos')->find()
+            ->select(['id', 'nome'])
+            ->where(['AnexosTipos.id' => 29])
+            ->first();
+        $anexoTipo29Nome = $anexoTipo29 ? (string)$anexoTipo29->nome : 'Anexo tipo 29';
+
+        $anexoFilhosMenor = $this->fetchTable('Anexos')->find()
+            ->select(['anexo'])
+            ->where([
+                'Anexos.projeto_bolsista_id' => (int)$inscricao->id,
+                'Anexos.anexos_tipo_id' => 27,
+                'Anexos.deleted IS' => null,
+            ])
+            ->orderBy(['Anexos.id' => 'DESC'])
+            ->first();
+        $anexoRecemServidor = $this->fetchTable('Anexos')->find()
+            ->select(['anexo'])
+            ->where([
+                'Anexos.projeto_bolsista_id' => (int)$inscricao->id,
+                'Anexos.anexos_tipo_id' => 29,
+                'Anexos.deleted IS' => null,
+            ])
+            ->orderBy(['Anexos.id' => 'DESC'])
+            ->first();
+
         $this->set(compact('sumulasEdital', 'quantidadesSalvas'));
-        $this->set(compact('inscricao'));
+        $this->set(compact('inscricao', 'anexoFilhosMenor', 'anexoTipo27Nome', 'anexoRecemServidor', 'anexoTipo29Nome'));
         $this->set($context);
     }
 
@@ -1661,6 +1744,16 @@ class InscricoesController extends AppController
                 $anexosPorTipo[$tipoId] = true;
             }
         }
+        $temAnexo27 = !empty($anexosPorTipo[27]);
+        if (!$temAnexo27 && (int)($inscricao->filhos_menor ?? 0) > 0) {
+            $temAnexo27 = $this->fetchTable('Anexos')->find()
+                ->where([
+                    'Anexos.projeto_bolsista_id' => (int)$inscricao->id,
+                    'Anexos.anexos_tipo_id' => 27,
+                    'Anexos.deleted IS' => null,
+                ])
+                ->count() > 0;
+        }
         $falhas = [];
 
         $errosBolsista = [];
@@ -1769,6 +1862,14 @@ class InscricoesController extends AppController
 
         $errosSumula = [];
         if (($edital->origem ?? null) === 'N') {
+            $anoDoutorado = $inscricao->ano_doutorado;
+            if ($anoDoutorado === null || $anoDoutorado === '') {
+                $errosSumula[] = 'Informe o ano de conclusão do doutorado.';
+            }
+            $recemServidor = $inscricao->recem_servidor;
+            if ($recemServidor === null || $recemServidor === '') {
+                $errosSumula[] = 'Informe se ingressou na Fiocruz por meio dos concursos de 2016 e 2024.';
+            }
             $sumulasAtivas = $this->fetchTable('EditaisSumulas')->find()
                 ->where([
                     'EditaisSumulas.editai_id' => (int)$edital->id,
@@ -1879,6 +1980,38 @@ class InscricoesController extends AppController
 
         //==== bloco anexos (mesma logica dos forms)
         $errosAnexosBolsista = [];
+        $errosAnexosSumula = [];
+        if ((int)($inscricao->filhos_menor ?? 0) > 0 && !$temAnexo27) {
+            $nomeTipo27 = $this->fetchTable('AnexosTipos')->find()
+                ->select(['nome'])
+                ->where(['AnexosTipos.id' => 27])
+                ->first();
+            $errosAnexosSumula[] = 'Anexo pendente: ' . ($nomeTipo27 ? (string)$nomeTipo27->nome : 'anexo #27') . '.';
+        }
+        $temAnexo29 = !empty($anexosPorTipo[29]);
+        if (!$temAnexo29 && (int)($inscricao->recem_servidor ?? 0) === 1) {
+            $temAnexo29 = $this->fetchTable('Anexos')->find()
+                ->where([
+                    'Anexos.projeto_bolsista_id' => (int)$inscricao->id,
+                    'Anexos.anexos_tipo_id' => 29,
+                    'Anexos.deleted IS' => null,
+                ])
+                ->count() > 0;
+        }
+        if ((int)($inscricao->recem_servidor ?? 0) === 1 && !$temAnexo29) {
+            $nomeTipo29 = $this->fetchTable('AnexosTipos')->find()
+                ->select(['nome'])
+                ->where(['AnexosTipos.id' => 29])
+                ->first();
+            $errosAnexosSumula[] = 'Anexo pendente: ' . ($nomeTipo29 ? (string)$nomeTipo29->nome : 'anexo #29') . '.';
+        }
+        if (!empty($errosAnexosSumula)) {
+            $falhas[] = [
+                'nome' => 'Anexos (Súmula)',
+                'url' => ['action' => 'sumula', $edital->id, $inscricao->id],
+                'erros' => $errosAnexosSumula,
+            ];
+        }
         foreach ($tiposObrigatoriosB as $tipoId) {
             if (empty($anexosPorTipo[(int)$tipoId])) {
                 $errosAnexosBolsista[] = 'Anexo pendente: ' . ($nomesTiposB[(int)$tipoId] ?? ('anexo #' . (int)$tipoId)) . '.';
@@ -2022,6 +2155,7 @@ class InscricoesController extends AppController
             'Coorientador' => ['controller' => 'Inscricoes', 'action' => 'coorientador', $edital->id, $inscricao->id],
             'Anexos (Coorientador)' => ['controller' => 'Inscricoes', 'action' => 'coorientador', $edital->id, $inscricao->id],
             'Súmula' => ['controller' => 'Inscricoes', 'action' => 'sumula', $edital->id, $inscricao->id],
+            'Anexos (Súmula)' => ['controller' => 'Inscricoes', 'action' => 'sumula', $edital->id, $inscricao->id],
             'Projeto' => ['controller' => 'Inscricoes', 'action' => 'projeto', $edital->id, $inscricao->id],
             'Anexos (Projeto)' => ['controller' => 'Inscricoes', 'action' => 'projeto', $edital->id, $inscricao->id],
             'Subprojeto' => ['controller' => 'Inscricoes', 'action' => 'subprojeto', $edital->id, $inscricao->id],
@@ -2364,7 +2498,7 @@ class InscricoesController extends AppController
                 <p>4. Os trabalhos publicados em decorrência das atividades apoiadas pelo CNPq deverão, necessariamente, fazer referência ao apoio recebido, com as seguintes expressões: a) Se publicado individualmente: "O presente trabalho foi realizado com o apoio do Conselho Nacional de Desenvolvimento Científico e Tecnológico – CNPq – Brasil". b) Se publicado em co-autoria: "Bolsista do CNPq – Brasil".</p>
                 <p>5. O CNPq poderá cancelar ou suspender a bolsa quando constatada infringência a quaisquer das condições constantes deste Termo das normas aplicáveis a esta concessão, sem prejuízo da aplicação dos dispositivos legais que disciplinam o ressarcimento dos recursos.</p>
                 <p>6. A concessão objeto do presente instrumento não gera vínculo de qualquer natureza ou relação de trabalho, constituindo doação, com encargos, feita ao beneficiário.</p>
-                <p>7. O beneficiário e o orientador manifestam sua integral e incondicional concordância com os termos da concessão, comprometendo-se a cumprir fielmente as condições expressas neste instrumento e as normas que lhe são aplicáveis: Resolução Normativa 017/2006 do Programa Institucional de Bolsas de Iniciação Científica.</p>
+                <p>7. O beneficiário e o orientador manifestam sua integral e incondicional concordância com os termos da concessão, comprometendo-se a cumprir fielmente as condições expressas neste instrumento e as normas que lhe são aplicáveis: Portaria CNPq nº 2.539/2025 do Programa Institucional de Bolsas de Iniciação Científica.</p>
 
                 <br><br>
                 <p>Data: ________________________________________</p>

@@ -93,6 +93,8 @@ use Cake\ORM\Entity;
  * @property \Cake\I18n\DateTime|null $deleted
  * @property int|null $matriz
  * @property int|null $pdj_inscricoe_id
+ * @property int|null $ano_doutorado
+ * @property bool|null $recem_servidor
  *
  * @property \App\Model\Entity\Editai $editai
  * @property \App\Model\Entity\Projeto $projeto
@@ -207,6 +209,8 @@ class ProjetoBolsista extends Entity
         'deleted' => true,
         'matriz' => true,
         'pdj_inscricoe_id' => true,
+        'ano_doutorado' => true,
+        'recem_servidor' => true,
         'editai' => true,
         'projeto' => true,
         'usuario' => true,

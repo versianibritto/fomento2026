@@ -1,6 +1,6 @@
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h4 class="fw-bold">Homologação</h4>
+        <h4 class="fw-bold">Homologação #<?= h($inscricao->id ?? '') ?></h4>
         <a href="<?= $this->Url->build(['controller' => 'Gestao', 'action' => 'listahomologacao']) ?>"
            class="btn btn-outline-secondary btn-sm rounded-pill px-3">
             <i class="fa fa-arrow-left me-1"></i> Voltar
@@ -13,10 +13,6 @@
         <div class="card-body">
             <div class="row g-3">
                 <div class="col-md-4">
-                    <div class="text-muted small">Inscrição</div>
-                    <div class="fw-semibold">#<?= h($inscricao->id ?? '') ?></div>
-                </div>
-                <div class="col-md-8">
                     <div class="text-muted small">Edital</div>
                     <div class="fw-semibold"><?= h($inscricao->editai->nome ?? '-') ?></div>
                 </div>
@@ -25,7 +21,7 @@
                     <div class="fw-semibold"><?= h($inscricao->editai->programa->sigla ?? '-') ?></div>
                 </div>
                 <div class="col-md-4">
-                    <div class="text-muted small">Fase</div>
+                    <div class="text-muted small">Status</div>
                     <div class="fw-semibold"><?= h($inscricao->fase->nome ?? '-') ?></div>
                 </div>
                 <div class="col-md-4">
@@ -33,16 +29,59 @@
                     <div class="fw-semibold"><?= !empty($inscricao->orientadore->nome) ? h($inscricao->orientadore->nome) : $naoInformado ?></div>
                 </div>
                 <div class="col-md-4">
+                    <div class="text-muted small">Unidade</div>
+                    <div class="fw-semibold"><?= !empty($inscricao->orientadore->unidade->sigla) ? h($inscricao->orientadore->unidade->sigla) : $naoInformado ?></div>
+                </div>
+                <div class="col-md-4">
+                    <div class="text-muted small">Vínculo</div>
+                    <div class="fw-semibold"><?= !empty($inscricao->orientadore->vinculo->nome) ? h($inscricao->orientadore->vinculo->nome) : $naoInformado ?></div>
+                </div>
+                <div class="col-md-4">
+                    <div class="text-muted small">Possui filhos</div>
+                    <div class="fw-semibold">
+                        <?php
+                            $filhosValor = $inscricao->filhos_menor;
+                            $filhosTexto = 'Não informado';
+                            if ($filhosValor !== null && $filhosValor !== '') {
+                                $filhosInt = (int)$filhosValor;
+                                if ($filhosInt === 0) {
+                                    $filhosTexto = 'Não';
+                                } elseif ($filhosInt === 1) {
+                                    $filhosTexto = 'Sim (1 filho)';
+                                } elseif ($filhosInt > 1) {
+                                    $filhosTexto = 'Sim (' . $filhosInt . ' filhos)';
+                                }
+                            }
+                        ?>
+                        <?= $filhosTexto === 'Não informado' ? $naoInformado : h($filhosTexto) ?>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="text-muted small">Ano do doutorado</div>
+                    <div class="fw-semibold">
+                        <?= !empty($inscricao->ano_doutorado) ? h($inscricao->ano_doutorado) : $naoInformado ?>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="text-muted small">Recém servidor</div>
+                    <div class="fw-semibold">
+                        <?php
+                            $recemServidorVal = $inscricao->recem_servidor;
+                            $recemServidorTexto = 'Não informado';
+                            if ($recemServidorVal !== null && $recemServidorVal !== '') {
+                                $recemServidorTexto = ((int)$recemServidorVal === 1) ? 'Sim' : 'Não';
+                            }
+                        ?>
+                        <?= $recemServidorTexto === 'Não informado' ? $naoInformado : h($recemServidorTexto) ?>
+                    </div>
+                </div>
+                <div class="col-md-6">
                     <div class="text-muted small">Bolsista</div>
                     <div class="fw-semibold"><?= !empty($inscricao->bolsista_usuario->nome) ? h($inscricao->bolsista_usuario->nome) : $naoInformado ?></div>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-6">
                     <div class="text-muted small">Coorientador</div>
                     <div class="fw-semibold"><?= !empty($inscricao->coorientadore->nome) ? h($inscricao->coorientadore->nome) : $naoInformado ?></div>
-                </div>
-                <div class="col-md-4">
-                    <div class="text-muted small">Unidade</div>
-                    <div class="fw-semibold"><?= !empty($inscricao->orientadore->unidade->sigla) ? h($inscricao->orientadore->unidade->sigla) : $naoInformado ?></div>
                 </div>
             </div>
         </div>

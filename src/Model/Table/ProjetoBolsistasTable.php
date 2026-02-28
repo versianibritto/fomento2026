@@ -331,6 +331,14 @@ class ProjetoBolsistasTable extends Table
             ->allowEmptyString('pdj_inscricoe_id');
 
         $validator
+            ->integer('ano_doutorado')
+            ->allowEmptyString('ano_doutorado');
+
+        $validator
+            ->boolean('recem_servidor')
+            ->allowEmptyString('recem_servidor');
+
+        $validator
             ->boolean('vigente')
             ->notEmptyString('vigente');
 

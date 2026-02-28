@@ -146,7 +146,7 @@ class IndexController extends AppController
         ->contain([
             'Erratas' => ['sort' => ['Erratas.id' => 'DESC']],
         ])
-        ->orderBy(['fim_inscricao' => 'DESC']);
+        ->orderBy(['origem'=>'DESC', 'fim_inscricao' => 'DESC']);
 
 
         $userId = (int)$this->Authentication->getIdentity()->id;

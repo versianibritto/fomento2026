@@ -73,53 +73,53 @@
                         </a>
                     </li>
                     <li class="sidebar-item">
-                        <a href="/dashboard" class="sidebar-link">
+                        <a href="<?= ($usuario_logado['yoda'] ?? false) ? '/index/dashyoda' : '/dashboard' ?>" class="sidebar-link">
                             Resumo
                         </a>
                     </li>
-                    <li class="sidebar-item">
-                        <a href="/projetos" class="sidebar-link <?=(($this->request->getParam('controller') == 'Projetos' && $this->request->getParam('action') != 'bolsistas') ? 'active' : '')?>">
-                            Meus Projetos
-                        </a>
-                    </li>
-                    <li class="sidebar-item">
-                        <a href="/index/dashdetalhes/T" class="sidebar-link <?=(($this->request->getParam('controller') == 'Index' && $this->request->getParam('action') == 'dashdetalhes') ? 'active' : '')?>">
-                            Meus Bolsistas
-                        </a>
-                    </li>
-                    <li class="sidebar-item">
-                        <a href="/avaliadors/minhas_avaliacoes" class="sidebar-link <?=(($this->request->getParam('action') == 'minhasAvaliacoes') ? 'active' : '')?>">
-                            Minhas Avaliações
-                        </a>
-                    </li>
-                    <!--<li class="sidebar-item">
-                        <a href="/users/meus-documentos" class="sidebar-link <?=(($this->request->getParam('action') == 'meusDocumentos') ? 'active' : '')?>">
-                            Meus Documentos
-                        </a>
-                    </li>-->
-                    <li class="sidebar-item">
-                        <a href="/bolsistas/raic" class="sidebar-link <?=(($this->request->getParam('action') == 'raic') ? 'active' : '')?>">
-                            Raic
-                        </a>
-                    </li>
-                    <li class="sidebar-item">
-                        <a href="/aulas/direciona" class="sidebar-link <?=(($this->request->getParam('controller') == 'Aulas' && $this->request->getParam('action') == 'liberadas') ? 'active' : '')?>">
-                            Sala de aula / Cursos
-                        </a>
-                    </li>
-                    <!--<li class="sidebar-item">
-                        <a href="/aulas/cursos" class="sidebar-link <?=(($this->request->getParam('controller') == 'Aulas' && $this->request->getParam('action') == 'cursos') ? 'active' : '')?>">
-                            Cursos
-                        </a>
-                    </li>-->
-                    
                     <li class="sidebar-item">
                         <a href="/feedbacks" class="sidebar-link">
                             Feedback
                             <span class="badge badge-danger right"><?=$feedback?></span>
                         </a>
                     </li>
-                    <?php if(($usuario_logado['escolaridade_id']==10) || ($usuario_logado['yoda'])){ ?>
+                    <li class="sidebar-item">
+                        <a href="/index/dashdetalhes/T" class="sidebar-link <?=(($this->request->getParam('controller') == 'Index' && $this->request->getParam('action') == 'dashdetalhes') ? 'active' : '')?>">
+                            <?php if ((int)($usuario_logado['escolaridade_id'] ?? 0) < 10) { ?>
+                                Minhas Bolsas
+                            <?php } else { ?>
+                                Meus Bolsistas
+                            <?php } ?>
+                        </a>
+                    </li>
+                    <?php if ((int)($usuario_logado['escolaridade_id'] ?? 0) >= 10) { ?>
+                        <li class="sidebar-item">
+                            <a href="/avaliadors/minhas_avaliacoes" class="sidebar-link <?=(($this->request->getParam('action') == 'minhasAvaliacoes') ? 'active' : '')?>">
+                                Minhas Avaliações
+                            </a>
+                        </li>
+                        <!--<li class="sidebar-item">
+                            <a href="/users/meus-documentos" class="sidebar-link <?=(($this->request->getParam('action') == 'meusDocumentos') ? 'active' : '')?>">
+                                Meus Documentos
+                            </a>
+                        </li>-->
+                        <li class="sidebar-item">
+                            <a href="/bolsistas/raic" class="sidebar-link <?=(($this->request->getParam('action') == 'raic') ? 'active' : '')?>">
+                                Raic
+                            </a>
+                        </li>
+                        <!--<li class="sidebar-item">
+                            <a href="/aulas/direciona" class="sidebar-link <?=(($this->request->getParam('controller') == 'Aulas' && $this->request->getParam('action') == 'liberadas') ? 'active' : '')?>">
+                                Sala de aula / Cursos
+                            </a>
+                        </li>-->
+                        <!--<li class="sidebar-item">
+                            <a href="/aulas/cursos" class="sidebar-link <?=(($this->request->getParam('controller') == 'Aulas' && $this->request->getParam('action') == 'cursos') ? 'active' : '')?>">
+                                Cursos
+                            </a>
+                        </li>-->
+                    
+                        
                         <li class="sidebar-header">
                             Banco de talentos
                         </li>

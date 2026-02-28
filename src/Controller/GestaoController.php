@@ -669,6 +669,79 @@ class GestaoController extends AppController
             ];
         }
 
+        $orientadoraSexo = strtoupper(trim((string)($inscricao->orientadore->sexo ?? '')));
+        $filhosMenorOrientadora = (int)($inscricao->filhos_menor ?? 0);
+        if ($orientadoraSexo === 'F' && $filhosMenorOrientadora > 0) {
+            $tipoCertidaoId = 27;
+            $certidaoJaListada = false;
+            foreach ($anexosI as $item) {
+                if ((int)($item['tipo_id'] ?? 0) === $tipoCertidaoId) {
+                    $certidaoJaListada = true;
+                    break;
+                }
+            }
+            if (!$certidaoJaListada) {
+                $tipoCertidao = $this->fetchTable('AnexosTipos')->find()
+                    ->select(['id', 'nome'])
+                    ->where(['AnexosTipos.id' => $tipoCertidaoId])
+                    ->first();
+                $anexoCertidao = $this->fetchTable('Anexos')->find()
+                    ->select(['anexo'])
+                    ->where([
+                        'Anexos.projeto_bolsista_id' => (int)$inscricao->id,
+                        'Anexos.anexos_tipo_id' => $tipoCertidaoId,
+                        'OR' => [
+                            'Anexos.deleted IS' => null,
+                            'Anexos.deleted' => 0,
+                        ],
+                    ])
+                    ->orderBy(['Anexos.id' => 'DESC'])
+                    ->first();
+                $anexosI[] = [
+                    'tipo_id' => $tipoCertidaoId,
+                    'tipo_nome' => (string)($tipoCertidao->nome ?? 'Certidão de nascimento (filhos orientadora)'),
+                    'arquivo' => (string)($anexoCertidao->anexo ?? ''),
+                    'regras' => ['Obrigatório para orientadora com filhos menores de 4 anos.'],
+                    'status_regra' => 'Obrigatório',
+                ];
+            }
+        }
+        if ((int)($inscricao->recem_servidor ?? 0) === 1) {
+            $tipoServidorId = 29;
+            $servidorJaListado = false;
+            foreach ($anexosI as $item) {
+                if ((int)($item['tipo_id'] ?? 0) === $tipoServidorId) {
+                    $servidorJaListado = true;
+                    break;
+                }
+            }
+            if (!$servidorJaListado) {
+                $tipoServidor = $this->fetchTable('AnexosTipos')->find()
+                    ->select(['id', 'nome'])
+                    ->where(['AnexosTipos.id' => $tipoServidorId])
+                    ->first();
+                $anexoServidor = $this->fetchTable('Anexos')->find()
+                    ->select(['anexo'])
+                    ->where([
+                        'Anexos.projeto_bolsista_id' => (int)$inscricao->id,
+                        'Anexos.anexos_tipo_id' => $tipoServidorId,
+                        'OR' => [
+                            'Anexos.deleted IS' => null,
+                            'Anexos.deleted' => 0,
+                        ],
+                    ])
+                    ->orderBy(['Anexos.id' => 'DESC'])
+                    ->first();
+                $anexosI[] = [
+                    'tipo_id' => $tipoServidorId,
+                    'tipo_nome' => (string)($tipoServidor->nome ?? 'Anexo de ingresso na Fiocruz'),
+                    'arquivo' => (string)($anexoServidor->anexo ?? ''),
+                    'regras' => ['Obrigatório para ingressos nos concursos de 2016 e 2024.'],
+                    'status_regra' => 'Obrigatório',
+                ];
+            }
+        }
+
         $projetoAtual = $inscricao->projeto ?? null;
         $tiposP = $this->fetchTable('AnexosTipos')->find()
             ->select(['id', 'nome'])

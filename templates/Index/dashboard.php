@@ -69,7 +69,7 @@
         flex-direction: column;
         justify-content: center;
     }
-</style>
+    </style>
 </head>
 
 <body class="bg-light p-4">
@@ -208,14 +208,6 @@ document.addEventListener('DOMContentLoaded', function () {
     </div>
 
 
-
-
-
-
-
-</body>
-</html>
-
 <!-- ===================== Editais ===================== -->
 
 <div class="container">
@@ -234,7 +226,6 @@ document.addEventListener('DOMContentLoaded', function () {
                     <thead class="table-light">
                         <tr>
                             <th>Edital</th>
-                            <th>Unidade</th>
                             <th>Inscrições até</th>
                             <th>Ações</th>
                             <th>Erratas</th>
@@ -261,14 +252,9 @@ document.addEventListener('DOMContentLoaded', function () {
                                         $edital->id,
                                     ]);
                                 }
-
-                                $unidade = $edital->unidade_id === null
-                                    ? 'Toda a FIOCRUZ'
-                                    : ($edital->unidade->sigla ?? (string)$edital->unidade_id);
                             ?>
                             <tr>
                                 <td><?= h($edital->nome) ?></td>
-                                <td><?= h($unidade) ?></td>
                                 <td>
                                     <?php
                                         $fim = $edital->fim_inscricao ?? null;
@@ -325,3 +311,5 @@ document.addEventListener('DOMContentLoaded', function () {
 </div>
 
     
+</body>
+</html>

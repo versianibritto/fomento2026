@@ -1139,3 +1139,20 @@ INSERT INTO `editais_sumulas_blocos` (`nome`, `deleted`) VALUES ('Formação de 
 
 UPDATE `anexos_tipos` SET `cota` = 'N' WHERE (`id` = '21');
 UPDATE `anexos_tipos` SET `deleted` = '0' WHERE (`id` = '21');
+
+
+-- //////////////////////////////// aqui 2
+INSERT INTO `anexos_tipos` (`nome`, `bloco`, `deleted`, `condicional`) VALUES ('Certidão de Nascimento (filhos Orientador)', 'I', '0', '1');
+
+ALTER TABLE `anexos_tipos` 
+CHANGE COLUMN `bloco` `bloco` ENUM('B', 'C', 'P', 'S', 'I', 'O') NULL DEFAULT NULL COMMENT 'bolsiata, coorientador, projeto, subprojeto, inscrição, orientador' ;
+
+UPDATE `anexos_tipos` SET `bloco` = 'O' WHERE (`id` = '27');
+INSERT INTO `anexos_tipos` (`nome`, `bloco`, `deleted`, `condicional`) VALUES ('Diploma de doutorado (recém doutor)', 'O', '0', '1');
+INSERT INTO `anexos_tipos` (`nome`, `bloco`, `deleted`, `condicional`) VALUES ('Copia do DO (recem concursados)', 'O', '0', '1');
+UPDATE `anexos_tipos` SET `nome` = 'Certidão de Nascimento (Filhos Orientadora)' WHERE (`id` = '27');
+
+
+ALTER TABLE `projeto_bolsistas` 
+ADD COLUMN `ano_doutorado` INT NULL AFTER `pdj_inscricoe_id`,
+ADD COLUMN `recem_servidor` TINYINT NULL AFTER `ano_doutorado`;
