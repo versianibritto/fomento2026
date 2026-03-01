@@ -1160,3 +1160,88 @@ ADD COLUMN `recem_servidor` TINYINT NULL AFTER `ano_doutorado`;
 
 ALTER TABLE `feedbacks` 
 ADD COLUMN `ramo` INT NULL AFTER `situacao`;
+
+
+CREATE TABLE suporte_categorias (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nome VARCHAR(80) NOT NULL,
+    ativo TINYINT(1) NOT NULL DEFAULT 1
+);
+
+-- exemplos iniciais
+INSERT INTO suporte_categorias (nome) VALUES
+('Erros durante a Inscrição (nova ou Renovação)'),
+('Avaliação de Projetos'),
+('Atualização de Dados pessoais'),
+('Outros');
+
+
+CREATE TABLE suporte_status (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nome VARCHAR(40) NOT NULL,
+    codigo VARCHAR(5) NOT NULL UNIQUE,
+    ativo TINYINT(1) NOT NULL DEFAULT 1
+);
+
+-- exemplos iniciais
+INSERT INTO suporte_status (nome, codigo) VALUES
+('Nova', 'N'),
+('Em análise', 'A'),
+('Devolvida (dúvida ao usuário)', 'D'),
+('Em andamento', 'E'),
+('Resolvida', 'R');
+
+CREATE TABLE suporte_classificacoes_finais (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nome VARCHAR(80) NOT NULL,
+    ativo TINYINT(1) NOT NULL DEFAULT 1
+);
+
+-- exemplos iniciais
+INSERT INTO suporte_classificacoes_finais (nome) VALUES
+('Erro do sistema'),
+('Erro do usuário'),
+('Apenas dúvida do usuário'),
+('Outros');
+
+
+
+CREATE TABLE suporte_chamados (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    ramo INT NULL,
+    parent_id INT NULL,
+
+    usuario_id INT NOT NULL,
+    destinatario_id INT NULL,
+    para_outro TINYINT(1) NOT NULL DEFAULT 0,
+
+    categoria_id INT NULL,
+    status_id INT NOT NULL,
+    classificacao_final_id INT NULL,
+
+    origem ENUM('P','R') NOT NULL DEFAULT 'P',
+    texto TEXT NOT NULL,
+
+    anexo_1 VARCHAR(255) NULL,
+    anexo_2 VARCHAR(255) NULL,
+    anexo_3 VARCHAR(255) NULL,
+
+    reaberto TINYINT(1) NOT NULL DEFAULT 0,
+
+    created DATETIME NULL,
+    modified DATETIME NULL
+);
+
+
+CREATE TABLE suporte_status_historico (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    suporte_id INT NOT NULL,
+    ramo INT NULL,
+    usuario_id INT NOT NULL,
+    status_anterior_id INT NULL,
+    status_novo_id INT NOT NULL,
+    created DATETIME NULL
+);
+
+ALTER TABLE `fomento2026`.`suporte_chamados` 
+ADD COLUMN `finalizado` TIMESTAMP NULL AFTER `modified`;

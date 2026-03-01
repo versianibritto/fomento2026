@@ -84,6 +84,11 @@
                         </a>
                     </li>
                     <li class="sidebar-item">
+                        <a href="/supote" class="sidebar-link">
+                            Suporte
+                        </a>
+                    </li>
+                    <li class="sidebar-item">
                         <a href="/index/dashdetalhes/T" class="sidebar-link <?=(($this->request->getParam('controller') == 'Index' && $this->request->getParam('action') == 'dashdetalhes') ? 'active' : '')?>">
                             <?php if ((int)($usuario_logado['escolaridade_id'] ?? 0) < 10) { ?>
                                 Minhas Bolsas
