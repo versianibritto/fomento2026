@@ -20,6 +20,7 @@ use Cake\ORM\Entity;
  * @property string|null $origem
  * @property string|null $titulo
  * @property string|null $situacao
+ * @property int|null $ramo
  *
  * @property \App\Model\Entity\Usuario $usuario
  * @property \App\Model\Entity\ParentFeedback $parent_feedback
@@ -48,6 +49,7 @@ class Feedback extends Entity
         'origem' => true,
         'titulo' => true,
         'situacao' => true,
+        'ramo' => true,
         'usuario' => true,
         'parent_feedback' => true,
         'child_feedbacks' => true,

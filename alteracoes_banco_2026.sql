@@ -1156,3 +1156,7 @@ UPDATE `anexos_tipos` SET `nome` = 'Certidão de Nascimento (Filhos Orientadora)
 ALTER TABLE `projeto_bolsistas` 
 ADD COLUMN `ano_doutorado` INT NULL AFTER `pdj_inscricoe_id`,
 ADD COLUMN `recem_servidor` TINYINT NULL AFTER `ano_doutorado`;
+
+
+ALTER TABLE `feedbacks` 
+ADD COLUMN `ramo` INT NULL AFTER `situacao`;

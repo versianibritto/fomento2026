@@ -107,6 +107,10 @@ class FeedbacksTable extends Table
             ->scalar('situacao')
             ->allowEmptyString('situacao');
 
+        $validator
+            ->integer('ramo')
+            ->allowEmptyString('ramo');
+
         return $validator;
     }
 

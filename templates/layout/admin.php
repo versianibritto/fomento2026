@@ -80,7 +80,7 @@
                     <li class="sidebar-item">
                         <a href="/feedbacks" class="sidebar-link">
                             Feedback
-                            <span class="badge badge-danger right"><?=$feedback?></span>
+                            <span class="badge bg-danger rounded-pill ms-2"><?= (int)($feedbackCount ?? 0) ?></span>
                         </a>
                     </li>
                     <li class="sidebar-item">

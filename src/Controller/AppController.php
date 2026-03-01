@@ -198,7 +198,7 @@ class AppController extends Controller
         */
 
         $this->set('usuario_logado', null);
-        $subs = $canc = $atv = $atv_pdj = $subs_pdj = $canc_pdj = $feedback = 0;
+            $subs = $canc = $atv = $atv_pdj = $subs_pdj = $canc_pdj = $feedbackCount = 0;
 
        // dd($this->request->getAttribute('authentication'));
         if($this->Authentication->getIdentity()) {
@@ -254,9 +254,22 @@ class AppController extends Controller
                 $atv = TableRegistry::getTableLocator()->get('ProjetoBolsistas')->find()->where(['vigente' => 1,  'deleted IS' => null])->count();
                 $atv_pdj = TableRegistry::getTableLocator()->get('PdjInscricoes')->find()->where(['vigente' => 1,  'deleted IS NULL'])->count();
 
-                $feedback = TableRegistry::getTableLocator()->get('Feedbacks')->find()->where(['situacao' => 'N'])->count();
-
-
+                $feedbackCount = TableRegistry::getTableLocator()->get('Feedbacks')->find()
+                    ->where(['situacao' => 'N', 'origem' => 'P'])
+                    ->count();
+            }
+            if(!$usuario->yoda) {
+                $feedbacksTable = TableRegistry::getTableLocator()->get('Feedbacks');
+                $feedbacksDoUsuario = $feedbacksTable->find()
+                    ->select(['id'])
+                    ->where(['usuario_id' => $usuario->id]);
+                $feedbackCount = $feedbacksTable->find()
+                    ->where([
+                        'situacao' => 'N',
+                        'origem' => 'R',
+                        'parent_id IN' => $feedbacksDoUsuario,
+                    ])
+                    ->count();
             }
                 
             /*
@@ -292,7 +305,7 @@ class AppController extends Controller
             }
                 */
         }
-        $this->set(compact('subs', 'subs_pdj', 'canc','canc_pdj',  'atv', 'atv_pdj','feedback'));
+            $this->set(compact('subs', 'subs_pdj', 'canc','canc_pdj',  'atv', 'atv_pdj','feedbackCount'));
 
     }
 
