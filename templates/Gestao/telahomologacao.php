@@ -267,117 +267,120 @@
                 </table>
             </div>
 
-            <hr class="my-4 border-0 border-top border-2 border-secondary-subtle opacity-100">
+            <?php /* Blocos Projeto e Subprojeto comentados temporariamente */ ?>
+            <?php if (false): ?>
+                <hr class="my-4 border-0 border-top border-2 border-secondary-subtle opacity-100">
 
-            <h5 class="fw-semibold mb-3">Projeto</h5>
-            <div class="row g-3 mb-3">
-                <div class="col-md-2">
-                    <div class="text-muted small">ID</div>
-                    <div class="fw-semibold"><?= !empty($projetoAtual->id ?? null) ? h($projetoAtual->id) : '<span class="text-muted">-</span>' ?></div>
+                <h5 class="fw-semibold mb-3">Projeto</h5>
+                <div class="row g-3 mb-3">
+                    <div class="col-md-2">
+                        <div class="text-muted small">ID</div>
+                        <div class="fw-semibold"><?= !empty($projetoAtual->id ?? null) ? h($projetoAtual->id) : '<span class="text-muted">-</span>' ?></div>
+                    </div>
+                    <div class="col-md-10">
+                        <div class="text-muted small">Título</div>
+                        <div class="fw-semibold"><?= !empty($projetoAtual->titulo ?? null) ? h($projetoAtual->titulo) : $naoInformado ?></div>
+                    </div>
                 </div>
-                <div class="col-md-10">
-                    <div class="text-muted small">Título</div>
-                    <div class="fw-semibold"><?= !empty($projetoAtual->titulo ?? null) ? h($projetoAtual->titulo) : $naoInformado ?></div>
+
+                <h6 class="fw-semibold mb-2">Anexos do bloco Projeto</h6>
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle">
+                        <thead>
+                            <tr>
+                                <th>Tipo</th>
+                                <th class="text-center">Status</th>
+                                <th>Anexo</th>
+                                <th class="text-end"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php if (empty($anexosP)): ?>
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted">Nenhum tipo de anexo de projeto configurado.</td>
+                                </tr>
+                            <?php endif; ?>
+                            <?php foreach ($anexosP as $anexo): ?>
+                                <tr>
+                                    <td><?= h($anexo['tipo_nome']) ?></td>
+                                    <td class="text-center">
+                                        <span class="badge bg-light text-danger border border-danger fw-normal"><?= h($anexo['status_regra']) ?></span>
+                                    </td>
+                                    <td>
+                                        <?php if ($anexo['arquivo'] !== ''): ?>
+                                            <?= h($anexo['arquivo']) ?>
+                                        <?php else: ?>
+                                            <?= $naoInformado ?>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td class="text-end">
+                                        <?php if ($anexo['arquivo'] !== ''): ?>
+                                            <a href="/uploads/anexos/<?= h($anexo['arquivo']) ?>" target="_blank" class="btn btn-light border btn-sm py-0 px-2" title="Download">
+                                                <i class="fa fa-download"></i>
+                                            </a>
+                                        <?php endif; ?>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
                 </div>
-            </div>
 
-            <h6 class="fw-semibold mb-2">Anexos do bloco Projeto</h6>
-            <div class="table-responsive">
-                <table class="table table-sm align-middle">
-                    <thead>
-                        <tr>
-                            <th>Tipo</th>
-                            <th class="text-center">Status</th>
-                            <th>Anexo</th>
-                            <th class="text-end"></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php if (empty($anexosP)): ?>
-                            <tr>
-                                <td colspan="4" class="text-center text-muted">Nenhum tipo de anexo de projeto configurado.</td>
-                            </tr>
-                        <?php endif; ?>
-                        <?php foreach ($anexosP as $anexo): ?>
-                            <tr>
-                                <td><?= h($anexo['tipo_nome']) ?></td>
-                                <td class="text-center">
-                                    <span class="badge bg-light text-danger border border-danger fw-normal"><?= h($anexo['status_regra']) ?></span>
-                                </td>
-                                <td>
-                                    <?php if ($anexo['arquivo'] !== ''): ?>
-                                        <?= h($anexo['arquivo']) ?>
-                                    <?php else: ?>
-                                        <?= $naoInformado ?>
-                                    <?php endif; ?>
-                                </td>
-                                <td class="text-end">
-                                    <?php if ($anexo['arquivo'] !== ''): ?>
-                                        <a href="/uploads/anexos/<?= h($anexo['arquivo']) ?>" target="_blank" class="btn btn-light border btn-sm py-0 px-2" title="Download">
-                                            <i class="fa fa-download"></i>
-                                        </a>
-                                    <?php endif; ?>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
+                <hr class="my-4 border-0 border-top border-2 border-secondary-subtle opacity-100">
 
-            <hr class="my-4 border-0 border-top border-2 border-secondary-subtle opacity-100">
-
-            <h5 class="fw-semibold mb-3">Subprojeto</h5>
-            <div class="row g-3 mb-3">
-                <div class="col-md-12">
-                    <div class="text-muted small">Título</div>
-                    <div class="fw-semibold"><?= $subprojetoTitulo !== '' ? h($subprojetoTitulo) : $naoInformado ?></div>
+                <h5 class="fw-semibold mb-3">Subprojeto</h5>
+                <div class="row g-3 mb-3">
+                    <div class="col-md-12">
+                        <div class="text-muted small">Título</div>
+                        <div class="fw-semibold"><?= $subprojetoTitulo !== '' ? h($subprojetoTitulo) : $naoInformado ?></div>
+                    </div>
                 </div>
-            </div>
 
-            <h6 class="fw-semibold mb-2">Anexos do bloco Subprojeto</h6>
-            <div class="table-responsive">
-                <table class="table table-sm align-middle">
-                    <thead>
-                        <tr>
-                            <th>Tipo</th>
-                            <th class="text-center">Status</th>
-                            <th>Anexo</th>
-                            <th class="text-end"></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php if (empty($anexosS)): ?>
+                <h6 class="fw-semibold mb-2">Anexos do bloco Subprojeto</h6>
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle">
+                        <thead>
                             <tr>
-                                <td colspan="4" class="text-center text-muted">Nenhum tipo de anexo de subprojeto configurado.</td>
+                                <th>Tipo</th>
+                                <th class="text-center">Status</th>
+                                <th>Anexo</th>
+                                <th class="text-end"></th>
                             </tr>
-                        <?php endif; ?>
-                        <?php foreach ($anexosS as $anexo): ?>
-                            <tr>
-                                <td><?= h($anexo['tipo_nome']) ?></td>
-                                <td class="text-center">
-                                    <span class="badge bg-light text-danger border border-danger fw-normal"><?= h($anexo['status_regra']) ?></span>
-                                </td>
-                                <td>
-                                    <?php if ($anexo['arquivo'] !== ''): ?>
-                                        <?= h($anexo['arquivo']) ?>
-                                    <?php else: ?>
-                                        <?= $naoInformado ?>
-                                    <?php endif; ?>
-                                </td>
-                                <td class="text-end">
-                                    <?php if ($anexo['arquivo'] !== ''): ?>
-                                        <a href="/uploads/anexos/<?= h($anexo['arquivo']) ?>" target="_blank" class="btn btn-light border btn-sm py-0 px-2" title="Download">
-                                            <i class="fa fa-download"></i>
-                                        </a>
-                                    <?php endif; ?>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
+                        </thead>
+                        <tbody>
+                            <?php if (empty($anexosS)): ?>
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted">Nenhum tipo de anexo de subprojeto configurado.</td>
+                                </tr>
+                            <?php endif; ?>
+                            <?php foreach ($anexosS as $anexo): ?>
+                                <tr>
+                                    <td><?= h($anexo['tipo_nome']) ?></td>
+                                    <td class="text-center">
+                                        <span class="badge bg-light text-danger border border-danger fw-normal"><?= h($anexo['status_regra']) ?></span>
+                                    </td>
+                                    <td>
+                                        <?php if ($anexo['arquivo'] !== ''): ?>
+                                            <?= h($anexo['arquivo']) ?>
+                                        <?php else: ?>
+                                            <?= $naoInformado ?>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td class="text-end">
+                                        <?php if ($anexo['arquivo'] !== ''): ?>
+                                            <a href="/uploads/anexos/<?= h($anexo['arquivo']) ?>" target="_blank" class="btn btn-light border btn-sm py-0 px-2" title="Download">
+                                                <i class="fa fa-download"></i>
+                                            </a>
+                                        <?php endif; ?>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
 
-            <hr class="my-4 border-0 border-top border-2 border-secondary-subtle opacity-100">
+                <hr class="my-4 border-0 border-top border-2 border-secondary-subtle opacity-100">
+            <?php endif; ?>
 
             <h5 class="fw-semibold mb-3">Anexos específicos da Inscrição</h5>
             <div class="table-responsive">
