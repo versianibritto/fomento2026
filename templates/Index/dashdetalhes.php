@@ -121,6 +121,13 @@
                                 </td>
                                 <td>
                                     <?php if ($usuarioId == $i['orientador']): ?>
+                                        <?php
+                                            $faseRegistro = (int)($i['fase_id'] ?? 0);
+                                            $origemRegistro = strtoupper(trim((string)($i['origem'] ?? '')));
+                                            $podeDesistirProcesso = $tipo === 'A'
+                                                && $origemRegistro === 'N'
+                                                && $faseRegistro < 8;
+                                        ?>
                                         <?php if ($tipo === 'A' || $tipo === 'T'): ?>                                  
                                             <?php if (in_array($i['fase_id'], [1, 3])): ?>
                                                 <!-- EDITAR -->
@@ -165,6 +172,17 @@
                                                 </a>
                                             <?php endif; ?>
                                         
+                                        <?php endif; ?>
+                                        <?php if ($podeDesistirProcesso): ?>
+                                            <?= $this->Form->postLink('Desistir do processo', [
+                                                'controller' => 'Inscricoes',
+                                                'action' => 'desistir',
+                                                (int)$i['editai_id'],
+                                                (int)$i['id'],
+                                            ], [
+                                                'class' => 'btn btn-sm btn-outline-danger mb-1',
+                                                'confirm' => 'Confirma a desistência do processo? Esta ação não poderá ser desfeita.',
+                                            ]) ?>
                                         <?php endif; ?>
                                         <?php if ($tipo === 'V' || $tipo === 'T'): ?>                                  
                                             <?php if (in_array($i['fase_id'], [11, 18, 19])): ?>

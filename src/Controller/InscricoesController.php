@@ -113,6 +113,71 @@ class InscricoesController extends AppController
         $this->Flash->success('Inscrição excluída com sucesso.');
         return $this->redirect(['controller' => 'Index', 'action' => 'dashdetalhes', 'A']);
     }
+
+    public function desistir($editalId = null, $inscricaoId = null)
+    {
+        $this->request->allowMethod(['post']);
+
+        $context = $this->loadContext($editalId);
+        if (isset($context['redirect'])) {
+            return $context['redirect'];
+        }
+        $edital = $context['edital'];
+        $identity = $context['identity'];
+
+        if (empty($inscricaoId)) {
+            $this->Flash->error('Inscrição não informada para desistência.');
+            return $this->redirect(['controller' => 'Index', 'action' => 'dashdetalhes', 'A']);
+        }
+
+        $tblProjetoBolsistas = $this->fetchTable('ProjetoBolsistas');
+        $inscricao = $tblProjetoBolsistas->find()
+            ->where([
+                'ProjetoBolsistas.id' => (int)$inscricaoId,
+                'ProjetoBolsistas.editai_id' => (int)$edital->id,
+                'ProjetoBolsistas.deleted IS' => null,
+            ])
+            ->first();
+
+        if (!$inscricao) {
+            $this->Flash->error('Inscrição não localizada para desistência.');
+            return $this->redirect(['controller' => 'Index', 'action' => 'dashdetalhes', 'A']);
+        }
+
+        if ((int)$inscricao->orientador !== (int)$identity->id) {
+            $this->Flash->error('Acesso negado. Somente o orientador pode desistir do processo.');
+            return $this->redirect(['controller' => 'Padrao', 'action' => 'visualizar', (int)$inscricao->id]);
+        }
+
+        if (strtoupper((string)($inscricao->origem ?? '')) !== 'N') {
+            $this->Flash->error('A desistência está disponível apenas para inscrições com origem nova.');
+            return $this->redirect(['controller' => 'Padrao', 'action' => 'visualizar', (int)$inscricao->id]);
+        }
+
+        if ((int)$inscricao->fase_id >= 8) {
+            $this->Flash->error('A desistência só é permitida para inscrições nas fases de inscrição.');
+            return $this->redirect(['controller' => 'Padrao', 'action' => 'visualizar', (int)$inscricao->id]);
+        }
+
+        try {
+            $faseAtual = (int)$inscricao->fase_id;
+            $inscricaoPatch = $tblProjetoBolsistas->patchEntity($inscricao, [
+                'deleted' => date('Y-m-d H:i:s'),
+            ]);
+            $tblProjetoBolsistas->saveOrFail($inscricaoPatch);
+            $this->historico((int)$inscricao->id, $faseAtual, $faseAtual, 'desistencia do processo pelo orientador', true);
+        } catch (\Throwable $e) {
+            $this->flashFriendlyException(
+                $e,
+                'Erro no sistema ao registrar desistência da inscrição.',
+                'Não foi possível registrar a desistência do processo.'
+            );
+            return $this->redirect(['controller' => 'Padrao', 'action' => 'visualizar', (int)$inscricao->id]);
+        }
+
+        $this->Flash->success('Desistência do processo registrada com sucesso.');
+        return $this->redirect(['controller' => 'Index', 'action' => 'dashdetalhes', 'A']);
+    }
     // valida se tem alguma inscrição e se tem alguma renovação para decidir
     public function fluxoNova($editalId = null)
     {

@@ -148,6 +148,13 @@ if (!$temDataInicio && !$temDataFim) {
         $controllerFluxo = (string)($controllerFluxo ?? ($isRenovacao ? 'Renovacoes' : 'Inscricoes'));
         $identityTela = $this->request->getAttribute('identity');
         $ehTIVisualizacao = !empty($identityTela->yoda) || !empty($identityTela->jedi);
+        $origemTela = strtoupper((string)($inscricao->origem ?? ''));
+        $ehOrientadorTela = !empty($identityTela->id) && (int)$identityTela->id === (int)($inscricao->orientador ?? 0);
+        $podeDesistirProcesso = !$isRenovacao
+            && $origemTela === 'N'
+            && $faseAtual < 8
+            && empty($inscricao->deleted)
+            && $ehOrientadorTela;
     ?>
     <div class="d-flex flex-wrap gap-2 mb-3">
         <?php if (in_array($faseAtual, [1, 3], true)): ?>
@@ -199,6 +206,18 @@ if (!$temDataInicio && !$temDataFim) {
                 'action' => 'reativar',
                 (int)$inscricao->id,
             ], ['class' => 'btn btn-sm btn-outline-secondary']) ?>
+        <?php endif; ?>
+
+        <?php if ($podeDesistirProcesso): ?>
+            <?= $this->Form->postLink('Desistir do processo', [
+                'controller' => 'Inscricoes',
+                'action' => 'desistir',
+                (int)$edital->id,
+                (int)$inscricao->id,
+            ], [
+                'class' => 'btn btn-sm btn-outline-danger',
+                'confirm' => 'Confirma a desistência do processo? Esta ação não poderá ser desfeita.',
+            ]) ?>
         <?php endif; ?>
     </div>
     <div class="card mb-3">
