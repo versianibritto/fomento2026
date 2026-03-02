@@ -931,7 +931,7 @@ SET pb.matriz = m.matriz_id where pb.id>0;
 select id, orientador, bolsista, projeto_id, created from projeto_bolsistas where matriz is null
 -- //////////////////////////////////////////////
 
-ALTER TABLE `fomento2026`.`projeto_bolsistas` 
+ALTER TABLE `projeto_bolsistas` 
 ADD COLUMN `pdj_inscricoe_id` INT NULL AFTER `matriz`;
 
 
@@ -1246,5 +1246,5 @@ CREATE TABLE suporte_status_historico (
 ALTER TABLE `suporte_chamados` 
 ADD COLUMN `finalizado` TIMESTAMP NULL AFTER `modified`;
 
-INSERT INTO `programas` (`sigla`, `letra`, `deleted`) VALUES ('Coleções', 'L', '0');
+INSERT INTO `programas` (`sigla`, `deleted`) VALUES ('Coleções', '0');
 

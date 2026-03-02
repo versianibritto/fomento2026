@@ -62,6 +62,20 @@
                             <div class="text-muted small">E-mail de contato</div>
                             <div class="fw-semibold"><?= !empty($inscricao->bolsista_usuario->email_contato) ? h($inscricao->bolsista_usuario->email_contato) : $naoInformado ?></div>
                         </div>
+                        <div class="col-12">
+                            <div class="d-flex flex-wrap gap-2">
+                                <?= $this->Html->link(
+                                    'Visualizar dados do bolsista',
+                                    ['controller' => 'Users', 'action' => 'ver', (int)$inscricao->bolsista],
+                                    ['class' => 'btn btn-outline-secondary btn-sm']
+                                ) ?>
+                                <?= $this->Html->link(
+                                    'Editar dados do bolsista',
+                                    ['controller' => 'Users', 'action' => 'editar', (int)$inscricao->bolsista],
+                                    ['class' => 'btn btn-outline-primary btn-sm']
+                                ) ?>
+                            </div>
+                        </div>
                         <?php endif; ?>
                         <div class="col-12">
                             <div class="border rounded bg-white p-3 p-md-4 mt-2">

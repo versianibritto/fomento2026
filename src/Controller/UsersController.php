@@ -356,8 +356,28 @@ class UsersController extends AppController
         $temJedi = $identity['jedi'] !== null && $identity['jedi'] !== '';
         $temPadauan = $identity['padauan'] !== null && $identity['padauan'] !== '';
         $ehProprioUsuario = $identity['id'] == $id;
+        $podeVisualizarPorInscricao = false;
 
         if (!$temYoda && !$temJedi && !$temPadauan && !$ehProprioUsuario) {
+            $orientadorId = (int)($identity['id'] ?? 0);
+            if ($orientadorId > 0) {
+                $vinculoEmRascunho = $this->fetchTable('ProjetoBolsistas')->find()
+                    ->select(['id'])
+                    ->where([
+                        'ProjetoBolsistas.deleted IS' => null,
+                        'ProjetoBolsistas.fase_id' => 3,
+                        'ProjetoBolsistas.orientador' => $orientadorId,
+                        'OR' => [
+                            'ProjetoBolsistas.bolsista' => (int)$id,
+                            'ProjetoBolsistas.coorientador' => (int)$id,
+                        ],
+                    ])
+                    ->first();
+                $podeVisualizarPorInscricao = (bool)$vinculoEmRascunho;
+            }
+        }
+
+        if (!$temYoda && !$temJedi && !$temPadauan && !$ehProprioUsuario && !$podeVisualizarPorInscricao) {
             $this->Flash->error('Acesso restrito.');
             return $this->redirect(['controller' => 'Index', 'action' => 'index']);
         }
@@ -535,11 +555,35 @@ class UsersController extends AppController
     //ok
     public function editar($id = null)
     {
-        $user = $this->Usuarios->get(($id ?? $this->Authentication->getIdentity()->id), ['contain' => ['Instituicaos', 'Streets'=>['Districts'=>['Cities']]]]);
+        $identity = $this->Authentication->getIdentity();
+        $identityId = (int)($identity->id ?? 0);
+        $inscricaoEdicaoOrientadorId = null;
+        $user = $this->Usuarios->get(($id ?? $identityId), ['contain' => ['Instituicaos', 'Streets'=>['Districts'=>['Cities']]]]);
         
-        if ($user->id != $this->Authentication->getIdentity()->id) {
-            if (!$this->Authentication->getIdentity()->yoda) {
-                $this->Flash->error("O acesso a edição dos dados é restrito ao próprio usuário ou à gestão.");
+        if ($user->id !== $identityId) {
+            $podeEditar = (bool)($identity->yoda ?? false);
+
+            if (!$podeEditar) {
+                $vinculoEmRascunho = $this->fetchTable('ProjetoBolsistas')->find()
+                    ->select(['id'])
+                    ->where([
+                        'ProjetoBolsistas.deleted IS' => null,
+                        'ProjetoBolsistas.fase_id' => 3,
+                        'ProjetoBolsistas.orientador' => $identityId,
+                        'OR' => [
+                            'ProjetoBolsistas.bolsista' => (int)$user->id,
+                            'ProjetoBolsistas.coorientador' => (int)$user->id,
+                        ],
+                    ])
+                    ->first();
+                $podeEditar = (bool)$vinculoEmRascunho;
+                if ($podeEditar) {
+                    $inscricaoEdicaoOrientadorId = (int)$vinculoEmRascunho->id;
+                }
+            }
+
+            if (!$podeEditar) {
+                $this->Flash->error("O acesso a edição dos dados é restrito ao próprio usuário, à gestão ou a bolsista/coorientador vinculado em inscrição na fase de rascunho.");
                 return $this->redirect(['controller' => 'Index', 'action' => 'index']);
             }
         }
@@ -568,6 +612,15 @@ class UsersController extends AppController
             //$user = $this->Usuarios->patchEntity($user, $this->request->getData());
             $dados = $this->request->getData();
             $original = $user->toArray();
+
+            // Campos desabilitados no form nao sao enviados no POST.
+            // Preserva o valor atual para evitar validacao indevida.
+            if (!array_key_exists('escolaridade_id', $dados)) {
+                $dados['escolaridade_id'] = $user->escolaridade_id;
+            }
+            if (!array_key_exists('ic', $dados)) {
+                $dados['ic'] = $user->ic;
+            }
 
 
             if($dados['data_nascimento']!=''){
@@ -655,9 +708,12 @@ class UsersController extends AppController
             $user = $this->Usuarios->patchEntity($user, $dados);
 
             $diff = $this->buildUserDiff($original, $user, $this->getUserAuditFields());
+            $observacaoEdicaoOrientador = $inscricaoEdicaoOrientadorId !== null
+                ? 'Alteração realizada pelo orientador na inscrição #' . $inscricaoEdicaoOrientadorId . '.'
+                : null;
 
             try {
-                $this->Usuarios->getConnection()->transactional(function () use ($user, $diff) {
+                $this->Usuarios->getConnection()->transactional(function () use ($user, $diff, $observacaoEdicaoOrientador) {
                     if (!$this->Usuarios->save($user)) {
                         throw new \RuntimeException('Falha ao salvar usuário.');
                     }
@@ -675,6 +731,16 @@ class UsersController extends AppController
                         ];
                     }
 
+                    if ($observacaoEdicaoOrientador !== null) {
+                        $infoAtual = trim((string)($diff['_info']['para'] ?? ''));
+                        $diff['_info'] = [
+                            'de' => null,
+                            'para' => $infoAtual !== ''
+                                ? $infoAtual . ' ' . $observacaoEdicaoOrientador
+                                : $observacaoEdicaoOrientador,
+                        ];
+                    }
+
                     if (!$this->saveUserHistory((int)$user->id, $diff, 'E')) {
                         throw new \RuntimeException('Falha ao salvar histórico.');
                     }
@@ -685,6 +751,9 @@ class UsersController extends AppController
                 });
 
                 $this->Flash->success('Usuário atualizado com sucesso');
+                if ($inscricaoEdicaoOrientadorId !== null) {
+                    return $this->redirect(['controller' => 'Index', 'action' => 'dashdetalhes', 'A']);
+                }
                 if ($user->escolaridade_id < 10) {
                     $this->Flash->success('Prezado(a) Candidato(a), agradecemos seu interesse em fazer parte do nosso Banco de talentos e pelo(a) seu(ua) participação em nossos processos seletivos. Caso seja selecionado(a) por um de nossos orientadores, eles entrarão em contato para uma entrevista e posterior inscrição de seu nome no sistema.');
                 }
@@ -1495,6 +1564,7 @@ class UsersController extends AppController
             if (empty($diff)) {
                 return true;
             }
+            $diff = $this->mapHistoryDiffToLabels($diff);
 
             $identity = $this->Authentication->getIdentity();
             $alteradoPor = $identity ? (int)$identity->id : null;
@@ -1512,6 +1582,109 @@ class UsersController extends AppController
             $novo->created = new \Cake\I18n\FrozenTime();
 
             return (bool)$this->UsuarioHistoricos->save($novo);
+        }
+
+        protected function mapHistoryDiffToLabels(array $diff): array
+        {
+            foreach ($diff as $field => $valores) {
+                if (!is_array($valores)) {
+                    continue;
+                }
+                $diff[$field]['de'] = $this->mapHistoryFieldValue((string)$field, $valores['de'] ?? null);
+                $diff[$field]['para'] = $this->mapHistoryFieldValue((string)$field, $valores['para'] ?? null);
+            }
+
+            return $diff;
+        }
+
+        protected function mapHistoryFieldValue(string $field, mixed $value): mixed
+        {
+            if ($value === null || $value === '') {
+                return null;
+            }
+
+            $mapsFixos = [
+                'sexo' => $this->sexo,
+                'raca' => $this->racas,
+                'deficiencia' => $this->deficiencia,
+                'documento' => $this->documentos,
+                'ic' => [
+                    'I' => 'IC Manguinhos/Ensp',
+                    'A' => 'IC Mata atlantica',
+                    'M' => 'IC Maré',
+                    'N' => 'Não me enquadro nestes editais',
+                ],
+                'yoda' => [
+                    '0' => 'Não',
+                    '1' => 'Sim',
+                ],
+                'em_curso' => [
+                    '0' => 'Não',
+                    '1' => 'Sim',
+                ],
+            ];
+
+            if (isset($mapsFixos[$field])) {
+                $key = is_scalar($value) ? (string)$value : null;
+                if ($key !== null && array_key_exists($key, $mapsFixos[$field])) {
+                    return $mapsFixos[$field][$key];
+                }
+            }
+
+            if ($field === 'documento_uf_emissor') {
+                $map = $this->getHistoryListMap('States', 'sigla');
+                $key = is_scalar($value) ? (string)$value : null;
+                if ($key !== null && array_key_exists($key, $map)) {
+                    return $map[$key];
+                }
+            }
+
+            if ($field === 'escolaridade_id') {
+                $map = $this->getHistoryListMap('Escolaridades', 'nome');
+                $key = is_scalar($value) ? (string)$value : null;
+                if ($key !== null && array_key_exists($key, $map)) {
+                    return $map[$key];
+                }
+            }
+
+            if ($field === 'vinculo_id') {
+                $map = $this->getHistoryListMap('Vinculos', 'nome');
+                $key = is_scalar($value) ? (string)$value : null;
+                if ($key !== null && array_key_exists($key, $map)) {
+                    return $map[$key];
+                }
+            }
+
+            if ($field === 'unidade_id') {
+                $map = $this->getHistoryListMap('Unidades', 'nome');
+                $key = is_scalar($value) ? (string)$value : null;
+                if ($key !== null && array_key_exists($key, $map)) {
+                    return $map[$key];
+                }
+            }
+
+            return $value;
+        }
+
+        protected function getHistoryListMap(string $tableName, string $valueField): array
+        {
+            static $cache = [];
+            $cacheKey = $tableName . ':' . $valueField;
+            if (isset($cache[$cacheKey])) {
+                return $cache[$cacheKey];
+            }
+
+            $map = $this->fetchTable($tableName)->find('list', [
+                'keyField' => 'id',
+                'valueField' => $valueField,
+            ])->toArray();
+
+            $cache[$cacheKey] = array_combine(
+                array_map('strval', array_keys($map)),
+                array_values($map)
+            ) ?: [];
+
+            return $cache[$cacheKey];
         }
 
         protected function filterHistoryDiff(array $diff): array

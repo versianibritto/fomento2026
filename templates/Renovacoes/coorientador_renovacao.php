@@ -50,6 +50,20 @@
                             <div class="text-muted small">E-mail</div>
                             <div class="fw-semibold"><?= !empty($coorientadorUsuario?->email) ? h($coorientadorUsuario->email) : $naoInformado ?></div>
                         </div>
+                        <div class="col-12">
+                            <div class="d-flex flex-wrap gap-2">
+                                <?= $this->Html->link(
+                                    'Visualizar dados do coorientador',
+                                    ['controller' => 'Users', 'action' => 'ver', (int)$inscricao->coorientador],
+                                    ['class' => 'btn btn-outline-secondary btn-sm']
+                                ) ?>
+                                <?= $this->Html->link(
+                                    'Editar dados do coorientador',
+                                    ['controller' => 'Users', 'action' => 'editar', (int)$inscricao->coorientador],
+                                    ['class' => 'btn btn-outline-primary btn-sm']
+                                ) ?>
+                            </div>
+                        </div>
                         <?php endif; ?>
                         <div class="col-12">
                             <div class="border rounded bg-white p-3 p-md-4 mt-2">
