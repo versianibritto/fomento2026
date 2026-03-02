@@ -1115,14 +1115,12 @@ class RenovacoesController extends AppController
             }
             if ($podePreencherResumoProjeto) {
                 $resumo = trim((string)($dados['resumo'] ?? ''));
-                if ($resumo !== '') {
-                    $erroResumoProjeto = $this->validarTextoComLimites($resumo, 'Resumo do projeto', 20, 4000);
-                    if ($erroResumoProjeto !== null) {
-                        $this->Flash->error($erroResumoProjeto);
-                        return $this->redirect(['action' => 'projetoRenovacao', $context['edital']->id, $inscricao->id]);
-                    }
-                    $dadosProjeto['resumo'] = $resumo;
+                $erroResumoProjeto = $this->validarTextoComLimites($resumo, 'Resumo do projeto', 20, 4000, true);
+                if ($erroResumoProjeto !== null) {
+                    $this->Flash->error($erroResumoProjeto);
+                    return $this->redirect(['action' => 'projetoRenovacao', $context['edital']->id, $inscricao->id]);
                 }
+                $dadosProjeto['resumo'] = $resumo;
             }
             if (!empty($dadosProjeto) && $projetoSelecionado) {
                 $tblProjetos = $this->fetchTable('Projetos');
@@ -1898,9 +1896,9 @@ class RenovacoesController extends AppController
             if ($erroTituloProjeto !== null) {
                 $errosProjeto[] = $erroTituloProjeto;
             }
-            $erroResumoProjeto = $this->validarTextoComLimites((string)($projeto->resumo ?? ''), 'Resumo do projeto', 20, 4000, true);
-            if ($erroResumoProjeto !== null) {
-                $errosProjeto[] = $erroResumoProjeto;
+            $resumoProjeto = trim((string)($projeto->resumo ?? ''));
+            if ($resumoProjeto === '') {
+                $errosProjeto[] = 'Informe resumo do projeto.';
             }
             $erroFinanciadores = $this->validarTextoComLimites((string)($projeto->financiamento ?? ''), 'Instituicoes financiadoras', 20, 255);
             if ($erroFinanciadores !== null) {

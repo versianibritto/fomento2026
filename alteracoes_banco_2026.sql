@@ -1243,5 +1243,8 @@ CREATE TABLE suporte_status_historico (
     created DATETIME NULL
 );
 
-ALTER TABLE `fomento2026`.`suporte_chamados` 
+ALTER TABLE `suporte_chamados` 
 ADD COLUMN `finalizado` TIMESTAMP NULL AFTER `modified`;
+
+INSERT INTO `programas` (`sigla`, `letra`, `deleted`) VALUES ('Coleções', 'L', '0');
+

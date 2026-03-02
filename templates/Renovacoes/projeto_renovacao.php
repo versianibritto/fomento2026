@@ -146,6 +146,7 @@
                                     'class' => 'form-control campo-vazio',
                                     'rows' => 5,
                                     'maxlength' => 4000,
+                                    'required' => true,
                                     'value' => '',
                                 ]) ?>
                             <?php else : ?>
