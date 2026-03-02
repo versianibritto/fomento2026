@@ -97,7 +97,7 @@
                 </div>
                 <div class="col-md-6">
                     <?= $this->Form->control('autorizacao', [
-                        'label' => 'Deseja autorizar publicação em revista?',
+                        'label' => 'Deseja autorizar a publicação em revista?',
                         'type' => 'select',
                         'options' => [
                             '1' => 'Sim',
@@ -170,7 +170,7 @@
                 </div>
 
                 <div class="col-12 modo-subprojeto-D">
-                    <h6 class="fw-semibold">Dados do Subprojeto</h6>
+                    <h6 class="fw-semibold">Dados do subprojeto</h6>
                 </div>
                 <div class="col-12 modo-subprojeto-D">
                     <?= $this->Form->control('justificativa_alteracao', [
@@ -209,12 +209,12 @@
                         <div class="col-md-6">
                             <?php if (empty($anexos[20])) : ?>
                                 <?= $this->Form->control('anexos[20]', [
-                                    'label' => 'Anexo subprojeto completo (PDF)',
+                                    'label' => 'Anexo do subprojeto completo (PDF)',
                                     'type' => 'file',
                                     'class' => 'form-control',
                                 ]) ?>
                             <?php else : ?>
-                                <label class="form-label d-block">Anexo subprojeto completo (PDF)</label>
+                                <label class="form-label d-block">Anexo do subprojeto completo (PDF)</label>
                                 <div class="anexo-arquivo-atual">
                                     <div class="d-flex align-items-center justify-content-between gap-2 flex-nowrap">
                                         <div class="small text-muted text-truncate">

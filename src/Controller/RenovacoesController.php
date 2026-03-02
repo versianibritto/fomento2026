@@ -599,7 +599,7 @@ class RenovacoesController extends AppController
             } catch (\Throwable $e) {
                 $this->flashFriendlyException(
                     $e,
-                    'Erro no Sistema - salvar dados no dados bolsista',
+                    'Erro no Sistema - salvar dados na tela de dados do bolsista',
                     'Não foi possível salvar os dados do bolsista.'
                 );
                 return $this->redirect(['action' => 'dadosBolsistaRenovacao', $edital->id, $inscricao->id]);
@@ -654,7 +654,7 @@ class RenovacoesController extends AppController
             ->count();
 
         if ($temVigente > 0 || $temAndamento > 0) {
-            throw new \Exception('O bolsista informado possui bolsa ativa ou inscricao em andamento.');
+            throw new \Exception('O bolsista informado possui bolsa ativa ou inscrição em andamento.');
         }
     }
 
@@ -867,7 +867,7 @@ class RenovacoesController extends AppController
                     ]);
                 });
             } catch (\Throwable $e) {
-                $this->flashFriendlyException($e, 'Erro no Sistema - salvar súmula da renovação');
+                $this->flashFriendlyException($e, 'Erro no sistema ao salvar a súmula da renovação.');
                 return $this->redirect(['action' => 'sumulaRenovacao', $context['edital']->id, $inscricao->id]);
             }
 
@@ -1288,12 +1288,12 @@ class RenovacoesController extends AppController
             $resumoSubprojetoNovo = trim((string)($dados['sp_resumo'] ?? ''));
             $justificativaAlteracao = trim((string)($dados['justificativa_alteracao'] ?? ''));
             $errosTextoSubprojeto = [];
-            $erroResumoRelatorio = $this->validarTextoComLimites($resumoRelatorio, 'Resumo do relatorio', 20, 4000);
+            $erroResumoRelatorio = $this->validarTextoComLimites($resumoRelatorio, 'Resumo do relatório', 20, 4000);
             if ($erroResumoRelatorio !== null) {
                 $errosTextoSubprojeto[] = $erroResumoRelatorio;
             }
             if ($modoSubprojeto === 'D') {
-                $erroTituloSubprojeto = $this->validarTextoComLimites($tituloSubprojetoNovo, 'Titulo do subprojeto', 20, 255);
+                $erroTituloSubprojeto = $this->validarTextoComLimites($tituloSubprojetoNovo, 'Título do subprojeto', 20, 255);
                 if ($erroTituloSubprojeto !== null) {
                     $errosTextoSubprojeto[] = $erroTituloSubprojeto;
                 }
@@ -1301,7 +1301,7 @@ class RenovacoesController extends AppController
                 if ($erroResumoSubprojeto !== null) {
                     $errosTextoSubprojeto[] = $erroResumoSubprojeto;
                 }
-                $erroJustificativa = $this->validarTextoComLimites($justificativaAlteracao, 'Justificativa da alteracao', 20, 4000);
+                $erroJustificativa = $this->validarTextoComLimites($justificativaAlteracao, 'Justificativa da alteração', 20, 4000);
                 if ($erroJustificativa !== null) {
                     $errosTextoSubprojeto[] = $erroJustificativa;
                 }
@@ -1379,7 +1379,7 @@ class RenovacoesController extends AppController
                         $tblProjetoBolsistas->saveOrFail($inscricaoPatch);
                         $this->replicarAnexoSubprojetoDaReferencia((int)$inscricao->id, (int)$anexoTipoSubprojeto, (int)($referenciaSubprojeto->id ?? 0));
                         if (!$this->anexarInscricao($anexosUploadRelatorio, $inscricao->projeto_id, (int)$inscricao->id, null, true)) {
-                            throw new \RuntimeException('Falha ao salvar anexo do relatorio parcial.');
+                            throw new \RuntimeException('Falha ao salvar anexo do relatório parcial.');
                         }
                     } else {
                         $inscricaoPatch = $tblProjetoBolsistas->patchEntity($inscricao, [
@@ -1396,14 +1396,14 @@ class RenovacoesController extends AppController
                             throw new \RuntimeException('Falha ao salvar anexo do subprojeto.');
                         }
                         if (!$this->anexarInscricao($anexosUploadRelatorio, $inscricao->projeto_id, (int)$inscricao->id, null, true)) {
-                            throw new \RuntimeException('Falha ao salvar anexo do relatorio parcial.');
+                            throw new \RuntimeException('Falha ao salvar anexo do relatório parcial.');
                         }
                     }
                 });
             } catch (\Throwable $e) {
                 $this->flashFriendlyException(
                     $e,
-                    'Erro no Sistema - salvar subprojeto da inscricao',
+                    'Erro no sistema ao salvar o subprojeto da inscrição.',
                     'Não foi possível processar os dados do subprojeto.'
                 );
                 return $this->redirect(['action' => 'subprojetoRenovacao', $context['edital']->id, $inscricao->id]);
@@ -1596,7 +1596,7 @@ class RenovacoesController extends AppController
                 } catch (\Throwable $e) {
                     $this->flashFriendlyException(
                         $e,
-                        'Erro no Sistema - vincular coorientador na inscricao',
+                        'Erro no sistema ao vincular o coorientador na inscrição.',
                         'Não foi possível vincular o coorientador na inscrição.'
                     );
                 }
@@ -1615,7 +1615,7 @@ class RenovacoesController extends AppController
                 } catch (\Throwable $e) {
                     $this->flashFriendlyException(
                         $e,
-                        'Erro no Sistema - excluir coorientador na inscricao',
+                        'Erro no sistema ao excluir o coorientador da inscrição.',
                         'Não foi possível remover o coorientador da inscrição.'
                     );
                 }
@@ -1729,7 +1729,7 @@ class RenovacoesController extends AppController
             }
             
             if ((string)$inscricao->bolsista_usuario->ano_conclusao === '') {
-                $errosBolsista[] = 'Dados do bolsista pendentes: ANO DE CONCLUSAO DO CURSO';
+                $errosBolsista[] = 'Dados do bolsista pendentes: ANO DE CONCLUSÃO DO CURSO';
             }
 
             if (!empty($inscricao->bolsista_usuario->ano_conclusao) && (int)$inscricao->bolsista_usuario->ano_conclusao < (int)date('Y')) {
@@ -1737,7 +1737,7 @@ class RenovacoesController extends AppController
             }
 
             if ((string)$inscricao->bolsista_usuario->documento_numero === '') {
-                $errosBolsista[] = 'Dados do bolsista pendentes: NUMERO DO DOCUMENTO DE IDENTIFICACAO';
+                $errosBolsista[] = 'Dados do bolsista pendentes: NÚMERO DO DOCUMENTO DE IDENTIFICAÇÃO';
             }
                 
         }
@@ -1892,7 +1892,7 @@ class RenovacoesController extends AppController
         if (empty($inscricao->projeto_id) || !$projeto) {
             $errosProjeto[] = 'Cadastre o projeto.';
         } else {
-            $erroTituloProjeto = $this->validarTextoComLimites((string)($projeto->titulo ?? ''), 'Titulo do projeto', 20, 255, true);
+            $erroTituloProjeto = $this->validarTextoComLimites((string)($projeto->titulo ?? ''), 'Título do projeto', 20, 255, true);
             if ($erroTituloProjeto !== null) {
                 $errosProjeto[] = $erroTituloProjeto;
             }
@@ -1900,7 +1900,7 @@ class RenovacoesController extends AppController
             if ($resumoProjeto === '') {
                 $errosProjeto[] = 'Informe resumo do projeto.';
             }
-            $erroFinanciadores = $this->validarTextoComLimites((string)($projeto->financiamento ?? ''), 'Instituicoes financiadoras', 20, 255);
+            $erroFinanciadores = $this->validarTextoComLimites((string)($projeto->financiamento ?? ''), 'Instituições financiadoras', 20, 255);
             if ($erroFinanciadores !== null) {
                 $errosProjeto[] = $erroFinanciadores;
             }
@@ -1909,7 +1909,7 @@ class RenovacoesController extends AppController
                 $errosProjeto[] = $erroPalavras;
             }
             if (empty($projeto->area_id)) {
-                $errosProjeto[] = 'Informe a Area CNPQ do projeto.';
+                $errosProjeto[] = 'Informe a Área CNPQ do projeto.';
             }
             if (empty($projeto->linha_id)) {
                 $errosProjeto[] = 'Informe a Linha Fiocruz do projeto.';
@@ -1924,7 +1924,7 @@ class RenovacoesController extends AppController
         }
 
         $errosSubprojeto = [];
-        $erroTituloSubprojeto = $this->validarTextoComLimites((string)($inscricao->sp_titulo ?? ''), 'Titulo do subprojeto', 20, 255, true);
+        $erroTituloSubprojeto = $this->validarTextoComLimites((string)($inscricao->sp_titulo ?? ''), 'Título do subprojeto', 20, 255, true);
         if ($erroTituloSubprojeto !== null) {
             $errosSubprojeto[] = $erroTituloSubprojeto;
         }
@@ -1932,15 +1932,15 @@ class RenovacoesController extends AppController
         if ($erroResumoSubprojeto !== null) {
             $errosSubprojeto[] = $erroResumoSubprojeto;
         }
-        $erroResumoRelatorio = $this->validarTextoComLimites((string)($inscricao->resumo_relatorio ?? ''), 'Resumo do relatorio', 20, 4000, true);
+        $erroResumoRelatorio = $this->validarTextoComLimites((string)($inscricao->resumo_relatorio ?? ''), 'Resumo do relatório', 20, 4000, true);
         if ($erroResumoRelatorio !== null) {
             $errosSubprojeto[] = $erroResumoRelatorio;
         }
         if (!in_array((string)($inscricao->autorizacao ?? ''), ['0', '1'], true)) {
-            $errosSubprojeto[] = 'Informe se autoriza publicacao em revista.';
+            $errosSubprojeto[] = 'Informe se autoriza a publicação em revista.';
         }
         if (strtoupper(trim((string)($inscricao->subprojeto_renovacao ?? ''))) === 'D') {
-            $erroJustificativa = $this->validarTextoComLimites((string)($inscricao->justificativa_alteracao ?? ''), 'Justificativa da alteracao', 20, 4000, true);
+            $erroJustificativa = $this->validarTextoComLimites((string)($inscricao->justificativa_alteracao ?? ''), 'Justificativa da alteração', 20, 4000, true);
             if ($erroJustificativa !== null) {
                 $errosSubprojeto[] = $erroJustificativa;
             }
@@ -2046,7 +2046,7 @@ class RenovacoesController extends AppController
             $errosAnexosSubprojeto[] = 'Anexo pendente: arquivo do subprojeto (tipo #20).';
         }
         if (empty($anexosPorTipo[13])) {
-            $errosAnexosSubprojeto[] = 'Anexo pendente: arquivo do relatorio parcial (tipo #13).';
+            $errosAnexosSubprojeto[] = 'Anexo pendente: arquivo do relatório parcial (tipo #13).';
         }
         if (!empty($errosAnexosSubprojeto)) {
             $falhas[] = [
@@ -2063,12 +2063,12 @@ class RenovacoesController extends AppController
                     $faseOriginal = (int)$inscricao->fase_id;
                     $inscricaoPatch = $projetoBolsistasTable->patchEntity($inscricao, ['fase_id' => 5]);
                     $projetoBolsistasTable->saveOrFail($inscricaoPatch);
-                    $this->historico((int)$inscricao->id, $faseOriginal, 5, 'Geracao de termo da inscricao', true);
+                    $this->historico((int)$inscricao->id, $faseOriginal, 5, 'Geração de termo da inscrição', true);
                 });
             } catch (\Throwable $e) {
                 $this->flashFriendlyException(
                     $e,
-                    'Erro no Sistema - gerar termo da inscricao',
+                    'Erro no sistema ao gerar o termo da inscrição.',
                     'Não foi possível concluir a geração do termo.'
                 );
                 return $this->redirect(['action' => 'gerarTermoRenovacao', $edital->id, $inscricao->id]);
@@ -2189,7 +2189,7 @@ class RenovacoesController extends AppController
             return $this->redirect(['action' => 'gerarTermoRenovacao', $edital->id, $inscricao->id]);
         }
 
-        $geracaoTopo = 'Termo gerado em ' . date('d/m/Y H:i:s', strtotime('-3 hours')) . ' por ' . (string)($identity->nome ?? 'Usuario');
+        $geracaoTopo = 'Termo gerado em ' . date('d/m/Y H:i:s', strtotime('-3 hours')) . ' por ' . (string)($identity->nome ?? 'Usuário');
         $htmlPdf = $this->montarHtmlTermoInscricao($edital, $inscricao, false, '', $geracaoTopo);
         $htmlExport = $this->montarHtmlTermoInscricao($edital, $inscricao, false, '', $geracaoTopo);
 
@@ -2220,7 +2220,7 @@ class RenovacoesController extends AppController
                 ->withDownload('termo_inscricao_' . (int)$inscricao->id . '.pdf');
         } catch (\Throwable $e) {
             $this->log(
-                'Falha gerar PDF mPDF termo inscricao #' . (int)$inscricao->id . ' | erro=' . $e->getMessage(),
+                'Falha ao gerar PDF mPDF do termo da inscrição #' . (int)$inscricao->id . ' | erro=' . $e->getMessage(),
                 'error'
             );
             $this->Flash->error('Não foi possível gerar o PDF no momento. Baixando termo em HTML.');
@@ -2290,7 +2290,7 @@ class RenovacoesController extends AppController
                         true
                     );
                     if (!$okAnexo) {
-                        throw new \RuntimeException('Falha ao anexar termo assinado da inscricao.');
+                        throw new \RuntimeException('Falha ao anexar termo assinado da inscrição.');
                     }
 
                     $faseOriginal = (int)$inscricao->fase_id;
@@ -2303,7 +2303,7 @@ class RenovacoesController extends AppController
             } catch (\Throwable $e) {
                 $this->flashFriendlyException(
                     $e,
-                    'Erro no Sistema - finalizar inscricao com termo assinado',
+                    'Erro no sistema ao finalizar a inscrição com termo assinado.',
                     'Não foi possível finalizar a inscrição.'
                 );
                 return $this->redirect(['action' => 'finalizarRenovacao', $edital->id, $inscricao->id]);

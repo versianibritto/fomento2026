@@ -108,7 +108,7 @@
                     <p class="text-muted small mt-0 mb-4">
                         Envie os documentos por etapa. Itens com arquivo já enviado podem ser baixados, alterados ou excluídos.<br>
                         Todos os anexos disponibilizados nesta tela serão exigidos na finalização da inscrição.<br>
-                        Sempre que alterar um coorientador, verifique se os anexos estão de acordo com a atualização do usuário.
+                        Sempre que alterar um coorientador, verifique se os anexos estão de acordo com a atualização do coorientador.
                     </p>
                     <div class="alert alert-info border mb-4">
                         <div class="fw-semibold mb-2">Termo de consentimento do coorientador</div>
@@ -118,7 +118,7 @@
                         <ol class="small mb-2 ps-3">
                             <li>Baixe o modelo disponibilizado para este edital.</li>
                             <li>Preencha os dados solicitados.</li>
-                            <li>Colete a(as) assinatura(as) necessárias.</li>
+                            <li>Colete a(s) assinatura(s) necessária(s).</li>
                             <li>Retorne a esta tela e faça o upload do termo assinado.</li>
                             <li>É permitida assinatura eletrônica do Gov.br.</li>
                         </ol>

@@ -10,7 +10,7 @@ $steps = [
 $inscricaoId = $inscricao->id ?? null;
 ?>
 <div class="mb-3 renovacoes-steps">
-    <div class="text-muted small mb-2">Etapas da renovacao</div>
+    <div class="text-muted small mb-2">Etapas da renovação</div>
     <div class="d-flex flex-wrap gap-2 justify-content-center">
         <?php foreach ($steps as $action => $label) { ?>
             <?php

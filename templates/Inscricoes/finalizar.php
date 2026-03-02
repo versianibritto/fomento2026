@@ -17,7 +17,7 @@
             <div class="alert alert-warning border border-warning-subtle mb-4 sumula-alerta">
                 <div class="fw-semibold mb-1">Atenção</div>
                 <div>
-                    O termo devidamente assinado, conforme edital, deverá ser anexado para finalizar.
+                    O termo devidamente assinado, conforme o edital, deverá ser anexado para finalizar.
                     Caso não tenha o arquivo do termo, é possível baixar clicando no botão abaixo.
                 </div>
                 <div class="mt-3">

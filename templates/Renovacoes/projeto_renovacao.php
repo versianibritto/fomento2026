@@ -13,7 +13,7 @@
                 <div class="fw-semibold">Inscrição - <?= h($edital->nome) ?></div>
                 <div class="text-muted mt-1">
                     O projeto do orientador não pode ser alterado na renovação.<br>
-                    Se houver alguma atualização dos documentos, podem ser inseridos neste formulário.
+                    Se houver alguma atualização dos documentos, eles podem ser inseridos neste formulário.
                 </div>
             </div>
 
@@ -95,7 +95,7 @@
                         <div class="col-md-6">
                             <?php if (!empty($podePreencherLinhaFiocruz)) : ?>
                                 <?= $this->Form->control('area_fiocruz_id_aux', [
-                                    'label' => 'Área de pesquisa FIOCRUZ',
+                                    'label' => 'Área de pesquisa Fiocruz',
                                     'type' => 'select',
                                     'options' => $areasFiocruz,
                                     'empty' => ' - Selecione - ',
@@ -104,7 +104,7 @@
                                 ]) ?>
                             <?php else : ?>
                                 <div class="border rounded p-2 bg-light h-100">
-                                    <div class="small text-muted">Área de pesquisa FIOCRUZ</div>
+                                    <div class="small text-muted">Área de pesquisa Fiocruz</div>
                                     <div><?= h($valorAreaFiocruz !== '' ? $valorAreaFiocruz : $naoInformado) ?></div>
                                 </div>
                             <?php endif; ?>
@@ -112,7 +112,7 @@
                         <div class="col-md-6">
                             <?php if (!empty($podePreencherLinhaFiocruz)) : ?>
                                 <?= $this->Form->control('linha_id', [
-                                    'label' => 'Linha de pesquisa FIOCRUZ',
+                                    'label' => 'Linha de pesquisa Fiocruz',
                                     'type' => 'select',
                                     'options' => [],
                                     'empty' => ' - Selecione a área - ',
@@ -121,7 +121,7 @@
                                 ]) ?>
                             <?php else : ?>
                                 <div class="border rounded p-2 bg-light h-100">
-                                    <div class="small text-muted">Linha de pesquisa FIOCRUZ</div>
+                                    <div class="small text-muted">Linha de pesquisa Fiocruz</div>
                                     <div><?= h($valorLinhaFiocruz !== '' ? $valorLinhaFiocruz : $naoInformado) ?></div>
                                 </div>
                             <?php endif; ?>

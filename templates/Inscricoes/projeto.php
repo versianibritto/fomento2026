@@ -55,7 +55,7 @@
                 </div>
                 <div class="col-12">
                     <?= $this->Form->control('area_fiocruz_id', [
-                        'label' => 'Área de pesquisa FIOCRUZ',
+                        'label' => 'Área de pesquisa Fiocruz',
                         'class' => 'form-select' . ($valorAreaFiocruz === '' ? ' campo-vazio' : ''),
                         'options' => $areasFiocruz ?? [],
                         'empty' => ' - Selecione - ',
@@ -64,7 +64,7 @@
                 </div>
                 <div class="col-12">
                     <?= $this->Form->control('linha_id', [
-                        'label' => 'Linha de pesquisa FIOCRUZ',
+                        'label' => 'Linha de pesquisa Fiocruz',
                         'class' => 'form-select' . ($valorLinhaFiocruz === '' ? ' campo-vazio' : ''),
                         'options' => $linhas ?? [],
                         'empty' => ' - Selecione a área - ',
@@ -72,7 +72,7 @@
                 </div>
                 <div class="col-md-6">
                     <?= $this->Form->control('financiadores', [
-                        'label' => 'Instituicoes financiadoras, se houver',
+                        'label' => 'Instituições financiadoras, se houver',
                         'type' => 'text',
                         'class' => 'form-control' . ($valorFinanciadores === '' ? ' campo-vazio' : ''),
                         'maxlength' => 255,

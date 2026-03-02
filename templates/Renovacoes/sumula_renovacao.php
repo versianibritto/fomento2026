@@ -20,8 +20,17 @@
             <?= $this->Form->hidden('anexo_tipo', ['value' => '', 'id' => 'anexo-tipo']) ?>
             <div class="alert alert-warning border border-warning-subtle mb-4 sumula-alerta">
                 <div class="fw-semibold mb-1">Atenção ao preenchimento da súmula</div>
-                <div>Orientadoras com filhos e orientadores egressos do concurso consideram 8 anos de produção. Os demais casos, 5 anos.</div>
-                <div>Todos os campos desta tela serão exigidos na finalização da inscrição.</div>
+                <?php $programaId = (int)($edital->programa_id ?? 0); ?>
+                <?php if ($programaId === 3) : ?>
+                    <div>Orientadoras com filhos; orientadores recém-doutores; orientadores que tenham ingressado na Fiocruz por meio dos concursos de 2016 e 2024; ou orientadores vinculados às unidades de produção (FAR, BIO) e ao INCQS, considerar a produção científica e tecnológica dos últimos 8 anos.</div>
+                    <div>Para os demais, será considerada a produção científica e tecnológica dos últimos 5 anos.</div>
+                    <div>OBS. Detalhes no anexo II do Edital.</div>
+                <?php else : ?>
+                    <div>Orientadoras com filhos; Orientadores recém-doutores; ou orientadores que tenham ingressado na Fiocruz por meio dos concursos de 2016 e 2024, considerar a produção científica e tecnológica dos últimos 8 anos.</div>
+                    <div>Para os demais, será considerada a produção científica e tecnológica dos últimos 5 anos.</div>
+                    <div>OBS. Detalhes no anexo II do Edital</div>
+                <?php endif; ?>
+                <div class="mt-3">Todos os campos desta tela serão exigidos na finalização da inscrição.</div>
                 <div>As súmulas que o orientador não possuir devem ser preenchidas obrigatoriamente com valor 0 (zero).</div>
                 <?php $filhosValor = (int)($inscricao->filhos_menor ?? 0); ?>
                 <?php $recemServidorValor = (int)($inscricao->recem_servidor ?? 0); ?>
@@ -41,12 +50,12 @@
                                         'class' => 'form-select',
                                         'empty' => 'Selecione',
                                         'value' => $inscricao->filhos_menor ?? null,
-                                        'options' => [
-                                            '0' => 'Não possuo filhos, ou são maiores de 5 anos',
-                                            '1' => 'Possuo um menor de 5 anos',
-                                            '2' => 'Mais de um filho menor de 5 anos',
-                                        ],
-                                    ]) ?>
+                                    'options' => [
+                                        '0' => 'Não possuo filhos, ou são maiores de 5 anos',
+                                        '1' => 'Possuo um filho menor de 5 anos',
+                                        '2' => 'Mais de um filho menor de 5 anos',
+                                    ],
+                                ]) ?>
                                 </div>
                             </div>
                             <div class="row g-2 align-items-center mt-2 anexos-areas" id="bloco-anexo-filhos" style="display: <?= $filhosValor > 0 ? 'flex' : 'none' ?>;">

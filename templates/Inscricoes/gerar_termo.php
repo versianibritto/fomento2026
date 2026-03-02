@@ -15,7 +15,7 @@
             </div>
 
             <div class="alert alert-warning border border-warning-subtle mb-4 sumula-alerta">
-                <div class="fw-semibold mb-1">Antes de gerar o termo revise:</div>
+                <div class="fw-semibold mb-1">Antes de gerar o termo, revise:</div>
                 <div>Após a geração do termo, a inscrição não poderá ser alterada.</div>
                 <ol class="mb-0 mt-2 ps-3">
                     <li>Bolsista: dados pessoais, anexos e cota afirmativa.</li>
