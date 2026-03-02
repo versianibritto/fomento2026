@@ -84,7 +84,18 @@
                     <?php foreach($listas as $b) { ?>
                     <tr>
                         <td><?=$b->id ?></td>
-                        <td><?=($b->created==null?'Não Informado':(date("d/m/Y \à\s H:i", strtotime($b->created))))?></td>
+                        <td>
+                            <?php
+                            if (empty($b->created)) {
+                                echo 'Não Informado';
+                            } else {
+                                $dataAcesso = $b->created instanceof \Cake\I18n\FrozenTime
+                                    ? $b->created->subHours(3)
+                                    : (new \Cake\I18n\FrozenTime((string)$b->created))->subHours(3);
+                                echo h($dataAcesso->i18nFormat("dd/MM/yyyy 'às' HH:mm"));
+                            }
+                            ?>
+                        </td>
                         <td><?=$b->nome?></td>
                         <td><?=$b->email==null?'N/A':$b->email?></td>
                         <td><?=$b->email_alternativo==null?'N/A':$b->email_alternativo?></td>

@@ -150,7 +150,7 @@
                         <div class="reply-item" style="margin-left: <?= (int)$margin ?>px;">
                             <div class="reply-meta">
                                 <span class="fw-semibold"><?= h((string)$autor) ?></span>
-                                <span class="text-muted">• <?= $item->created ? h($item->created->i18nFormat('dd/MM/YYYY HH:mm')) : '-' ?></span>
+                                <span class="text-muted">• <?= $item->created ? h($item->created->subHours(3)->i18nFormat('dd/MM/yyyy HH:mm')) : '-' ?></span>
                             </div>
                             <div class="reply-text"><?= h((string)($item->texto ?? '')) ?></div>
                             <?php if (!empty($item->anexo_1) || !empty($item->anexo_2) || !empty($item->anexo_3)): ?>
@@ -305,7 +305,7 @@
                         <tbody>
                             <?php foreach ($historico as $item): ?>
                                 <tr>
-                                    <td><?= $item->created ? h($item->created->i18nFormat('dd/MM/YYYY HH:mm')) : '-' ?></td>
+                                    <td><?= $item->created ? h($item->created->subHours(3)->i18nFormat('dd/MM/yyyy HH:mm')) : '-' ?></td>
                                     <td><?= h($item->usuario->nome ?? '-') ?></td>
                                     <td><?= h($item->status_anterior->nome ?? '-') ?></td>
                                     <td><?= h($item->status_novo->nome ?? '-') ?></td>

@@ -128,6 +128,37 @@ class AppController extends Controller
         return $text;
     }
 
+    protected function ajustarDataBancoParaTela($value, int $offsetHoras = -3): ?FrozenTime
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+        if ($value instanceof FrozenTime) {
+            return $value->addHours($offsetHoras);
+        }
+        if ($value instanceof \DateTimeInterface) {
+            return FrozenTime::instance($value)->addHours($offsetHoras);
+        }
+        try {
+            return (new FrozenTime((string)$value))->addHours($offsetHoras);
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
+    protected function formatarDataBancoParaTela(
+        $value,
+        string $formato = 'dd/MM/yyyy HH:mm',
+        string $fallback = '-',
+        int $offsetHoras = -3
+    ): string {
+        $data = $this->ajustarDataBancoParaTela($value, $offsetHoras);
+        if (!$data) {
+            return $fallback;
+        }
+        return (string)$data->i18nFormat($formato);
+    }
+
     protected function ehYoda(): bool
     {
         $identity = $this->getIdentityAtual();
@@ -337,7 +368,21 @@ class AppController extends Controller
             }
         } else {
             return ['status' => false, 'mensagem' => "Nenhum arquivo foi enviado"];
-        }        
+        }
+    }
+
+    public function beforeRender(EventInterface $event)
+    {
+        parent::beforeRender($event);
+
+        $this->set('formatarDataBancoParaTela', function (
+            $value,
+            string $formato = 'dd/MM/yyyy HH:mm',
+            string $fallback = '-',
+            int $offsetHoras = -3
+        ) {
+            return $this->formatarDataBancoParaTela($value, $formato, $fallback, $offsetHoras);
+        });
     }
     */
 

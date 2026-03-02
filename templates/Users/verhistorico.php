@@ -271,7 +271,7 @@ body.sidebar-collapse .user-id-bar {
     <?php foreach ($historicos as $historico): ?>
             <?php
             $createdLabel = $historico->created
-                ? $historico->created->i18nFormat('dd/MM/Y HH:mm:ss')
+                ? $historico->created->subHours(3)->i18nFormat('dd/MM/Y HH:mm:ss')
                 : '-';
             $alteradorNome = $historico->alterador->nome ?? 'Sistema';
             $contextoLabel = $contextoMap[$historico->contexto] ?? $historico->contexto;

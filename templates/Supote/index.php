@@ -1,4 +1,5 @@
 <div class="container mt-4">
+    <?php $fmtData = is_callable($formatarDataBancoParaTela ?? null) ? $formatarDataBancoParaTela : null; ?>
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h4 class="fw-bold mb-0">Suporte técnico</h4>
         <a href="/supote/add" class="btn btn-success btn-sm">
@@ -78,7 +79,7 @@
                             <td><?= h($item->suporte_categoria->nome ?? '-') ?></td>
                             <td><?= h($item->usuario->nome ?? '-') ?></td>
                             <td><?= h($item->suporte_status->nome ?? '-') ?></td>
-                            <td><?= $item->modified ? h($item->modified->i18nFormat('dd/MM/YYYY HH:mm')) : '-' ?></td>
+                            <td><?= $item->modified ? h($item->modified->subHours(3)->i18nFormat('dd/MM/yyyy HH:mm')) : '-' ?></td>
                             <td class="text-end">
                                 <a href="/supote/view/<?= (int)$item->id ?>?ramo=<?= (int)($item->ramo ?? $item->id) ?>" class="btn btn-sm btn-outline-info">Detalhes</a>
                             </td>

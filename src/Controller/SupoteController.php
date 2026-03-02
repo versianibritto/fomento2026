@@ -74,13 +74,13 @@ class SupoteController extends AppController
 
                 $row = [
                     $item->id,
-                    $criadoEm ? $criadoEm->format('d/m/Y H:i:s') : '',
+                    $this->formatarDataBancoParaTela($criadoEm, 'dd/MM/yyyy HH:mm:ss', ''),
                     $item->usuario->nome ?? '',
                     $item->suporte_categoria->nome ?? '',
                     $this->normalizeCsvValue($item->texto ?? ''),
                     $item->suporte_status->nome ?? '',
                     (int)($item->reaberto ?? 0) === 1 ? 'Sim' : 'Nao',
-                    $finalizadoEm ? $finalizadoEm->format('d/m/Y H:i:s') : '',
+                    $this->formatarDataBancoParaTela($finalizadoEm, 'dd/MM/yyyy HH:mm:ss', ''),
                     $tempoSolucao,
                 ];
                 fputcsv($fh, $row, ';');
