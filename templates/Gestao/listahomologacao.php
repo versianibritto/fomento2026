@@ -40,9 +40,10 @@
                            'controller' => 'Gestao',
                            'action' => 'listahomologacao',
                            '?' => [
-                               'programa_id' => $programaId ?: null,
-                               'fase_id' => $faseId ?: null,
+                               'programa_id' => $programaId > 0 ? $programaId : '',
+                               'fase_id' => $faseId > 0 ? $faseId : '',
                                'acao' => 'excel',
+                               'origem' => 'gestao',
                            ],
                        ]) ?>">
                         Exportar Excel

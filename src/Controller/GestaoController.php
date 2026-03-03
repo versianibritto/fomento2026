@@ -462,9 +462,61 @@ class GestaoController extends AppController
         ])->where(['Fases.id IN' => $fasesFiltro])->toArray();
 
         if ($this->request->getQuery('acao') === 'excel') {
-            $excelQuery = clone $query;
-            $excelQuery->limit(null);
+            $origemExportacao = (string)$this->request->getQuery('origem');
+            if ($origemExportacao === 'dashyoda') {
+                $excelConditions = [
+                    'ProjetoBolsistas.deleted IS' => null,
+                    'Editais.inicio_vigencia >' => $agora,
+                    'ProjetoBolsistas.fase_id IN' => [4, 6, 7],
+                ];
+            } else {
+                $excelConditions = $conditions;
+            }
+
+            $excelQuery = $tblProjetoBolsistas->find()
+                ->contain([
+                    'Editais' => ['Programas'],
+                    'Bolsistas',
+                    'Orientadores' => ['Unidades'],
+                    'Coorientadores',
+                    'Fases',
+                ])
+                ->where($excelConditions)
+                ->orderBy(['ProjetoBolsistas.id' => 'DESC']);
+
             $rows = $excelQuery->all();
+            $idsInscricao = [];
+            foreach ($rows as $item) {
+                $idInscricao = (int)($item->id ?? 0);
+                if ($idInscricao > 0) {
+                    $idsInscricao[] = $idInscricao;
+                }
+            }
+            $idsInscricao = array_values(array_unique($idsInscricao));
+
+            $justificativaNaoHomologacaoMap = [];
+            if (!empty($idsInscricao)) {
+                $historicos = $this->fetchTable('SituacaoHistoricos')->find()
+                    ->select(['id', 'projeto_bolsista_id', 'justificativa'])
+                    ->where([
+                        'SituacaoHistoricos.projeto_bolsista_id IN' => $idsInscricao,
+                        'SituacaoHistoricos.fase_atual' => 7,
+                    ])
+                    ->orderBy([
+                        'SituacaoHistoricos.projeto_bolsista_id' => 'ASC',
+                        'SituacaoHistoricos.id' => 'DESC',
+                    ])
+                    ->enableHydration(false)
+                    ->all();
+
+                foreach ($historicos as $historico) {
+                    $idInscricao = (int)($historico['projeto_bolsista_id'] ?? 0);
+                    if ($idInscricao <= 0 || isset($justificativaNaoHomologacaoMap[$idInscricao])) {
+                        continue;
+                    }
+                    $justificativaNaoHomologacaoMap[$idInscricao] = (string)($historico['justificativa'] ?? '');
+                }
+            }
 
             $header = [
                 'id',
@@ -475,12 +527,21 @@ class GestaoController extends AppController
                 'orientador',
                 'unidade',
                 'data_inscricao',
+                'telefone',
+                'telefone_contato',
+                'celular',
+                'whatsapp',
+                'email',
+                'email_alternativo',
+                'email_contato',
+                'justificativa_ultima_nao_homologacao',
             ];
 
             $fh = fopen('php://temp', 'r+');
             fputcsv($fh, $header, ';');
 
             foreach ($rows as $item) {
+                $faseAtualId = (int)($item->fase_id ?? 0);
                 $row = [
                     $this->normalizeCsvValue($item->id ?? ''),
                     $this->normalizeCsvValue($item->editai->nome ?? ''),
@@ -490,6 +551,18 @@ class GestaoController extends AppController
                     $this->normalizeCsvValue($item->orientadore->nome ?? ''),
                     $this->normalizeCsvValue($item->orientadore->unidade->sigla ?? ''),
                     $this->normalizeCsvValue($item->created ? $item->created->format('d/m/Y H:i:s') : ''),
+                    $this->normalizeCsvValue($item->orientadore->telefone ?? ''),
+                    $this->normalizeCsvValue($item->orientadore->telefone_contato ?? ''),
+                    $this->normalizeCsvValue($item->orientadore->celular ?? ''),
+                    $this->normalizeCsvValue($item->orientadore->whatsapp ?? ''),
+                    $this->normalizeCsvValue($item->orientadore->email ?? ''),
+                    $this->normalizeCsvValue($item->orientadore->email_alternativo ?? ''),
+                    $this->normalizeCsvValue($item->orientadore->email_contato ?? ''),
+                    $this->normalizeCsvValue(
+                        $faseAtualId === 7
+                            ? ($justificativaNaoHomologacaoMap[(int)($item->id ?? 0)] ?? '')
+                            : ''
+                    ),
                 ];
                 fputcsv($fh, $row, ';');
             }
