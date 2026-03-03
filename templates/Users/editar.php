@@ -1,5 +1,19 @@
-<?php $mostrarSiape = !empty($vinculoPesquisador40hId) && (string)($user->vinculo_id ?? '') === (string)$vinculoPesquisador40hId; ?>
-<?=$this->Form->create($user, ['autocomplete' => 'off', 'class' => 'user-edit-form'])?>
+<?php
+$mostrarSiape = !empty($vinculoPesquisador40hId) && (string)($user->vinculo_id ?? '') === (string)$vinculoPesquisador40hId;
+$enderecoAtual = null;
+if (!empty($user->street)) {
+    $partesEndereco = array_filter([
+        $user->street->nome ?? null,
+        $user->street->district->nome ?? null,
+        $user->street->district->city->nome ?? null,
+        $user->street->district->city->state->sigla ?? null,
+    ]);
+    if (!empty($partesEndereco)) {
+        $enderecoAtual = implode(', ', $partesEndereco);
+    }
+}
+?>
+<?=$this->Form->create($user, ['autocomplete' => 'off', 'class' => 'user-edit-form', 'data-no-loading' => '1'])?>
 <script>
     window.addEventListener('pageshow', function (event) {
         if (event.persisted) {
@@ -41,8 +55,25 @@
                                 <?=$this->Form->control('cep', ['id' => 'txtCEP', 'label' => 'CEP', 'class' => 'form-control', 'maxlength' => 20, 'required', 'value' => ($user->street_id != null ? $user->street->cep : null)]) ?>
                         </div>
                         <div class="col-12 col-md-6"> 
-                                <?=$this->Form->control('endereco', ['id' => 'endereco','label' => 'Endereço', 'class' => 'form-control', 'maxlength' => 255]) ?>
+                                <?=$this->Form->control('endereco', [
+                                    'id' => 'endereco',
+                                    'label' => 'Endereço',
+                                    'class' => 'form-control',
+                                    'maxlength' => 255,
+                                    'value' => $enderecoAtual,
+                                    'readonly' => true,
+                                    'autocomplete' => 'new-password',
+                                ]) ?>
                                 <?=$this->Form->control('street_id', ['id' => 'street_id','type' => 'hidden', 'class' => 'form-control']) ?>
+                                <div id="endereco-opcao-wrapper" class="mt-2" style="display:none;">
+                                    <label for="endereco-opcao" class="form-label mb-1">Selecione a rua</label>
+                                    <select id="endereco-opcao" class="form-control">
+                                        <option value="">Selecione a rua para este CEP</option>
+                                    </select>
+                                    <small class="text-muted">
+                                        Este CEP possui mais de um logradouro. Selecione a opção correta.
+                                    </small>
+                                </div>
                         </div>
                         <div class="col-6 col-md-2"> 
                                 <?=$this->Form->control('numero', ['label' => 'Número', 'class' => 'form-control', 'size'=>50, 'maxlength'=>50, 'required'=>true]) ?>
@@ -323,6 +354,90 @@
 <?=$this->Form->end()?>
 
 <script>
+var opcoesEnderecoPorId = {};
+var cepConsultaEmAndamento = false;
+var cepConsultaXhr = null;
+var ultimoCepConsultado = '';
+var ultimoCepComErro = '';
+
+function limparEnderecoSelecionado() {
+    $('#endereco').val('');
+    $('#street_id').val('');
+}
+
+function formatarEndereco(end) {
+    if (!end) {
+        return '';
+    }
+    var district = end['district'] || {};
+    var city = district['city'] || {};
+    var state = city['state'] || {};
+    return [
+        end['nome'] || '',
+        district['nome'] || '',
+        city['nome'] || '',
+        state['sigla'] || ''
+    ].filter(Boolean).join(', ');
+}
+
+function mostrarOpcoesEndereco(lista) {
+    var $wrapper = $('#endereco-opcao-wrapper');
+    var $select = $('#endereco-opcao');
+    var streetIdAtual = String($('#street_id').val() || '');
+
+    opcoesEnderecoPorId = {};
+    $select.empty();
+    $select.append('<option value="">Selecione a rua para este CEP</option>');
+
+    lista.forEach(function (item) {
+        var id = String(item.id || '');
+        if (!id) {
+            return;
+        }
+        var texto = formatarEndereco(item);
+        opcoesEnderecoPorId[id] = item;
+        $select.append($('<option>', { value: id, text: texto }));
+    });
+
+    if (streetIdAtual && opcoesEnderecoPorId[streetIdAtual]) {
+        $select.val(streetIdAtual);
+    }
+
+    $wrapper.show();
+}
+
+function esconderOpcoesEndereco() {
+    $('#endereco-opcao-wrapper').hide();
+    $('#endereco-opcao').val('');
+    opcoesEnderecoPorId = {};
+}
+
+function aplicarEndereco(end) {
+    var textoEndereco = formatarEndereco(end);
+    if (!textoEndereco) {
+        limparEnderecoSelecionado();
+        return;
+    }
+    $('#endereco').val(textoEndereco);
+    $('#street_id').val(end['id'] || '');
+    // Evita sobrescrita tardia por autofill/extensões do navegador.
+    window.setTimeout(function () {
+        if ($('#endereco').val() !== textoEndereco) {
+            $('#endereco').val(textoEndereco);
+        }
+    }, 120);
+}
+
+function extrairListaEnderecos(json) {
+    if (Array.isArray(json)) {
+        return json;
+    }
+    if (json && Array.isArray(json.retorno)) {
+        return json.retorno;
+    }
+    return [];
+}
+
 function toggleRequired(selector, required) {
     var $el = $(selector);
     if (!$el.length || $el.is(':disabled')) {
@@ -426,43 +541,128 @@ $(document).on('change', '#ic', atualizarAvisosIc);
 $(document).ready(function () {
     atualizarDependenciasEscolaridade();
     atualizarAvisosIc();
-    if ($('#txtCEP').val().length == 8) {
-        carregaEndereco($('#txtCEP'));
+});
+
+$(document).on('input', '#txtCEP', function () {
+    var cepLen = String($(this).val() || '').replace(/\D/g, '').length;
+    if (cepLen !== 8) {
+        esconderOpcoesEndereco();
+        limparEnderecoSelecionado();
+        ultimoCepConsultado = '';
+        ultimoCepComErro = '';
+        return;
+    }
+
+    // CEP completo durante digitacao: aguarda blur para consultar
+    esconderOpcoesEndereco();
+    limparEnderecoSelecionado();
+    ultimoCepConsultado = '';
+});
+$(document).on('blur', '#txtCEP', function () {
+    if (String($(this).val() || '').replace(/\D/g, '').length === 8) {
+        carregaEndereco($(this), { notifyError: true });
     }
 });
 
-$(document).on('keyup', '#txtCEP', function () {
-    if ($(this).val().length == 8) {
-        carregaEndereco($(this));
-        $('#numero').focus();
+$(document).on('submit', '.user-edit-form', function (e) {
+    var cepLen = String($('#txtCEP').val() || '').replace(/\D/g, '').length;
+    var streetId = String($('#street_id').val() || '');
+    if (cepLen === 8 && !streetId) {
+        e.preventDefault();
+        alert('Informe um CEP válido e selecione um endereço antes de gravar.');
     }
 });
 
-    function carregaEndereco(obj) {
-        $.ajax({
-            type: "POST",
-            url: "<?=$this->Url->build(['controller'=>'enderecos', 'action'=>'buscaEnderecoCompleto'])?>",
-            async: false,
-            data: {
-                txtCEP: obj.val()
-            },
-            beforeSend: function (xhr) {
-                xhr.setRequestHeader("X-CSRF-Token", $('[name="_csrfToken"]').val());
-            },
-            dataType: "json",
-            success: function (json) {
-                var end = json[0];
-                if (end != null) {
-                    $('#endereco').val(end['nome'] + ', ' + end['district']['nome'] + "," + end['district'][
-                        'city'
-                    ]['nome'] + "," + end['district']['city']['state']['sigla']);
-                    $('#street_id').val(end['id']);
-                } else {
-                    alert('Endereço não encontrado, favor verificar o CEP');
-                }
+$(document).on('change', '#endereco-opcao', function () {
+    var idSelecionado = String($(this).val() || '');
+    if (!idSelecionado || !opcoesEnderecoPorId[idSelecionado]) {
+        limparEnderecoSelecionado();
+        return;
+    }
+    aplicarEndereco(opcoesEnderecoPorId[idSelecionado]);
+});
+
+function carregaEndereco(obj, options) {
+    options = options || {};
+    var notifyError = options.notifyError !== false;
+    var cepLimpo = String(obj.val() || '').replace(/\D/g, '');
+    if (cepLimpo.length !== 8) {
+        return;
+    }
+    if (cepConsultaXhr && cepConsultaXhr.readyState !== 4) {
+        cepConsultaXhr.abort();
+    }
+    if (ultimoCepConsultado === cepLimpo) {
+        return;
+    }
+
+    cepConsultaEmAndamento = true;
+    ultimoCepConsultado = cepLimpo;
+    var cepSolicitado = cepLimpo;
+
+    cepConsultaXhr = $.ajax({
+        type: "POST",
+        url: "<?=$this->Url->build(['controller'=>'enderecos', 'action'=>'buscaEnderecoCompleto'])?>",
+        cache: false,
+        data: {
+            txtCEP: cepLimpo
+        },
+        beforeSend: function (xhr) {
+            xhr.setRequestHeader("X-CSRF-Token", $('[name="_csrfToken"]').val());
+        },
+        dataType: "json",
+        success: function (json) {
+            var cepAtual = String($('#txtCEP').val() || '').replace(/\D/g, '');
+            if (cepAtual !== cepSolicitado) {
+                cepConsultaEmAndamento = false;
+                return;
             }
-        });
-    }
+            var lista = extrairListaEnderecos(json);
+
+            if (!lista.length) {
+                esconderOpcoesEndereco();
+                limparEnderecoSelecionado();
+                alert('Endereço não encontrado, favor verificar o CEP');
+                cepConsultaEmAndamento = false;
+                return;
+            }
+
+            if (lista.length === 1) {
+                esconderOpcoesEndereco();
+                aplicarEndereco(lista[0]);
+                ultimoCepComErro = '';
+                cepConsultaEmAndamento = false;
+                return;
+            }
+
+            mostrarOpcoesEndereco(lista);
+
+            var streetIdAtual = String($('#street_id').val() || '');
+            if (streetIdAtual && opcoesEnderecoPorId[streetIdAtual]) {
+                aplicarEndereco(opcoesEnderecoPorId[streetIdAtual]);
+            } else {
+                limparEnderecoSelecionado();
+            }
+            ultimoCepComErro = '';
+            cepConsultaEmAndamento = false;
+        },
+        error: function () {
+            var cepAtual = String($('#txtCEP').val() || '').replace(/\D/g, '');
+            if (cepAtual !== cepSolicitado) {
+                cepConsultaEmAndamento = false;
+                return;
+            }
+            esconderOpcoesEndereco();
+            limparEnderecoSelecionado();
+            if (notifyError && ultimoCepComErro !== cepLimpo) {
+                alert('Não foi possível consultar o endereço deste CEP no momento.');
+            }
+            ultimoCepComErro = cepLimpo;
+            ultimoCepConsultado = '';
+            cepConsultaEmAndamento = false;
+        }
+    });
+}
 
 
 </script>

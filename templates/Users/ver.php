@@ -283,6 +283,49 @@ body.sidebar-collapse .user-id-bar {
 
                 <hr>
 
+                <!-- ================= ENDEREÇO ================= -->
+                <h6 class="text-primary mb-2">Endereço</h6>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <strong>CEP:</strong>
+                        <?= !empty($usuario->street?->cep)
+                            ? h($usuario->street->cep)
+                            : '<span class="badge bg-danger">Não Informado</span>' ?>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Número:</strong>
+                        <?= !empty($usuario->numero)
+                            ? h($usuario->numero)
+                            : '<span class="badge bg-danger">Não Informado</span>' ?>
+                    </div>
+                </div>
+
+                <div class="row mt-2">
+                    <div class="col-md-6">
+                        <strong>Endereço:</strong>
+                        <?php
+                        $enderecoCompleto = implode(', ', array_filter([
+                            $usuario->street?->nome ?? null,
+                            $usuario->street?->district?->nome ?? null,
+                            $usuario->street?->district?->city?->nome ?? null,
+                            $usuario->street?->district?->city?->state?->sigla ?? null,
+                        ]));
+                        ?>
+                        <?= $enderecoCompleto !== ''
+                            ? h($enderecoCompleto)
+                            : '<span class="badge bg-danger">Não Informado</span>' ?>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Complemento:</strong>
+                        <?= !empty($usuario->complemento)
+                            ? h($usuario->complemento)
+                            : '<span class="badge bg-secondary">Não informado</span>' ?>
+                    </div>
+                </div>
+
+                <hr>
+
                 <!-- ================= PERFIS ================= -->
                 <h6 class="text-primary mb-2">Perfis de Acesso</h6>
 

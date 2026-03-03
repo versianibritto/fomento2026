@@ -386,7 +386,12 @@ class UsersController extends AppController
 
         $usuario = $this->Usuarios->find()
         ->contain([
-            'Unidades', 'Escolaridades', 'Vinculos', 'Instituicaos'])
+            'Unidades',
+            'Escolaridades',
+            'Vinculos',
+            'Instituicaos',
+            'Streets' => ['Districts' => ['Cities' => ['States']]],
+        ])
         ->where(['Usuarios.id' => $id])->first();       
 
 

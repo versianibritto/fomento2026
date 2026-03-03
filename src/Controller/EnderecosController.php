@@ -68,18 +68,34 @@ class EnderecosController extends AppController
 
     public function buscaEnderecoCompleto()
     {
-        $cep = $this->request->getData('txtCEP');
+        $cepRaw = trim((string)$this->request->getData('txtCEP'));
+        $cep = preg_replace('/\D/', '', $cepRaw);
+        $cepFormatado = strlen($cep) === 8 ? substr($cep, 0, 5) . '-' . substr($cep, 5) : $cep;
         $id =  $this->request->getData('id');
         $endereco = TableRegistry::getTableLocator()->get('Streets');
         $query = $endereco->find('all')->select()->contain(['Districts'=>['Cities'=>['States']]]);
-        if($cep != null){
-            $query->where(['Streets.cep' => $cep]);
+        if ($cep !== '') {
+            $cepsBusca = array_values(array_unique(array_filter([
+                $cepRaw,
+                $cep,
+                $cepFormatado,
+            ])));
+            $query->where([
+                'Streets.cep IN' => $cepsBusca,
+            ]);
+            $query->orderBy([
+                'Streets.nome' => 'ASC',
+            ]);
         }else{
             $query->where(['Streets.id'=>$id]);
         }
-        $query->enableHydration();
-        $endereco = $query->all()->toList();
-        $this->set('retorno', $endereco);
-        $this->viewBuilder()->setOption('serialize', 'retorno');            
+        $endereco = $query
+            ->enableHydration(false)
+            ->all()
+            ->toArray();
+
+        return $this->response
+            ->withType('application/json')
+            ->withStringBody((string)json_encode($endereco, JSON_UNESCAPED_UNICODE));
     }
 }
