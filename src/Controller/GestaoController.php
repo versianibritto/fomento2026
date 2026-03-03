@@ -161,6 +161,150 @@ class GestaoController extends AppController
         $this->set(compact('bolsista', 'erros', 'fontes'));
     }
 
+    public function addarquivo($pbId)
+    {
+        $inscricaoId = (int)$pbId;
+        $inscricao = $this->fetchTable('ProjetoBolsistas')->find()
+            ->contain([
+                'Projetos',
+                'Editais' => ['Programas'],
+                'Orientadores',
+                'Bolsistas',
+                'Fases',
+            ])
+            ->where(['ProjetoBolsistas.id' => $inscricaoId])
+            ->first();
+
+        if (!$inscricao) {
+            $this->Flash->error('Inscrição não localizada.');
+            return $this->redirect(['controller' => 'Index', 'action' => 'dashboard']);
+        }
+
+        if ($inscricao->deleted !== null) {
+            $this->Flash->error('O registro foi deletado. Não é possível inserir/alterar anexos.');
+            return $this->redirect(['controller' => 'Padrao', 'action' => 'visualizar', $inscricaoId]);
+        }
+
+        $tiposAnexo = $this->fetchTable('AnexosTipos')->find()
+            ->select(['id', 'nome', 'bloco'])
+            ->where(['AnexosTipos.deleted' => 0])
+            ->orderBy(['AnexosTipos.bloco' => 'ASC', 'AnexosTipos.id' => 'ASC'])
+            ->all()
+            ->toList();
+
+        $tiposPermitidos = array_map(
+            static fn($tipo) => (int)$tipo->id,
+            $tiposAnexo
+        );
+
+        if ($this->request->is(['post', 'put', 'patch'])) {
+            $dados = (array)$this->request->getData();
+
+            $acaoRapida = $this->processarAcaoRapidaAnexoInscricao(
+                $dados,
+                (int)($inscricao->projeto_id ?? 0),
+                $inscricaoId,
+                $tiposPermitidos
+            );
+            if ($acaoRapida !== null) {
+                return $this->redirect(['controller' => 'Gestao', 'action' => 'addarquivo', $inscricaoId]);
+            }
+
+            $anexosUpload = $dados['anexos'] ?? [];
+            if (!is_array($anexosUpload)) {
+                $anexosUpload = [];
+            }
+
+            $temArquivo = false;
+            foreach ($anexosUpload as $arquivoUpload) {
+                if (is_object($arquivoUpload) && method_exists($arquivoUpload, 'getClientFilename') && $arquivoUpload->getClientFilename() !== '') {
+                    $temArquivo = true;
+                    break;
+                }
+            }
+            if (!$temArquivo) {
+                $this->Flash->error('Selecione ao menos um arquivo para enviar.');
+                return $this->redirect(['controller' => 'Gestao', 'action' => 'addarquivo', $inscricaoId]);
+            }
+
+            try {
+                $ok = $this->anexarInscricao(
+                    $anexosUpload,
+                    (int)($inscricao->projeto_id ?? 0),
+                    $inscricaoId,
+                    null,
+                    true
+                );
+                if ($ok) {
+                    $this->historico(
+                        $inscricaoId,
+                        (int)$inscricao->fase_id,
+                        (int)$inscricao->fase_id,
+                        'Alteração/Inserção de anexos pela gestão'
+                    );
+                    $this->Flash->success('Anexos atualizados com sucesso.');
+                } else {
+                    $this->Flash->error('Não foi possível atualizar os anexos. Tente novamente.');
+                }
+            } catch (\Throwable $e) {
+                $this->flashFriendlyException(
+                    $e,
+                    'Erro no Sistema - gestão addarquivo',
+                    'Não foi possível atualizar os anexos.'
+                );
+            }
+
+            return $this->redirect(['controller' => 'Gestao', 'action' => 'addarquivo', $inscricaoId]);
+        }
+
+        $anexosMap = [];
+        if (!empty($tiposPermitidos)) {
+            $anexosAtivos = $this->fetchTable('Anexos')->find()
+                ->select(['id', 'anexos_tipo_id', 'anexo', 'usuario_id', 'created'])
+                ->contain([
+                    'Usuarios' => function ($q) {
+                        return $q->select(['id', 'nome']);
+                    },
+                ])
+                ->where([
+                    'Anexos.projeto_bolsista_id' => $inscricaoId,
+                    'Anexos.anexos_tipo_id IN' => $tiposPermitidos,
+                    'OR' => [
+                        'Anexos.deleted IS' => null,
+                        'Anexos.deleted' => 0,
+                    ],
+                ])
+                ->orderBy(['Anexos.id' => 'DESC'])
+                ->all();
+            foreach ($anexosAtivos as $anexo) {
+                $tipoId = (int)($anexo->anexos_tipo_id ?? 0);
+                if ($tipoId <= 0 || isset($anexosMap[$tipoId])) {
+                    continue;
+                }
+                $anexosMap[$tipoId] = [
+                    'arquivo' => (string)($anexo->anexo ?? ''),
+                    'usuario_nome' => trim((string)($anexo->usuario->nome ?? '')),
+                    'data_inclusao' => $anexo->created ?? null,
+                ];
+            }
+        }
+
+        $anexosLista = [];
+        foreach ($tiposAnexo as $tipo) {
+            $tipoId = (int)$tipo->id;
+            $anexosLista[] = [
+                'tipo_id' => $tipoId,
+                'tipo_nome' => (string)$tipo->nome,
+                'bloco' => (string)$tipo->bloco,
+                'arquivo' => (string)($anexosMap[$tipoId]['arquivo'] ?? ''),
+                'usuario_nome' => (string)($anexosMap[$tipoId]['usuario_nome'] ?? ''),
+                'data_inclusao' => $anexosMap[$tipoId]['data_inclusao'] ?? null,
+            ];
+        }
+
+        $this->set(compact('inscricao', 'anexosLista'));
+    }
+
     public function listarconfirmacoes(string $tipo)
     {
         $tipo = strtoupper(trim($tipo));

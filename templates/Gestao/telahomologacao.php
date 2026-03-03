@@ -14,14 +14,14 @@
                 return '';
             }
             if ($data instanceof \DateTimeInterface) {
-                return $data->format('d/m/Y H:i');
+                return (clone $data)->modify('-3 hours')->format('d/m/Y H:i');
             }
             $dataTexto = trim((string)$data);
             if ($dataTexto === '') {
                 return '';
             }
             $timestamp = strtotime($dataTexto);
-            return $timestamp ? date('d/m/Y H:i', $timestamp) : $dataTexto;
+            return $timestamp ? date('d/m/Y H:i', strtotime('-3 hours', $timestamp)) : $dataTexto;
         };
     ?>
 

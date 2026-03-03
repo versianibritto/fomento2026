@@ -701,6 +701,21 @@ if (!$temDataInicio && !$temDataFim) {
                                         </p>
                                     </div>
                                 </div>
+                                <hr class="my-3">
+                                <div class="row g-3 align-items-center">
+                                    <div class="col-md-4">
+                                        <?= $this->Html->link(
+                                            'Gerenciar Anexos',
+                                            ['controller' => 'Gestao', 'action' => 'addarquivo', (int)$inscricao->id],
+                                            ['class' => 'btn btn-outline-secondary w-100']
+                                        ) ?>
+                                    </div>
+                                    <div class="col-md-8">
+                                        <p class="mb-0 text-muted">
+                                            Tela administrativa para incluir/alterar anexos da inscrição, com download e edição por tipo de anexo.
+                                        </p>
+                                    </div>
+                                </div>
                                 <?php if (in_array($faseAtual, [4, 6, 7], true)): ?>
                                     <hr class="my-3">
                                     <div class="row g-3 align-items-center">
