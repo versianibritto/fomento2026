@@ -390,6 +390,35 @@ class GestaoController extends AppController
         $homologacaoPermitida = in_array($faseOriginal, $fasesPermitidasHomologacao, true);
         $exigeConfirmacaoReavaliacao = in_array($faseOriginal, [6, 7], true);
         $motivoNaoHomologacao = trim((string)($this->request->getData('motivo_nao_homologacao') ?? ''));
+
+        if ($this->request->is(['post', 'put', 'patch'])) {
+            $acaoRapidaAnexo = (string)($this->request->getData('anexo_acao') ?? '');
+            $tipoRapido = (int)($this->request->getData('anexo_tipo') ?? 0);
+            $tipoRapidoAlternativo = (int)($this->request->getData('alterar_anexo_tipo') ?? 0);
+            if ($acaoRapidaAnexo === 'alterar' || $tipoRapido > 0 || $tipoRapidoAlternativo > 0) {
+                $tiposPermitidosAnexo = $this->fetchTable('AnexosTipos')->find()
+                    ->select(['id'])
+                    ->where([
+                        'AnexosTipos.deleted' => 0,
+                        'AnexosTipos.bloco IN' => ['B', 'C', 'I'],
+                    ])
+                    ->enableHydration(false)
+                    ->all()
+                    ->extract('id')
+                    ->map(fn($idTipo) => (int)$idTipo)
+                    ->toList();
+
+                $this->processarAcaoRapidaAnexoInscricao(
+                    (array)$this->request->getData(),
+                    (int)($inscricao->projeto_id ?? 0),
+                    (int)$inscricao->id,
+                    $tiposPermitidosAnexo
+                );
+
+                return $this->redirect(['controller' => 'Gestao', 'action' => 'telahomologacao', (int)$inscricao->id]);
+            }
+        }
+
         if ($this->request->is(['post', 'put', 'patch'])) {
             if (!$this->ehYoda()) {
                 $this->Flash->error('Somente perfil yoda pode homologar ou não homologar inscrições.');
@@ -477,7 +506,12 @@ class GestaoController extends AppController
         }
         $anexosBMap = [];
         $anexosBAtivos = $this->fetchTable('Anexos')->find()
-            ->select(['anexos_tipo_id', 'anexo'])
+            ->select(['anexos_tipo_id', 'anexo', 'usuario_id', 'created'])
+            ->contain([
+                'Usuarios' => function ($q) {
+                    return $q->select(['id', 'nome']);
+                },
+            ])
             ->where([
                 'Anexos.projeto_bolsista_id' => (int)$inscricao->id,
                 'Anexos.anexos_tipo_id IN' => $tiposBIds,
@@ -494,7 +528,11 @@ class GestaoController extends AppController
                 continue;
             }
             if (!isset($anexosBMap[$tipoId])) {
-                $anexosBMap[$tipoId] = (string)$anexo->anexo;
+                $anexosBMap[$tipoId] = [
+                    'arquivo' => (string)$anexo->anexo,
+                    'usuario_nome' => trim((string)($anexo->usuario->nome ?? '')),
+                    'data_inclusao' => $anexo->created ?? null,
+                ];
             }
         }
 
@@ -579,7 +617,9 @@ class GestaoController extends AppController
             $anexosB[] = [
                 'tipo_id' => $tipoId,
                 'tipo_nome' => (string)$tipo->nome,
-                'arquivo' => $anexosBMap[$tipoId] ?? '',
+                'arquivo' => (string)($anexosBMap[$tipoId]['arquivo'] ?? ''),
+                'usuario_nome' => (string)($anexosBMap[$tipoId]['usuario_nome'] ?? ''),
+                'data_inclusao' => $anexosBMap[$tipoId]['data_inclusao'] ?? null,
                 'regras' => $regras,
                 'status_regra' => $statusRegra,
             ];
@@ -599,7 +639,12 @@ class GestaoController extends AppController
         $anexosIMap = [];
         if (!empty($tiposIIds)) {
             $anexosIAtivos = $this->fetchTable('Anexos')->find()
-                ->select(['anexos_tipo_id', 'anexo'])
+                ->select(['anexos_tipo_id', 'anexo', 'usuario_id', 'created'])
+                ->contain([
+                    'Usuarios' => function ($q) {
+                        return $q->select(['id', 'nome']);
+                    },
+                ])
                 ->where([
                     'Anexos.projeto_bolsista_id' => (int)$inscricao->id,
                     'Anexos.anexos_tipo_id IN' => $tiposIIds,
@@ -616,7 +661,11 @@ class GestaoController extends AppController
                     continue;
                 }
                 if (!isset($anexosIMap[$tipoId])) {
-                    $anexosIMap[$tipoId] = (string)$anexoI->anexo;
+                    $anexosIMap[$tipoId] = [
+                        'arquivo' => (string)$anexoI->anexo,
+                        'usuario_nome' => trim((string)($anexoI->usuario->nome ?? '')),
+                        'data_inclusao' => $anexoI->created ?? null,
+                    ];
                 }
             }
         }
@@ -663,7 +712,9 @@ class GestaoController extends AppController
             $anexosI[] = [
                 'tipo_id' => $tipoId,
                 'tipo_nome' => (string)$tipoI->nome,
-                'arquivo' => $anexosIMap[$tipoId] ?? '',
+                'arquivo' => (string)($anexosIMap[$tipoId]['arquivo'] ?? ''),
+                'usuario_nome' => (string)($anexosIMap[$tipoId]['usuario_nome'] ?? ''),
+                'data_inclusao' => $anexosIMap[$tipoId]['data_inclusao'] ?? null,
                 'regras' => $regras,
                 'status_regra' => 'Obrigatório',
             ];
@@ -686,7 +737,12 @@ class GestaoController extends AppController
                     ->where(['AnexosTipos.id' => $tipoCertidaoId])
                     ->first();
                 $anexoCertidao = $this->fetchTable('Anexos')->find()
-                    ->select(['anexo'])
+                    ->select(['anexo', 'usuario_id', 'created'])
+                    ->contain([
+                        'Usuarios' => function ($q) {
+                            return $q->select(['id', 'nome']);
+                        },
+                    ])
                     ->where([
                         'Anexos.projeto_bolsista_id' => (int)$inscricao->id,
                         'Anexos.anexos_tipo_id' => $tipoCertidaoId,
@@ -701,6 +757,8 @@ class GestaoController extends AppController
                     'tipo_id' => $tipoCertidaoId,
                     'tipo_nome' => (string)($tipoCertidao->nome ?? 'Certidão de nascimento (filhos orientadora)'),
                     'arquivo' => (string)($anexoCertidao->anexo ?? ''),
+                    'usuario_nome' => trim((string)($anexoCertidao->usuario->nome ?? '')),
+                    'data_inclusao' => $anexoCertidao->created ?? null,
                     'regras' => ['Obrigatório para orientadora com filhos menores de 4 anos.'],
                     'status_regra' => 'Obrigatório',
                 ];
@@ -721,7 +779,12 @@ class GestaoController extends AppController
                     ->where(['AnexosTipos.id' => $tipoServidorId])
                     ->first();
                 $anexoServidor = $this->fetchTable('Anexos')->find()
-                    ->select(['anexo'])
+                    ->select(['anexo', 'usuario_id', 'created'])
+                    ->contain([
+                        'Usuarios' => function ($q) {
+                            return $q->select(['id', 'nome']);
+                        },
+                    ])
                     ->where([
                         'Anexos.projeto_bolsista_id' => (int)$inscricao->id,
                         'Anexos.anexos_tipo_id' => $tipoServidorId,
@@ -736,6 +799,8 @@ class GestaoController extends AppController
                     'tipo_id' => $tipoServidorId,
                     'tipo_nome' => (string)($tipoServidor->nome ?? 'Anexo de ingresso na Fiocruz'),
                     'arquivo' => (string)($anexoServidor->anexo ?? ''),
+                    'usuario_nome' => trim((string)($anexoServidor->usuario->nome ?? '')),
+                    'data_inclusao' => $anexoServidor->created ?? null,
                     'regras' => ['Obrigatório para ingressos nos concursos de 2016 e 2024.'],
                     'status_regra' => 'Obrigatório',
                 ];
@@ -759,7 +824,12 @@ class GestaoController extends AppController
         $anexosPMap = [];
         if (!empty($inscricao->projeto_id) && !empty($tiposPIds)) {
             $anexosPAtivos = $this->fetchTable('Anexos')->find()
-                ->select(['anexos_tipo_id', 'anexo'])
+                ->select(['anexos_tipo_id', 'anexo', 'usuario_id', 'created'])
+                ->contain([
+                    'Usuarios' => function ($q) {
+                        return $q->select(['id', 'nome']);
+                    },
+                ])
                 ->where([
                     'Anexos.projeto_id' => (int)$inscricao->projeto_id,
                     'Anexos.anexos_tipo_id IN' => $tiposPIds,
@@ -776,7 +846,11 @@ class GestaoController extends AppController
                     continue;
                 }
                 if (!isset($anexosPMap[$tipoId])) {
-                    $anexosPMap[$tipoId] = (string)$anexoProjeto->anexo;
+                    $anexosPMap[$tipoId] = [
+                        'arquivo' => (string)$anexoProjeto->anexo,
+                        'usuario_nome' => trim((string)($anexoProjeto->usuario->nome ?? '')),
+                        'data_inclusao' => $anexoProjeto->created ?? null,
+                    ];
                 }
             }
         }
@@ -786,7 +860,9 @@ class GestaoController extends AppController
             $anexosP[] = [
                 'tipo_id' => $tipoId,
                 'tipo_nome' => (string)$tipoP->nome,
-                'arquivo' => $anexosPMap[$tipoId] ?? '',
+                'arquivo' => (string)($anexosPMap[$tipoId]['arquivo'] ?? ''),
+                'usuario_nome' => (string)($anexosPMap[$tipoId]['usuario_nome'] ?? ''),
+                'data_inclusao' => $anexosPMap[$tipoId]['data_inclusao'] ?? null,
                 'status_regra' => 'Obrigatório',
             ];
         }
@@ -807,7 +883,12 @@ class GestaoController extends AppController
         $anexosSMap = [];
         if (!empty($tiposSIds)) {
             $anexosSAtivos = $this->fetchTable('Anexos')->find()
-                ->select(['anexos_tipo_id', 'anexo'])
+                ->select(['anexos_tipo_id', 'anexo', 'usuario_id', 'created'])
+                ->contain([
+                    'Usuarios' => function ($q) {
+                        return $q->select(['id', 'nome']);
+                    },
+                ])
                 ->where([
                     'Anexos.projeto_bolsista_id' => (int)$inscricao->id,
                     'Anexos.anexos_tipo_id IN' => $tiposSIds,
@@ -824,7 +905,11 @@ class GestaoController extends AppController
                     continue;
                 }
                 if (!isset($anexosSMap[$tipoId])) {
-                    $anexosSMap[$tipoId] = (string)$anexoSubprojeto->anexo;
+                    $anexosSMap[$tipoId] = [
+                        'arquivo' => (string)$anexoSubprojeto->anexo,
+                        'usuario_nome' => trim((string)($anexoSubprojeto->usuario->nome ?? '')),
+                        'data_inclusao' => $anexoSubprojeto->created ?? null,
+                    ];
                 }
             }
         }
@@ -834,7 +919,9 @@ class GestaoController extends AppController
             $anexosS[] = [
                 'tipo_id' => $tipoId,
                 'tipo_nome' => (string)$tipoS->nome,
-                'arquivo' => $anexosSMap[$tipoId] ?? '',
+                'arquivo' => (string)($anexosSMap[$tipoId]['arquivo'] ?? ''),
+                'usuario_nome' => (string)($anexosSMap[$tipoId]['usuario_nome'] ?? ''),
+                'data_inclusao' => $anexosSMap[$tipoId]['data_inclusao'] ?? null,
                 'status_regra' => 'Obrigatório',
             ];
         }
@@ -870,7 +957,12 @@ class GestaoController extends AppController
         if ($coorientadorInformado && !empty($tiposCIds)) {
             $anexosCMap = [];
             $anexosCAtivos = $this->fetchTable('Anexos')->find()
-                ->select(['anexos_tipo_id', 'anexo'])
+                ->select(['anexos_tipo_id', 'anexo', 'usuario_id', 'created'])
+                ->contain([
+                    'Usuarios' => function ($q) {
+                        return $q->select(['id', 'nome']);
+                    },
+                ])
                 ->where([
                     'Anexos.projeto_bolsista_id' => (int)$inscricao->id,
                     'Anexos.anexos_tipo_id IN' => $tiposCIds,
@@ -887,7 +979,11 @@ class GestaoController extends AppController
                     continue;
                 }
                 if (!isset($anexosCMap[$tipoId])) {
-                    $anexosCMap[$tipoId] = (string)$anexoC->anexo;
+                    $anexosCMap[$tipoId] = [
+                        'arquivo' => (string)$anexoC->anexo,
+                        'usuario_nome' => trim((string)($anexoC->usuario->nome ?? '')),
+                        'data_inclusao' => $anexoC->created ?? null,
+                    ];
                 }
             }
             foreach ($tiposC as $tipoC) {
@@ -895,10 +991,12 @@ class GestaoController extends AppController
                 $anexosC[] = [
                     'tipo_id' => $tipoId,
                     'tipo_nome' => (string)$tipoC->nome,
-                    'arquivo' => $anexosCMap[$tipoId] ?? '',
+                    'arquivo' => (string)($anexosCMap[$tipoId]['arquivo'] ?? ''),
+                    'usuario_nome' => (string)($anexosCMap[$tipoId]['usuario_nome'] ?? ''),
+                    'data_inclusao' => $anexosCMap[$tipoId]['data_inclusao'] ?? null,
                     'status_regra' => 'Obrigatório',
                 ];
-                if (($anexosCMap[$tipoId] ?? '') === '') {
+                if ((string)($anexosCMap[$tipoId]['arquivo'] ?? '') === '') {
                     $errosCoorientador[] = 'Anexo obrigatório do coorientador pendente: ' . (string)$tipoC->nome . '.';
                 }
             }

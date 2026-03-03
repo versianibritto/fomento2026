@@ -7,7 +7,23 @@
         </a>
     </div>
 
-    <?php $naoInformado = '<span class="badge bg-danger">Não informado</span>'; ?>
+    <?php
+        $naoInformado = '<span class="badge bg-danger">Não informado</span>';
+        $formatDataAnexo = static function ($data): string {
+            if ($data === null || $data === '') {
+                return '';
+            }
+            if ($data instanceof \DateTimeInterface) {
+                return $data->format('d/m/Y H:i');
+            }
+            $dataTexto = trim((string)$data);
+            if ($dataTexto === '') {
+                return '';
+            }
+            $timestamp = strtotime($dataTexto);
+            return $timestamp ? date('d/m/Y H:i', $timestamp) : $dataTexto;
+        };
+    ?>
 
     <div class="card shadow-sm mb-3">
         <div class="card-body">
@@ -142,6 +158,14 @@
                                 <td>
                                     <?php if ($anexo['arquivo'] !== ''): ?>
                                         <?= h($anexo['arquivo']) ?>
+                                        <?php
+                                            $usuarioAnexo = trim((string)($anexo['usuario_nome'] ?? ''));
+                                            $dataAnexoFmt = $formatDataAnexo($anexo['data_inclusao'] ?? null);
+                                        ?>
+                                        <div class="small text-muted">
+                                            <?= $usuarioAnexo !== '' ? 'Incluído por ' . h($usuarioAnexo) : 'Usuário não informado' ?>
+                                            <?= $dataAnexoFmt !== '' ? ' em ' . h($dataAnexoFmt) : '' ?>
+                                        </div>
                                     <?php elseif ($statusRegra === 'Obrigatório'): ?>
                                         <?= $naoInformado ?>
                                     <?php else: ?>
@@ -150,9 +174,30 @@
                                 </td>
                                 <td class="text-end">
                                     <?php if ($anexo['arquivo'] !== ''): ?>
-                                        <a href="/uploads/anexos/<?= h($anexo['arquivo']) ?>" target="_blank" class="btn btn-light border btn-sm py-0 px-2" title="Download">
-                                            <i class="fa fa-download"></i>
-                                        </a>
+                                        <?= $this->Form->create(null, [
+                                            'type' => 'file',
+                                            'url' => ['controller' => 'Gestao', 'action' => 'telahomologacao', (int)($inscricao->id ?? 0)],
+                                            'class' => 'd-inline-flex align-items-center gap-1',
+                                            'data-no-loading' => '1',
+                                        ]) ?>
+                                            <?= $this->Form->hidden('anexo_acao', ['value' => 'alterar']) ?>
+                                            <?= $this->Form->hidden('anexo_tipo', ['value' => (int)($anexo['tipo_id'] ?? 0)]) ?>
+                                            <?= $this->Form->hidden('alterar_anexo_tipo', ['value' => (int)($anexo['tipo_id'] ?? 0)]) ?>
+                                            <a href="/uploads/anexos/<?= h($anexo['arquivo']) ?>" target="_blank" class="btn btn-light border btn-sm py-0 px-2" title="Download">
+                                                <i class="fa fa-download"></i>
+                                            </a>
+                                            <?php $inputIdAnexoB = 'editar-anexo-B-' . (int)($anexo['tipo_id'] ?? 0); ?>
+                                            <label for="<?= h($inputIdAnexoB) ?>" class="btn btn-light border btn-sm py-0 px-2 mb-0" title="Alterar anexo">
+                                                <i class="fa fa-edit"></i>
+                                            </label>
+                                            <input
+                                                id="<?= h($inputIdAnexoB) ?>"
+                                                name="anexos[<?= (int)($anexo['tipo_id'] ?? 0) ?>]"
+                                                type="file"
+                                                class="d-none homologacao-anexo-file"
+                                                data-tipo="<?= (int)($anexo['tipo_id'] ?? 0) ?>"
+                                            >
+                                        <?= $this->Form->end() ?>
                                     <?php endif; ?>
                                 </td>
                             </tr>
@@ -250,15 +295,44 @@
                                 <td>
                                     <?php if ($anexo['arquivo'] !== ''): ?>
                                         <?= h($anexo['arquivo']) ?>
+                                        <?php
+                                            $usuarioAnexo = trim((string)($anexo['usuario_nome'] ?? ''));
+                                            $dataAnexoFmt = $formatDataAnexo($anexo['data_inclusao'] ?? null);
+                                        ?>
+                                        <div class="small text-muted">
+                                            <?= $usuarioAnexo !== '' ? 'Incluído por ' . h($usuarioAnexo) : 'Usuário não informado' ?>
+                                            <?= $dataAnexoFmt !== '' ? ' em ' . h($dataAnexoFmt) : '' ?>
+                                        </div>
                                     <?php else: ?>
                                         <?= $naoInformado ?>
                                     <?php endif; ?>
                                 </td>
                                 <td class="text-end">
                                     <?php if ($anexo['arquivo'] !== ''): ?>
-                                        <a href="/uploads/anexos/<?= h($anexo['arquivo']) ?>" target="_blank" class="btn btn-light border btn-sm py-0 px-2" title="Download">
-                                            <i class="fa fa-download"></i>
-                                        </a>
+                                        <?= $this->Form->create(null, [
+                                            'type' => 'file',
+                                            'url' => ['controller' => 'Gestao', 'action' => 'telahomologacao', (int)($inscricao->id ?? 0)],
+                                            'class' => 'd-inline-flex align-items-center gap-1',
+                                            'data-no-loading' => '1',
+                                        ]) ?>
+                                            <?= $this->Form->hidden('anexo_acao', ['value' => 'alterar']) ?>
+                                            <?= $this->Form->hidden('anexo_tipo', ['value' => (int)($anexo['tipo_id'] ?? 0)]) ?>
+                                            <?= $this->Form->hidden('alterar_anexo_tipo', ['value' => (int)($anexo['tipo_id'] ?? 0)]) ?>
+                                            <a href="/uploads/anexos/<?= h($anexo['arquivo']) ?>" target="_blank" class="btn btn-light border btn-sm py-0 px-2" title="Download">
+                                                <i class="fa fa-download"></i>
+                                            </a>
+                                            <?php $inputIdAnexoC = 'editar-anexo-C-' . (int)($anexo['tipo_id'] ?? 0); ?>
+                                            <label for="<?= h($inputIdAnexoC) ?>" class="btn btn-light border btn-sm py-0 px-2 mb-0" title="Alterar anexo">
+                                                <i class="fa fa-edit"></i>
+                                            </label>
+                                            <input
+                                                id="<?= h($inputIdAnexoC) ?>"
+                                                name="anexos[<?= (int)($anexo['tipo_id'] ?? 0) ?>]"
+                                                type="file"
+                                                class="d-none homologacao-anexo-file"
+                                                data-tipo="<?= (int)($anexo['tipo_id'] ?? 0) ?>"
+                                            >
+                                        <?= $this->Form->end() ?>
                                     <?php endif; ?>
                                 </td>
                             </tr>
@@ -309,6 +383,14 @@
                                     <td>
                                         <?php if ($anexo['arquivo'] !== ''): ?>
                                             <?= h($anexo['arquivo']) ?>
+                                            <?php
+                                                $usuarioAnexo = trim((string)($anexo['usuario_nome'] ?? ''));
+                                                $dataAnexoFmt = $formatDataAnexo($anexo['data_inclusao'] ?? null);
+                                            ?>
+                                            <div class="small text-muted">
+                                                <?= $usuarioAnexo !== '' ? 'Incluído por ' . h($usuarioAnexo) : 'Usuário não informado' ?>
+                                                <?= $dataAnexoFmt !== '' ? ' em ' . h($dataAnexoFmt) : '' ?>
+                                            </div>
                                         <?php else: ?>
                                             <?= $naoInformado ?>
                                         <?php endif; ?>
@@ -362,6 +444,14 @@
                                     <td>
                                         <?php if ($anexo['arquivo'] !== ''): ?>
                                             <?= h($anexo['arquivo']) ?>
+                                            <?php
+                                                $usuarioAnexo = trim((string)($anexo['usuario_nome'] ?? ''));
+                                                $dataAnexoFmt = $formatDataAnexo($anexo['data_inclusao'] ?? null);
+                                            ?>
+                                            <div class="small text-muted">
+                                                <?= $usuarioAnexo !== '' ? 'Incluído por ' . h($usuarioAnexo) : 'Usuário não informado' ?>
+                                                <?= $dataAnexoFmt !== '' ? ' em ' . h($dataAnexoFmt) : '' ?>
+                                            </div>
                                         <?php else: ?>
                                             <?= $naoInformado ?>
                                         <?php endif; ?>
@@ -410,15 +500,44 @@
                                 <td>
                                     <?php if ($anexo['arquivo'] !== ''): ?>
                                         <?= h($anexo['arquivo']) ?>
+                                        <?php
+                                            $usuarioAnexo = trim((string)($anexo['usuario_nome'] ?? ''));
+                                            $dataAnexoFmt = $formatDataAnexo($anexo['data_inclusao'] ?? null);
+                                        ?>
+                                        <div class="small text-muted">
+                                            <?= $usuarioAnexo !== '' ? 'Incluído por ' . h($usuarioAnexo) : 'Usuário não informado' ?>
+                                            <?= $dataAnexoFmt !== '' ? ' em ' . h($dataAnexoFmt) : '' ?>
+                                        </div>
                                     <?php else: ?>
                                         <?= $naoInformado ?>
                                     <?php endif; ?>
                                 </td>
                                 <td class="text-end">
                                     <?php if ($anexo['arquivo'] !== ''): ?>
-                                        <a href="/uploads/anexos/<?= h($anexo['arquivo']) ?>" target="_blank" class="btn btn-light border btn-sm py-0 px-2" title="Download">
-                                            <i class="fa fa-download"></i>
-                                        </a>
+                                        <?= $this->Form->create(null, [
+                                            'type' => 'file',
+                                            'url' => ['controller' => 'Gestao', 'action' => 'telahomologacao', (int)($inscricao->id ?? 0)],
+                                            'class' => 'd-inline-flex align-items-center gap-1',
+                                            'data-no-loading' => '1',
+                                        ]) ?>
+                                            <?= $this->Form->hidden('anexo_acao', ['value' => 'alterar']) ?>
+                                            <?= $this->Form->hidden('anexo_tipo', ['value' => (int)($anexo['tipo_id'] ?? 0)]) ?>
+                                            <?= $this->Form->hidden('alterar_anexo_tipo', ['value' => (int)($anexo['tipo_id'] ?? 0)]) ?>
+                                            <a href="/uploads/anexos/<?= h($anexo['arquivo']) ?>" target="_blank" class="btn btn-light border btn-sm py-0 px-2" title="Download">
+                                                <i class="fa fa-download"></i>
+                                            </a>
+                                            <?php $inputIdAnexoI = 'editar-anexo-I-' . (int)($anexo['tipo_id'] ?? 0); ?>
+                                            <label for="<?= h($inputIdAnexoI) ?>" class="btn btn-light border btn-sm py-0 px-2 mb-0" title="Alterar anexo">
+                                                <i class="fa fa-edit"></i>
+                                            </label>
+                                            <input
+                                                id="<?= h($inputIdAnexoI) ?>"
+                                                name="anexos[<?= (int)($anexo['tipo_id'] ?? 0) ?>]"
+                                                type="file"
+                                                class="d-none homologacao-anexo-file"
+                                                data-tipo="<?= (int)($anexo['tipo_id'] ?? 0) ?>"
+                                            >
+                                        <?= $this->Form->end() ?>
                                     <?php endif; ?>
                                 </td>
                             </tr>
@@ -522,6 +641,19 @@ document.addEventListener('DOMContentLoaded', function () {
     btn.addEventListener('click', function () {
         const exibindo = box.style.display !== 'none';
         box.style.display = exibindo ? 'none' : 'block';
+    });
+});
+
+document.querySelectorAll('.homologacao-anexo-file').forEach(function (input) {
+    input.addEventListener('change', function () {
+        if (!this.files || this.files.length === 0) {
+            return;
+        }
+        const form = this.closest('form');
+        if (!form) {
+            return;
+        }
+        form.submit();
     });
 });
 </script>
