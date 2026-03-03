@@ -84,23 +84,43 @@
                                 </td>
 
                                 <td>
-                                    <?= !isset($i['bolsista'])
-                                        ? '<strong><em>Não informado</em></strong>'
-                                        : ($usuarioId == $i['bolsista']
-                                            ? '<span class="badge bg-danger" title="Você Mesmo"><i class="fa fa-user"></i></span>'
-                                            : h($i['nome_bolsista'] ?? '<strong><em>Não informado</em></strong>')
-                                        ) 
-                                    ?>
+                                    <?php if (!isset($i['bolsista']) || (int)$i['bolsista'] <= 0): ?>
+                                        <strong><em>Não informado</em></strong>
+                                    <?php else: ?>
+                                        <?php
+                                            $bolsistaId = (int)$i['bolsista'];
+                                            $nomeBolsista = trim((string)($i['nome_bolsista'] ?? ''));
+                                            $nomeBolsista = $nomeBolsista !== '' ? $nomeBolsista : 'Não informado';
+                                        ?>
+                                        <?= $this->Html->link(
+                                            $usuarioId === $bolsistaId ? 'Você' : $nomeBolsista,
+                                            ['controller' => 'Users', 'action' => 'ver', $bolsistaId],
+                                            [
+                                                'class' => 'text-decoration-none',
+                                                'title' => 'Visualizar os dados pessoais',
+                                            ]
+                                        ) ?>
+                                    <?php endif; ?>
                                 </td>
 
                                 <td>
-                                    <?= !isset($i['coorientador'])
-                                        ? '<strong><em>Não informado</em></strong>'
-                                        : ($usuarioId == $i['coorientador']
-                                            ? '<span class="badge bg-danger" title="Você Mesmo"><i class="fa fa-user"></i></span>'
-                                            : h($i['nome_coorientador'] ?? '<strong><em>Não informado</em></strong>')
-                                        ) 
-                                    ?>
+                                    <?php if (!isset($i['coorientador']) || (int)$i['coorientador'] <= 0): ?>
+                                        <strong><em>Não informado</em></strong>
+                                    <?php else: ?>
+                                        <?php
+                                            $coorientadorId = (int)$i['coorientador'];
+                                            $nomeCoorientador = trim((string)($i['nome_coorientador'] ?? ''));
+                                            $nomeCoorientador = $nomeCoorientador !== '' ? $nomeCoorientador : 'Não informado';
+                                        ?>
+                                        <?= $this->Html->link(
+                                            $usuarioId === $coorientadorId ? 'Você' : $nomeCoorientador,
+                                            ['controller' => 'Users', 'action' => 'ver', $coorientadorId],
+                                            [
+                                                'class' => 'text-decoration-none',
+                                                'title' => 'Visualizar os dados pessoais',
+                                            ]
+                                        ) ?>
+                                    <?php endif; ?>
                                 </td>
 
                                 <td>

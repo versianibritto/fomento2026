@@ -1248,3 +1248,5 @@ ADD COLUMN `finalizado` TIMESTAMP NULL AFTER `modified`;
 
 INSERT INTO `programas` (`sigla`, `deleted`) VALUES ('Coleções', '0');
 
+-- aqui 3
+UPDATE `anexos_tipos` SET `nome` = 'Cópia do DO (recém concursados)' WHERE (`id` = '29');
