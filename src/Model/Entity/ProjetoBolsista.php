@@ -95,6 +95,7 @@ use Cake\ORM\Entity;
  * @property int|null $pdj_inscricoe_id
  * @property int|null $ano_doutorado
  * @property bool|null $recem_servidor
+ * @property string|null $justificativa_bolsa
  *
  * @property \App\Model\Entity\Editai $editai
  * @property \App\Model\Entity\Projeto $projeto
@@ -211,6 +212,7 @@ class ProjetoBolsista extends Entity
         'pdj_inscricoe_id' => true,
         'ano_doutorado' => true,
         'recem_servidor' => true,
+        'justificativa_bolsa' => true,
         'editai' => true,
         'projeto' => true,
         'usuario' => true,

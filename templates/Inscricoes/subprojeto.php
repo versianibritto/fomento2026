@@ -18,6 +18,20 @@
                 <?= $this->Form->hidden('alterar_anexo_tipo', ['value' => '', 'id' => 'alterar-anexo-tipo']) ?>
                 <?= $this->Form->hidden('anexo_acao', ['value' => '', 'id' => 'anexo-acao']) ?>
                 <?= $this->Form->hidden('anexo_tipo', ['value' => '', 'id' => 'anexo-tipo']) ?>
+                <div class="alert alert-warning border border-warning-subtle mb-4 sumula-alerta">
+                    <div class="fw-semibold mb-1">Atenção ao preenchimento</div>
+                    <div>
+                        <strong>Anexo do Subprojeto (completo):</strong> deverá observar o seguinte modelo: Justificativa de solicitação da bolsa; Resumo;
+                        Introdução; Objetivos; Metodologia e Métodos; Cronograma das atividades e Referenciais.
+                        <br><br>
+                        <strong>Justificativa de solicitação da bolsa:</strong> demonstrar a contribuição do subprojeto do(a) bolsista
+                        para o Grupo de Pesquisa/Laboratório; justificar como a obtenção da bolsa PIBIC contribuirá para
+                        a realização do projeto de pesquisa principal do(a) orientador(a); destacar os conhecimentos,
+                        metodologias, método e técnicas com os quais o(a) candidato(a) terá contado durante o período
+                        de bolsas; discorrer sobre a infraestrutura disponível para o desenvolvimento do subprojeto do(a)
+                        bolsista.
+                    </div>
+                </div>
                 <div class="col-12">
                     <h6 class="fw-semibold">Dados do subprojeto</h6>
                 </div>
@@ -37,6 +51,16 @@
                         'rows' => 4,
                         'maxlength' => 4000,
                         'value' => $inscricao->sp_resumo ?? null,
+                    ]) ?>
+                </div>
+                <div class="col-12">
+                    <?= $this->Form->control('justificativa_bolsa', [
+                        'label' => 'Justificativa da bolsa',
+                        'type' => 'textarea',
+                        'class' => 'form-control',
+                        'rows' => 4,
+                        'maxlength' => 4000,
+                        'value' => $inscricao->justificativa_bolsa ?? null,
                     ]) ?>
                 </div>
                 <div class="col-12">
@@ -97,6 +121,11 @@
     </div>
 </div>
 <style>
+.sumula-alerta {
+    border: 1px solid #ffe69c;
+    background: #fff8db;
+    box-shadow: 0 0 0 2px rgba(255, 193, 7, .15);
+}
 .anexos-areas .anexo-arquivo-atual {
     border: 1px solid #dfe3e7;
     border-radius: .5rem;

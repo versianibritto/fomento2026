@@ -513,6 +513,12 @@ if (!$temDataInicio && !$temDataFim) {
                                         <div class="mt-2" style="white-space: pre-line;"><?= !empty($inscricao->sp_resumo) ? h($inscricao->sp_resumo) : $naoInformado ?></div>
                                     </details>
                                 </div>
+                                <div class="col-12">
+                                    <details class="border rounded p-2 bg-white">
+                                        <summary class="fw-semibold">Justificativa da bolsa</summary>
+                                        <div class="mt-2" style="white-space: pre-line;"><?= !empty($inscricao->justificativa_bolsa) ? h($inscricao->justificativa_bolsa) : $naoInformado ?></div>
+                                    </details>
+                                </div>
                                 <?php if ($isRenovacao): ?>
                                     <div class="col-12">
                                         <details class="border rounded p-2 bg-white">

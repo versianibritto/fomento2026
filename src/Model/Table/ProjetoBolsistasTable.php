@@ -339,6 +339,11 @@ class ProjetoBolsistasTable extends Table
             ->allowEmptyString('recem_servidor');
 
         $validator
+            ->scalar('justificativa_bolsa')
+            ->maxLength('justificativa_bolsa', 4000)
+            ->allowEmptyString('justificativa_bolsa');
+
+        $validator
             ->boolean('vigente')
             ->notEmptyString('vigente');
 

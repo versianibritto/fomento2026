@@ -1521,6 +1521,11 @@ class InscricoesController extends AppController
             if ($erroResumoSubprojeto !== null) {
                 $errosTextoSubprojeto[] = $erroResumoSubprojeto;
             }
+            $justificativaBolsa = trim((string)($dados['justificativa_bolsa'] ?? ''));
+            $erroJustificativaBolsa = $this->validarTextoComLimites($justificativaBolsa, 'Justificativa da bolsa', 0, 4000);
+            if ($erroJustificativaBolsa !== null) {
+                $errosTextoSubprojeto[] = $erroJustificativaBolsa;
+            }
             if (!empty($errosTextoSubprojeto)) {
                 foreach ($errosTextoSubprojeto as $erroTextoSubprojeto) {
                     $this->Flash->error($erroTextoSubprojeto);
@@ -1544,10 +1549,11 @@ class InscricoesController extends AppController
                 }
 
                 $tblProjetoBolsistas = $this->fetchTable('ProjetoBolsistas');
-                $tblProjetoBolsistas->getConnection()->transactional(function () use ($tblProjetoBolsistas, &$inscricao, $dados, $anexosUpload) {
+                $tblProjetoBolsistas->getConnection()->transactional(function () use ($tblProjetoBolsistas, &$inscricao, $dados, $anexosUpload, $justificativaBolsa) {
                     $inscricaoPatch = $tblProjetoBolsistas->patchEntity($inscricao, [
                         'sp_titulo' => trim((string)($dados['sp_titulo'] ?? '')),
                         'sp_resumo' => trim((string)($dados['sp_resumo'] ?? '')),
+                        'justificativa_bolsa' => $justificativaBolsa,
                     ]);
                     $tblProjetoBolsistas->saveOrFail($inscricaoPatch);
 
@@ -2034,6 +2040,10 @@ class InscricoesController extends AppController
         $erroResumoSubprojeto = $this->validarTextoComLimites((string)($inscricao->sp_resumo ?? ''), 'Resumo do subprojeto', 20, 4000, true);
         if ($erroResumoSubprojeto !== null) {
             $errosSubprojeto[] = $erroResumoSubprojeto;
+        }
+        $erroJustificativaBolsa = $this->validarTextoComLimites((string)($inscricao->justificativa_bolsa ?? ''), 'Justificativa da bolsa', 0, 4000, true);
+        if ($erroJustificativaBolsa !== null) {
+            $errosSubprojeto[] = $erroJustificativaBolsa;
         }
         if (!empty($errosSubprojeto)) {
             $falhas[] = [
