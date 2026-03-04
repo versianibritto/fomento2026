@@ -230,6 +230,8 @@ class AppController extends Controller
 
         $this->set('usuario_logado', null);
             $subs = $canc = $atv = $atv_pdj = $subs_pdj = $canc_pdj = $feedbackCount = 0;
+            $suporteNotifDuvidaCount = $suporteNotifFinalizadoCount = $suporteNotifNovaCount = $suporteNotifTotal = 0;
+            $suporteStatusNovoId = 0;
 
        // dd($this->request->getAttribute('authentication'));
         if($this->Authentication->getIdentity()) {
@@ -302,6 +304,42 @@ class AppController extends Controller
                     ])
                     ->count();
             }
+
+            $isTi = in_array((int)$usuario->id, [1, 8088], true);
+            if (!$isTi) {
+                $suporteChamadosTable = TableRegistry::getTableLocator()->get('SuporteChamados');
+                $suporteBaseConditions = [
+                    'SuporteChamados.parent_id IS' => null,
+                    'SuporteChamados.usuario_id' => (int)$usuario->id,
+                ];
+
+                $suporteNotifDuvidaCount = $suporteChamadosTable->find()
+                    ->where($suporteBaseConditions + ['SuporteChamados.status_id' => 3])
+                    ->count();
+
+                $suporteNotifFinalizadoCount = $suporteChamadosTable->find()
+                    ->where($suporteBaseConditions + ['SuporteChamados.status_id' => 5])
+                    ->count();
+
+                $suporteNotifTotal = (int)$suporteNotifDuvidaCount + (int)$suporteNotifFinalizadoCount;
+            } else {
+                $suporteChamadosTable = TableRegistry::getTableLocator()->get('SuporteChamados');
+                $statusNovo = TableRegistry::getTableLocator()->get('SuporteStatus')->find()
+                    ->select(['id'])
+                    ->where(['codigo' => 'N'])
+                    ->first();
+                $statusNovoId = (int)($statusNovo->id ?? 0);
+                $suporteStatusNovoId = $statusNovoId;
+                if ($statusNovoId > 0) {
+                    $suporteNotifNovaCount = $suporteChamadosTable->find()
+                        ->where([
+                            'SuporteChamados.parent_id IS' => null,
+                            'SuporteChamados.status_id' => $statusNovoId,
+                        ])
+                        ->count();
+                    $suporteNotifTotal = (int)$suporteNotifNovaCount;
+                }
+            }
                 
             /*
             if($usuario->jedi) {
@@ -336,7 +374,20 @@ class AppController extends Controller
             }
                 */
         }
-            $this->set(compact('subs', 'subs_pdj', 'canc','canc_pdj',  'atv', 'atv_pdj','feedbackCount'));
+            $this->set(compact(
+                'subs',
+                'subs_pdj',
+                'canc',
+                'canc_pdj',
+                'atv',
+                'atv_pdj',
+                'feedbackCount',
+                'suporteNotifDuvidaCount',
+                'suporteNotifFinalizadoCount',
+                'suporteNotifNovaCount',
+                'suporteStatusNovoId',
+                'suporteNotifTotal'
+            ));
 
     }
 

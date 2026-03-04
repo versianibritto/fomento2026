@@ -16,7 +16,7 @@
                 <div>As mensagens são direcionadas à <strong>gestão</strong>.</div>
                 <div>
                     Para <strong>erros de sistema</strong>, utilize o
-                    <a href="<?= $this->Url->build(['controller' => 'Suporte', 'action' => 'index']) ?>" class="text-decoration-none fw-semibold">Suporte</a>
+                    <a href="<?= $this->Url->build(['controller' => 'Supote', 'action' => 'index']) ?>" class="text-decoration-none fw-semibold">Suporte</a>
                     para encaminhamento direto à TI.
                 </div>
             </div>

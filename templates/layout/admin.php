@@ -86,6 +86,39 @@
                     <li class="sidebar-item">
                         <a href="/supote" class="sidebar-link">
                             Suporte
+                            <?php if ((int)($suporteNotifTotal ?? 0) > 0): ?>
+                                <i class="bi bi-bell-fill text-danger ms-2"></i>
+                            <?php endif; ?>
+                            <?php if ((int)($suporteNotifDuvidaCount ?? 0) > 0): ?>
+                                <span
+                                    class="badge bg-warning text-dark rounded-pill ms-2 text-decoration-none"
+                                    title="Chamados em dúvida (status 3)"
+                                    role="button"
+                                    style="cursor: pointer;"
+                                    data-target-url="/supote?status_id=3">
+                                    D: <?= (int)$suporteNotifDuvidaCount ?>
+                                </span>
+                            <?php endif; ?>
+                            <?php if ((int)($suporteNotifFinalizadoCount ?? 0) > 0): ?>
+                                <span
+                                    class="badge bg-success rounded-pill ms-1 text-decoration-none"
+                                    title="Chamados finalizados (status 5)"
+                                    role="button"
+                                    style="cursor: pointer;"
+                                    data-target-url="/supote?status_id=5">
+                                    F: <?= (int)$suporteNotifFinalizadoCount ?>
+                                </span>
+                            <?php endif; ?>
+                            <?php if ((int)($suporteNotifNovaCount ?? 0) > 0): ?>
+                                <span
+                                    class="badge bg-primary rounded-pill ms-1 text-decoration-none"
+                                    title="Chamados novos"
+                                    role="button"
+                                    style="cursor: pointer;"
+                                    data-target-url="/supote?status_id=<?= (int)($suporteStatusNovoId ?? 0) ?>">
+                                    N: <?= (int)$suporteNotifNovaCount ?>
+                                </span>
+                            <?php endif; ?>
                         </a>
                     </li>
                     <li class="sidebar-item">
@@ -421,6 +454,20 @@
             </footer>
         </div>
     </div>
+    <script>
+        (function () {
+            document.addEventListener('click', function (event) {
+                var alvo = event.target && event.target.closest ? event.target.closest('[data-target-url]') : null;
+                if (!alvo) return;
+                event.preventDefault();
+                event.stopPropagation();
+                var destino = alvo.getAttribute('data-target-url');
+                if (destino) {
+                    window.location.href = destino;
+                }
+            }, true);
+        })();
+    </script>
     <script>
         (function () {
             var overlay = document.getElementById('globalSubmitOverlay');
