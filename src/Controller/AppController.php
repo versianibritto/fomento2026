@@ -241,6 +241,19 @@ class AppController extends Controller
             $_user = $this->Authentication->getIdentity();
             $usuario = TableRegistry::getTableLocator()->get('Usuarios')->get($_user->id);
             $this->Authentication->setIdentity($usuario);
+            $feedbacksTable = TableRegistry::getTableLocator()->get('Feedbacks');
+            $usuariosTable = TableRegistry::getTableLocator()->get('Usuarios');
+            $yodaIds = $usuariosTable->find()
+                ->select(['id'])
+                ->where(['yoda' => 1])
+                ->enableHydration(false)
+                ->all()
+                ->extract('id')
+                ->map(fn($id) => (int)$id)
+                ->toList();
+            if (empty($yodaIds)) {
+                $yodaIds = [0];
+            }
 
 
             if(!$this->request->is('ajax')) {
@@ -286,21 +299,35 @@ class AppController extends Controller
 
                 $atv = TableRegistry::getTableLocator()->get('ProjetoBolsistas')->find()->where(['vigente' => 1,  'deleted IS' => null])->count();
                 $atv_pdj = TableRegistry::getTableLocator()->get('PdjInscricoes')->find()->where(['vigente' => 1,  'deleted IS NULL'])->count();
-
-                $feedbackCount = TableRegistry::getTableLocator()->get('Feedbacks')->find()
-                    ->where(['situacao' => 'N', 'origem' => 'P'])
+                $feedbackCount = $feedbacksTable->find()
+                    ->where([
+                        'Feedbacks.origem' => 'R',
+                        'Feedbacks.situacao' => 'N',
+                        'Feedbacks.usuario_id NOT IN' => $yodaIds,
+                    ])
+                    ->count();
+                $feedbackCount += $feedbacksTable->find()
+                    ->where([
+                        'Feedbacks.parent_id IS' => null,
+                        'Feedbacks.origem' => 'P',
+                        'Feedbacks.situacao' => 'N',
+                        'Feedbacks.usuario_id NOT IN' => $yodaIds,
+                    ])
                     ->count();
             }
             if(!$usuario->yoda) {
-                $feedbacksTable = TableRegistry::getTableLocator()->get('Feedbacks');
-                $feedbacksDoUsuario = $feedbacksTable->find()
+                $ramosRaizUsuario = $feedbacksTable->find()
                     ->select(['id'])
-                    ->where(['usuario_id' => $usuario->id]);
+                    ->where([
+                        'Feedbacks.parent_id IS' => null,
+                        'Feedbacks.usuario_id' => (int)$usuario->id,
+                    ]);
                 $feedbackCount = $feedbacksTable->find()
                     ->where([
-                        'situacao' => 'N',
-                        'origem' => 'R',
-                        'parent_id IN' => $feedbacksDoUsuario,
+                        'Feedbacks.ramo IN' => $ramosRaizUsuario,
+                        'Feedbacks.origem' => 'R',
+                        'Feedbacks.situacao' => 'N',
+                        'Feedbacks.usuario_id IN' => $yodaIds,
                     ])
                     ->count();
             }

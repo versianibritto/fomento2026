@@ -108,7 +108,7 @@
                             ?>
                             <?=$this->Html->link('Ver respostas', ['controller'=>'feedbacks','action' => 'view', $b->id, '?' => ['ramo' => $ramoAtual]], ['class' => 'btn btn-sm btn-outline-info', 'escape' => false])?>
                             <?php if($qtdNovas > 0){?>
-                                <span class="badge bg-danger ms-1"><?= (int)$qtdNovas ?></span>
+                                <i class="bi bi-bell-fill text-danger ms-1" title="Há comentários novos"></i>
                             <?php }?>
                             <?php if($b->origem!='R'){?>
                                 <a class="btn btn-sm btn-primary ms-1" href="/feedbacks/responder/<?=$b->id?>"><i class="fas fa-regular fa-comment"></i></a>

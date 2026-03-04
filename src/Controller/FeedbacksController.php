@@ -15,6 +15,17 @@ class FeedbacksController extends AppController
     {
         $identity = $this->request->getAttribute('identity');
         $isYoda = (bool)($identity['yoda'] ?? false);
+        $yodaIds = $this->fetchTable('Usuarios')->find()
+            ->select(['id'])
+            ->where(['yoda' => 1])
+            ->enableHydration(false)
+            ->all()
+            ->extract('id')
+            ->map(fn($id) => (int)$id)
+            ->toList();
+        if (empty($yodaIds)) {
+            $yodaIds = [0];
+        }
 
         $feedbacksTable = $this->fetchTable('Feedbacks');
         $query = $feedbacksTable->find()
@@ -46,23 +57,39 @@ class FeedbacksController extends AppController
         $feedbacks = $this->paginate($query);
 
         $novasRespostasPorRamo = [];
-        if ($isYoda) {
+        $ramosDaPagina = [];
+        foreach ($feedbacks as $item) {
+            $ramoItem = (int)($item->ramo ?? $item->id ?? 0);
+            if ($ramoItem > 0) {
+                $ramosDaPagina[] = $ramoItem;
+            }
+        }
+        $ramosDaPagina = array_values(array_unique($ramosDaPagina));
+        if (!empty($ramosDaPagina)) {
+            $conditionsNovas = [
+                'Feedbacks.parent_id IS NOT' => null,
+                'Feedbacks.situacao' => 'N',
+                'Feedbacks.ramo IN' => $ramosDaPagina,
+            ];
+            if ($isYoda) {
+                $conditionsNovas['Feedbacks.usuario_id NOT IN'] = $yodaIds;
+            } else {
+                $conditionsNovas['Feedbacks.usuario_id IN'] = $yodaIds;
+            }
             $novasRespostas = $feedbacksTable->find()
-                ->select([
-                    'ramo' => 'Feedbacks.ramo',
-                    'qtd' => $feedbacksTable->find()->func()->count('Feedbacks.id'),
-                ])
-                ->where([
-                    'Feedbacks.origem' => 'R',
-                    'Feedbacks.situacao' => 'N',
-                ])
-                ->groupBy('Feedbacks.ramo')
+                ->select(['ramo'])
+                ->where($conditionsNovas)
+                ->enableHydration(false)
                 ->all();
             foreach ($novasRespostas as $item) {
-                $ramo = (int)($item->ramo ?? 0);
-                if ($ramo > 0) {
-                    $novasRespostasPorRamo[$ramo] = (int)$item->qtd;
+                $ramo = (int)($item['ramo'] ?? 0);
+                if ($ramo <= 0) {
+                    continue;
                 }
+                if (!isset($novasRespostasPorRamo[$ramo])) {
+                    $novasRespostasPorRamo[$ramo] = 0;
+                }
+                $novasRespostasPorRamo[$ramo]++;
             }
         }
 
@@ -97,15 +124,48 @@ class FeedbacksController extends AppController
 
         $identity = $this->request->getAttribute('identity');
         $isYoda = (bool)($identity['yoda'] ?? false);
+        $yodaIds = $this->fetchTable('Usuarios')->find()
+            ->select(['id'])
+            ->where(['yoda' => 1])
+            ->enableHydration(false)
+            ->all()
+            ->extract('id')
+            ->map(fn($id) => (int)$id)
+            ->toList();
+        if (empty($yodaIds)) {
+            $yodaIds = [0];
+        }
         if ($isYoda || (int)($feedback->usuario_id ?? 0) === (int)($identity['id'] ?? 0)) {
-            $feedbacksTable->updateAll(
-                ['situacao' => 'R'],
-                [
-                    'Feedbacks.ramo' => $ramo,
-                    'Feedbacks.origem' => 'R',
-                    'Feedbacks.situacao' => 'N',
-                ]
-            );
+            if ($isYoda) {
+                $feedbacksTable->updateAll(
+                    ['situacao' => 'R'],
+                    [
+                        'Feedbacks.ramo' => $ramo,
+                        'Feedbacks.origem' => 'R',
+                        'Feedbacks.situacao' => 'N',
+                        'Feedbacks.usuario_id NOT IN' => $yodaIds,
+                    ]
+                );
+                $feedbacksTable->updateAll(
+                    ['situacao' => 'R'],
+                    [
+                        'Feedbacks.id' => (int)$feedback->id,
+                        'Feedbacks.origem' => 'P',
+                        'Feedbacks.situacao' => 'N',
+                        'Feedbacks.usuario_id NOT IN' => $yodaIds,
+                    ]
+                );
+            } else {
+                $feedbacksTable->updateAll(
+                    ['situacao' => 'R'],
+                    [
+                        'Feedbacks.ramo' => $ramo,
+                        'Feedbacks.origem' => 'R',
+                        'Feedbacks.situacao' => 'N',
+                        'Feedbacks.usuario_id IN' => $yodaIds,
+                    ]
+                );
+            }
         }
 
         $repliesByParent = [];
@@ -182,7 +242,7 @@ class FeedbacksController extends AppController
             $dados['parent_id'] = (int)$feedbackPai->id;
             $dados['destinatario'] = (string)($feedbackPai->destinatario ?? '');
             $dados['tipo'] = 'P';
-            $dados['situacao'] = ($identity['yoda'] ?? false) ? 'R' : 'N';
+            $dados['situacao'] = 'N';
             $dados['origem'] = 'R';
             $dados['ativo'] = 1;
             $dados['ramo'] = $feedbackPai->ramo ?? $feedbackPai->id;
