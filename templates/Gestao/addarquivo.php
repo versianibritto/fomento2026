@@ -58,7 +58,9 @@
                                     $dataInclusao = $anexo['data_inclusao'] ?? null;
                                     $dataInclusaoFmt = '-';
                                     if ($dataInclusao instanceof \DateTimeInterface) {
-                                        $dataInclusaoFmt = (clone $dataInclusao)->modify('-3 hours')->format('d/m/Y H:i');
+                                        $dataInclusaoFmt = \DateTimeImmutable::createFromInterface($dataInclusao)
+                                            ->modify('-3 hours')
+                                            ->format('d/m/Y H:i');
                                     } elseif (!empty($dataInclusao)) {
                                         $tsData = strtotime((string)$dataInclusao);
                                         $dataInclusaoFmt = $tsData ? date('d/m/Y H:i', strtotime('-3 hours', $tsData)) : (string)$dataInclusao;

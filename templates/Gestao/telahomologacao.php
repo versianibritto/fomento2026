@@ -14,7 +14,9 @@
                 return '';
             }
             if ($data instanceof \DateTimeInterface) {
-                return (clone $data)->modify('-3 hours')->format('d/m/Y H:i');
+                return \DateTimeImmutable::createFromInterface($data)
+                    ->modify('-3 hours')
+                    ->format('d/m/Y H:i');
             }
             $dataTexto = trim((string)$data);
             if ($dataTexto === '') {
@@ -23,6 +25,25 @@
             $timestamp = strtotime($dataTexto);
             return $timestamp ? date('d/m/Y H:i', strtotime('-3 hours', $timestamp)) : $dataTexto;
         };
+        $tipoAnexoOcultoId = 13;
+        $ocultarTipoAnexo = static function ($anexos) use ($tipoAnexoOcultoId): array {
+            if (!is_iterable($anexos)) {
+                return [];
+            }
+            $anexosFiltrados = [];
+            foreach ($anexos as $anexo) {
+                if ((int)($anexo['tipo_id'] ?? 0) === $tipoAnexoOcultoId) {
+                    continue;
+                }
+                $anexosFiltrados[] = $anexo;
+            }
+            return $anexosFiltrados;
+        };
+        $anexosB = $ocultarTipoAnexo($anexosB ?? []);
+        $anexosC = $ocultarTipoAnexo($anexosC ?? []);
+        $anexosP = $ocultarTipoAnexo($anexosP ?? []);
+        $anexosS = $ocultarTipoAnexo($anexosS ?? []);
+        $anexosI = $ocultarTipoAnexo($anexosI ?? []);
     ?>
 
     <div class="card shadow-sm mb-3">

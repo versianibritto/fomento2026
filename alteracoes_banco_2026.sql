@@ -1253,3 +1253,8 @@ UPDATE `anexos_tipos` SET `nome` = 'Cópia do DO (recém concursados)' WHERE (`i
 
 ALTER TABLE `projeto_bolsistas` 
 ADD COLUMN `justificativa_bolsa` TEXT NULL AFTER `recem_servidor`;
+
+UPDATE `anexos_tipos` SET `nome` = 'Comprovante de Matrícula' WHERE (`id` = '15');
+UPDATE `anexos_tipos` SET `nome` = 'RANI' WHERE (`id` = '26');
+UPDATE `anexos_tipos` SET `nome` = 'Relatório Parcial' WHERE (`id` = '13');
+UPDATE `anexos_tipos` SET `nome` = 'Anexo Sub Projeto' WHERE (`id` = '20');
