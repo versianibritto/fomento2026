@@ -2307,6 +2307,8 @@ class InscricoesController extends AppController
                 'margin_right' => 12,
                 'margin_top' => 20,
                 'margin_bottom' => 18,
+                'setAutoTopMargin' => 'stretch',
+                'setAutoBottomMargin' => 'stretch',
             ]);
             $mpdf->WriteHTML($htmlPdf);
             $pdfBin = $mpdf->Output('', \Mpdf\Output\Destination::STRING_RETURN);
@@ -2509,19 +2511,29 @@ class InscricoesController extends AppController
         }
         $rotuloOrigemFmt = $fmt($rotuloOrigem);
         $nomeEditalCabecalho = $esc($edital->nome ?? 'PIBIC');
-        $textoGeracaoCabecalho = trim($textoRodapeGeracao) !== ''
-            ? $esc($textoRodapeGeracao)
-            : $esc('Termo gerado em ' . date('d/m/Y H:i:s', strtotime('-3 hours')) . ' por Usuario');
+        $textoGeracaoCabecalho = trim((string)$textoRodapeGeracao) !== ''
+            ? (string)$textoRodapeGeracao
+            : ('Termo gerado em ' . date('d/m/Y H:i:s', strtotime('-3 hours')) . ' por Usuario');
+        $textoGeracaoCabecalhoHtml = $esc($textoGeracaoCabecalho);
+        if (preg_match('/^Termo gerado em (.+) por (.+)$/u', $textoGeracaoCabecalho, $partesGeracao) === 1) {
+            $textoGeracaoCabecalhoHtml = 'Termo gerado em <strong>' . $esc($partesGeracao[1]) . '</strong> por <strong>' . $esc($partesGeracao[2]) . '</strong>';
+        }
 
-        $logoHtml = '<img src="/img/marcafiocruz_horizontal_POSITIVA_24052024.svg" alt="Marca Fiocruz" style="width:15%;">';
+        $logoHtml = '<img src="/img/marcafiocruz_horizontal_POSITIVA_24052024.svg" alt="Marca Fiocruz" style="width:180px;max-width:100%;height:auto;display:block;">';
 
         return '<!doctype html><html><head><meta charset="utf-8"><style>
-            @page { size: auto; margin: 50px 0; }
-            body{font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.5;color:#111}
+            @page { size: auto; margin: 78px 18px 60px; header: html_termoHeader; footer: html_termoFooter; }
+            body{margin:0;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.5;color:#111}
+            .main-termo{display:block;padding-top:8px}
+            .espaco-topo{height:16px}
             p{margin:0 0 10px 0;text-align:justify}
-            .wrap{padding:0 70px 50px}
-            .topo-termo{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:22px}
-            .topo-termo .geracao{font-size:11px;text-align:right;max-width:60%;line-height:1.35;color:#222}
+            .wrap{padding:0 52px 24px}
+            .header-termo{border-bottom:1px solid #d7d7d7;padding:0 52px 8px}
+            .header-termo .col-4{width:33.333%;text-align:left;vertical-align:middle}
+            .header-termo .col-8{width:66.667%;text-align:right;vertical-align:middle}
+            .header-termo .info{font-size:12px;line-height:1.35;color:#222;font-weight:600}
+            .header-termo .geracao-linha{display:block;font-size:10px;font-style:italic;font-weight:400}
+            .footer-termo{border-top:1px solid #9a9a9a;padding:6px 52px 0;font-size:10px;color:#444;text-align:center;line-height:1.35}
             .titulo{text-align:center;margin:14px 0 18px}
             .titulo h1{margin:0 0 8px;font-size:19px;line-height:1.2;font-weight:700}
             .titulo h2{margin:0;font-size:14px;line-height:1.3;font-weight:600}
@@ -2529,8 +2541,14 @@ class InscricoesController extends AppController
             .assinatura{margin-top:28px}
             ul{margin:6px 0 12px 20px}
             </style></head><body>
-            <div class="wrap">
-                <div class="topo-termo"><div>' . $logoHtml . '</div><div class="geracao">' . $textoGeracaoCabecalho . '</div></div>
+            <htmlpageheader name="termoHeader">
+                <div class="header-termo"><table width="100%" cellpadding="0" cellspacing="0"><tr><td class="col-4">' . $logoHtml . '</td><td class="col-8"><div class="info">Termo de solicitação de bolsa ' . $nomeEditalCabecalho . '<br>Inscrição ' . $inscricaoNumeroFmt . '<br><span class="geracao-linha">' . $textoGeracaoCabecalhoHtml . '</span></div></td></tr></table></div>
+            </htmlpageheader>
+            <htmlpagefooter name="termoFooter">
+                <div class="footer-termo">Fiocruz - Av. Brasil, 4365 • Campus Manguinhos •<br>Castelo Mourisco • sala 110 • Rio de Janeiro • RJ • Brasil • CEP 21040 900<br>Tel (21) 3865 1618 - 3865 1698 •<br>secretariavppcb@fiocruz.br • vppcb@fiocruz.br •<br>www.fiocruz.br</div>
+            </htmlpagefooter>
+            <main class="main-termo"><div class="wrap">
+                <div class="espaco-topo"></div>
                 <div class="titulo">
                     <h1>' . $nomeEditalCabecalho . ' - CNPq/FIOCRUZ</h1>
                     <h2>Termo de Solicitação de Bolsas para o Período ' . $periodoInicioFmt . ' a ' . $periodoFimFmt . '</h2>
@@ -2581,7 +2599,7 @@ class InscricoesController extends AppController
                 <p class="assinatura">______________________________________________________________________<br>' . $nomeBolsista . ' - CPF ' . $cpfBolsista . '<br>Bolsista</p>
                 <br><br>
                 <p class="assinatura">________________________________________________________________________<br>' . $nomeOrientador . ' - CPF ' . $cpfOrientador . '<br>Orientador</p>
-            </div>
+            </div></main>
             </body></html>';
     }
 
