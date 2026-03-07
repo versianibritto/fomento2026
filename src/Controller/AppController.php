@@ -419,7 +419,7 @@ class AppController extends Controller
     }
 
     // funcao V4.5
-    /*
+    
     public function uploadArquivo($file, $pasta, $nome_arquivo = null, $limit = 2097152)
     {
         if(is_object($file)) {
@@ -448,6 +448,7 @@ class AppController extends Controller
             return ['status' => false, 'mensagem' => "Nenhum arquivo foi enviado"];
         }
     }
+    
 
     public function beforeRender(EventInterface $event)
     {
@@ -462,39 +463,9 @@ class AppController extends Controller
             return $this->formatarDataBancoParaTela($value, $formato, $fallback, $offsetHoras);
         });
     }
-    */
+    
 
-    // funcao V4.5
-    /*
-    public function uploadArquivoImg($file, $pasta, $nome_arquivo = null, $limit = 2097152)
-    {
-        if(is_object($file)) {
-            $arquivo = $file->getClientFilename();
-            //dd($arquivo);
-            if($file->getSize() > $limit) {
-                return ['status' => false, 'mensagem' => "O tamanho excede o limite de " . floor($limit/(1024*1024)) . "Mb. O seu arquivo apresenta " . number_format(($file->getSize()/(1024*1024)),2,",","."). " Mb. "];
-            }
-            if($arquivo != ''){
-                if ($nome_arquivo == null){
-                    $splited = explode('.', $arquivo);
-                    $extensao = end($splited);
-                    $nome = uniqid() . '.' .$extensao;
-                    //dd($file);
-                }else{
-                    $nome = $nome_arquivo;
-                }
-
-                $diretorio = WWW_ROOT . $pasta . DS . $nome;
-                $file->moveTo($diretorio);
-                return ['status' => true, 'mensagem' => "sucesso", 'arquivo' => $nome];
-            } else {
-                return ['status' => false, 'mensagem' => "Nenhum arquivo foi enviado"];
-            }
-        } else {
-            return ['status' => false, 'mensagem' => "Nenhum arquivo foi enviado"];
-        }        
-    }
-    */
+    
 
     // ===== Uso em Edital =====
     protected function loadContext($editalId, $inscricaoId = null): array
@@ -957,7 +928,7 @@ class AppController extends Controller
         }
 
         if ((int)($coorientador->escolaridade_id ?? 0) !== 10) {
-            return 'Coorientador inelegivel: a escolaridade deve ser Doutorado (id=10).';
+            return 'Coorientador inelegível: a escolaridade deve ser Doutorado (id=10).';
         }
 
         $orientador = $usuariosTable->find()
@@ -988,7 +959,7 @@ class AppController extends Controller
                 $orientadorServidor = $porId[(int)$orientador->vinculo_id] ?? 0;
                 $coorientadorServidor = $porId[(int)($coorientador->vinculo_id ?? 0)] ?? 0;
                 if ($orientadorServidor === 0 && $coorientadorServidor !== 1) {
-                    return 'Coorientador inelegivel: para orientador com vinculo nao servidor, o coorientador precisa ter vinculo de servidor.';
+                    return 'Coorientador inelegível: para orientador com vinculo nao servidor, o coorientador precisa ter vinculo de servidor.';
                 }
             }
         }
@@ -1011,7 +982,7 @@ class AppController extends Controller
             ->where($condicoesInscricaoBase)
             ->count();
         if ($qtdInscricoes > 0) {
-            return 'Coorientador inelegivel: ja existe inscricao em andamento deste coorientador no mesmo programa.';
+            return 'Coorientador inelegível: ja existe inscricao em andamento deste coorientador no mesmo programa.';
         }
         return null;
     }

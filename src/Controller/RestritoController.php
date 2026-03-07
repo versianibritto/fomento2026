@@ -69,6 +69,13 @@ class RestritoController extends AppController
                 'class' => 'btn-info',
                 'icon' => 'fas fa-layer-group',
             ],
+            [
+                'titulo' => 'Upload de Arquivos',
+                'descricao' => 'Enviar arquivo para pastas internas de uploads',
+                'url' => ['controller' => 'Restrito', 'action' => 'uploadArquivos'],
+                'class' => 'btn-secondary',
+                'icon' => 'fas fa-file-upload',
+            ],
         ];
 
         $this->set(compact('atalhos'));
@@ -689,5 +696,52 @@ class RestritoController extends AppController
         }
 
         $this->set(compact('erro', 'classificacoesOptions', 'tiposDisponiveis', 'tipoSelecionado'));
+    }
+
+    public function uploadArquivos()
+    {
+        $pastasUpload = [
+            'documentos' => 'Documentos',
+            'parecer' => 'Parecer',
+            'autorizacao' => 'Autorizacao',
+            'anexos' => 'Anexos',
+            'editais' => 'Editais',
+            'aulas' => 'Aulas',
+            'relatorios' => 'Relatorios',
+            'imagens' => 'Imagens internas',
+        ];
+
+        if ($this->request->is(['post', 'put', 'patch'])) {
+            $arquivo = $this->request->getData('arquivo');
+            $pasta = (string)$this->request->getData('pasta');
+            $nomeArquivo = trim((string)$this->request->getData('nome_arquivo'));
+
+            if (!isset($pastasUpload[$pasta])) {
+                $this->Flash->error('Pasta de destino invalida.');
+                return $this->redirect(['action' => 'uploadArquivos']);
+            }
+
+            if (!is_object($arquivo) || !$arquivo->getClientFilename()) {
+                $this->Flash->error('Selecione um arquivo para upload.');
+                return $this->redirect(['action' => 'uploadArquivos']);
+            }
+
+            if ($nomeArquivo !== '' && strpos($nomeArquivo, '.') === false) {
+                $extensaoOriginal = pathinfo((string)$arquivo->getClientFilename(), PATHINFO_EXTENSION);
+                if ($extensaoOriginal !== '') {
+                    $nomeArquivo .= '.' . $extensaoOriginal;
+                }
+            }
+
+            $upload = parent::uploadArquivo($arquivo, $pasta, $nomeArquivo !== '' ? $nomeArquivo : null);
+            if (!empty($upload['status'])) {
+                $this->Flash->success('Upload realizado com sucesso. Arquivo: ' . (string)($upload['arquivo'] ?? ''));
+                return $this->redirect(['action' => 'uploadArquivos']);
+            }
+
+            $this->Flash->error((string)($upload['mensagem'] ?? 'Nao foi possivel enviar o arquivo.'));
+        }
+
+        $this->set(compact('pastasUpload'));
     }
 }

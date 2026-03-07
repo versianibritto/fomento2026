@@ -260,13 +260,13 @@ body.sidebar-collapse .user-id-bar {
 
                 <div class="row">       
                     <div class="col-md-6">
-                        <strong>Email:</strong>
+                        <strong>E-mail:</strong>
                         <?= !empty($usuario->email)
                             ? h($usuario->email)
                             : '<span class="badge bg-danger">Não Informado</span>' ?>
                     </div>
                     <div class="col-md-6">
-                        <strong>Email Alternativo:</strong>
+                        <strong>E-mail Alternativo:</strong>
                         <?= !empty($usuario->email_alternativo)
                             ? h($usuario->email_alternativo)
                             : '<span class="badge bg-danger">Não Informado</span>' ?>
@@ -274,7 +274,7 @@ body.sidebar-collapse .user-id-bar {
                 </div> 
                 <div class="row mt-2">
                     <div class="col-md-6">
-                        <strong>Email Contato:</strong>
+                        <strong>E-mail Contato:</strong>
                         <?= !empty($usuario->email_contato)
                             ? h($usuario->email_contato)
                             : '<span class="badge bg-danger">Não Informado</span>' ?>

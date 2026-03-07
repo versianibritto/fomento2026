@@ -444,7 +444,7 @@
                                             <?php endforeach; ?>
                                         </div>
                                         <div id="anexos-vazio" class="alert alert-warning mt-3 d-none mb-0">
-                                            Nenhum anexo condicional aplicavel para a cota selecionada.
+                                            Nenhum anexo condicional aplicável para a cota selecionada.
                                         </div>
                                     </div>
                                 </div>

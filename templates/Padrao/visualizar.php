@@ -1,5 +1,5 @@
 <?php
-$naoInformado = '<span class="badge border border-danger text-danger bg-transparent fw-normal">Nao informado</span>';
+$naoInformado = '<span class="badge border border-danger text-danger bg-transparent fw-normal">Não informado</span>';
 $filhosMap = [
     '0' => 'Nao possui filhos, ou sao maiores de 5 anos',
     '1' => 'Possui um filho menor de 5 anos',
@@ -23,14 +23,14 @@ $dataFimTexto = null;
 $temDataInicio = !empty($inscricao->data_inicio);
 $temDataFim = !empty($inscricao->data_fim);
 if (!$temDataInicio && !$temDataFim) {
-    $dataInicioTexto = 'Nao implantado';
-    $dataFimTexto = 'Nao implantado';
+    $dataInicioTexto = 'Não implantado';
+    $dataFimTexto = 'Não implantado';
 } elseif ($temDataInicio && !$temDataFim) {
     if ($inscricao->data_inicio instanceof \Cake\I18n\FrozenTime) {
         $dataInicioTexto = $inscricao->data_inicio->i18nFormat('dd/MM/yyyy');
     } else {
         $tsInicio = strtotime((string)$inscricao->data_inicio);
-        $dataInicioTexto = $tsInicio ? date('d/m/Y', $tsInicio) : 'Nao informado';
+        $dataInicioTexto = $tsInicio ? date('d/m/Y', $tsInicio) : 'Não informado';
     }
     $dataFimTexto = ((int)($inscricao->vigente ?? 0) === 1) ? 'Ainda vigente' : 'Encerrada';
 } else {
@@ -38,13 +38,13 @@ if (!$temDataInicio && !$temDataFim) {
         $dataInicioTexto = $inscricao->data_inicio->i18nFormat('dd/MM/yyyy');
     } else {
         $tsInicio = strtotime((string)$inscricao->data_inicio);
-        $dataInicioTexto = $tsInicio ? date('d/m/Y', $tsInicio) : 'Nao informado';
+        $dataInicioTexto = $tsInicio ? date('d/m/Y', $tsInicio) : 'Não informado';
     }
     if ($inscricao->data_fim instanceof \Cake\I18n\FrozenTime) {
         $dataFimTexto = $inscricao->data_fim->i18nFormat('dd/MM/yyyy');
     } else {
         $tsFim = strtotime((string)$inscricao->data_fim);
-        $dataFimTexto = $tsFim ? date('d/m/Y', $tsFim) : 'Nao informado';
+        $dataFimTexto = $tsFim ? date('d/m/Y', $tsFim) : 'Não informado';
     }
 }
 ?>
@@ -312,7 +312,7 @@ if (!$temDataInicio && !$temDataFim) {
             <ul class="nav nav-pills tabs-visualizacao mb-3" id="tabs-visualizacao-padrao" role="tablist">
                 <li class="nav-item" role="presentation"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-bolsista" type="button">Dados do Bolsista</button></li>
                 <?php if (!$isRenovacao): ?>
-                    <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-sumula" type="button">Sumula</button></li>
+                    <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-sumula" type="button">Súmula</button></li>
                 <?php endif; ?>
                 <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-projeto" type="button">Projeto</button></li>
                 <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-subprojeto" type="button">Subprojeto/Relatório</button></li>
@@ -327,13 +327,13 @@ if (!$temDataInicio && !$temDataFim) {
             <div class="tab-content">
                 <div class="tab-pane fade show active" id="tab-bolsista">
                     <?php if (empty($inscricao->bolsista_usuario)): ?>
-                        <p><span class="badge bg-danger">Bolsista nao informado</span></p>
+                        <p><span class="badge bg-danger">Bolsista não informado</span></p>
                     <?php else: ?>
                         <p><strong>Nome:</strong> <?= !empty($inscricao->bolsista_usuario->nome) ? h($inscricao->bolsista_usuario->nome) : $naoInformado ?></p>
                         <p><strong>Universidade:</strong> <?= !empty($inscricao->bolsista_usuario->instituicao_curso) ? h($inscricao->bolsista_usuario->instituicao_curso) : $naoInformado ?></p>
                         <p><strong>Curso:</strong> <?= !empty($inscricao->bolsista_usuario->curso) ? h($inscricao->bolsista_usuario->curso) : $naoInformado ?></p>
                     <?php endif; ?>
-                    <p><strong>Primeiro periodo:</strong> <?= $inscricao->primeiro_periodo === null ? $naoInformado : ((int)$inscricao->primeiro_periodo === 1 ? 'Sim' : 'Nao') ?></p>
+                    <p><strong>Primeiro período:</strong> <?= $inscricao->primeiro_periodo === null ? $naoInformado : ((int)$inscricao->primeiro_periodo === 1 ? 'Sim' : 'Nao') ?></p>
                     <hr>
                     <h6>Anexos do Bolsista</h6>
                     <?php if (empty($anexosPorBloco['B'])): ?>
@@ -365,16 +365,16 @@ if (!$temDataInicio && !$temDataFim) {
                                 <?= isset($filhosMap[$filhosKey]) ? h($filhosMap[$filhosKey]) : $naoInformado ?>
                             </p>
                         <?php endif; ?>
-                        <h6 class="mb-2">Itens de Sumula</h6>
+                        <h6 class="mb-2">Itens de Súmula</h6>
                         <?php if (empty($sumulasEdital) || $sumulasEdital->count() === 0): ?>
-                            <p><span class="badge bg-danger">Nenhum item de sumula encontrado</span></p>
+                            <p><span class="badge bg-danger">Nenhum item de súmula encontrado</span></p>
                         <?php else: ?>
                             <div class="table-responsive">
                                 <table class="table table-sm table-striped align-middle">
                                     <thead>
                                         <tr>
-                                            <th>Sumula</th>
-                                            <th>Parametro</th>
+                                            <th>Súmula</th>
+                                            <th>Parâmetro</th>
                                             <th>Quantidade</th>
                                         </tr>
                                     </thead>
@@ -400,7 +400,7 @@ if (!$temDataInicio && !$temDataFim) {
                             <div class="row g-3">
                                 <div class="col-12">
                                     <div class="border rounded p-2 bg-white h-100">
-                                        <div class="small text-muted">Titulo do projeto</div>
+                                        <div class="small text-muted">Título do projeto</div>
                                         <div><?= !empty($inscricao->projeto->titulo) ? h($inscricao->projeto->titulo) : $naoInformado ?></div>
                                     </div>
                                 </div>
@@ -418,7 +418,7 @@ if (!$temDataInicio && !$temDataFim) {
                                 </div>
                                 <div class="col-md-6">
                                     <div class="border rounded p-2 bg-white h-100">
-                                        <div class="small text-muted">Area de pesquisa FIOCRUZ</div>
+                                        <div class="small text-muted">Área de pesquisa FIOCRUZ</div>
                                         <div><?= !empty($inscricao->projeto->linha->areas_fiocruz->nome) ? h($inscricao->projeto->linha->areas_fiocruz->nome) : $naoInformado ?></div>
                                     </div>
                                 </div>
@@ -430,7 +430,7 @@ if (!$temDataInicio && !$temDataFim) {
                                 </div>
                                 <div class="col-md-6">
                                     <div class="border rounded p-2 bg-white h-100">
-                                        <div class="small text-muted">Instituicoes financiadoras</div>
+                                        <div class="small text-muted">Instituições financiadoras</div>
                                         <div><?= !empty($inscricao->projeto->financiamento) ? h($inscricao->projeto->financiamento) : $naoInformado ?></div>
                                     </div>
                                 </div>
@@ -476,7 +476,7 @@ if (!$temDataInicio && !$temDataFim) {
                             <div class="row g-3">
                                 <div class="col-12">
                                     <div class="border rounded p-2 bg-white h-100">
-                                        <div class="small text-muted">Titulo do subprojeto</div>
+                                        <div class="small text-muted">Título do subprojeto</div>
                                         <div><?= !empty($inscricao->sp_titulo) ? h($inscricao->sp_titulo) : $naoInformado ?></div>
                                     </div>
                                 </div>
@@ -553,7 +553,7 @@ if (!$temDataInicio && !$temDataFim) {
 
                 <div class="tab-pane fade" id="tab-coorientador">
                     <?php if (empty($inscricao->coorientadore)): ?>
-                        <p><span class="badge bg-danger">Coorientador nao informado</span></p>
+                        <p><span class="badge bg-danger">Coorientador não informado</span></p>
                     <?php else: ?>
                         <p><strong>Nome:</strong> <?= !empty($inscricao->coorientadore->nome) ? h($inscricao->coorientadore->nome) : $naoInformado ?></p>
                         <div class="row g-2">
