@@ -2519,7 +2519,9 @@ class InscricoesController extends AppController
             $textoGeracaoCabecalhoHtml = 'Termo gerado em <strong>' . $esc($partesGeracao[1]) . '</strong> por <strong>' . $esc($partesGeracao[2]) . '</strong>';
         }
 
-        $logoHtml = '<img src="/img/marcafiocruz_horizontal_POSITIVA_24052024.svg" alt="Marca Fiocruz" style="width:180px;max-width:100%;height:auto;display:block;">';
+        $logoPath = WWW_ROOT . 'img' . DS . 'marcafiocruz_horizontal_POSITIVA_24052024.svg';
+        $logoSrc = is_file($logoPath) ? str_replace(DS, '/', $logoPath) : '/img/marcafiocruz_horizontal_POSITIVA_24052024.svg';
+        $logoHtml = '<img src="' . $esc($logoSrc) . '" alt="Marca Fiocruz" style="width:180px;max-width:100%;height:auto;display:block;">';
 
         return '<!doctype html><html><head><meta charset="utf-8"><style>
             @page { size: auto; margin: 78px 18px 60px; header: html_termoHeader; footer: html_termoFooter; }
