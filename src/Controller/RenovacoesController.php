@@ -2416,7 +2416,7 @@ class RenovacoesController extends AppController
             ? $esc($textoRodapeGeracao)
             : $esc('Termo gerado em ' . date('d/m/Y H:i:s', strtotime('-3 hours')) . ' por Usuario');
 
-        $logoHtml = '<img src="/img/logoNovo.svg" alt="Logo Fomento" style="width:15%;">';
+        $logoHtml = '<img src="/img/marcafiocruz_horizontal_POSITIVA_24052024.svg" alt="Marca Fiocruz" style="width:15%;">';
 
         return '<!doctype html><html><head><meta charset="utf-8"><style>
             @page { size: auto; margin: 50px 0; }
