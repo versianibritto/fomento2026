@@ -363,7 +363,7 @@ if (!$temDataInicio && !$temDataFim) {
                                 <li>
                                     <div class="anexo-titulo">
                                         <span class="anexo-tipo"><?= h($anexo['tipo_nome']) ?></span>
-                                        <span class="anexo-arquivo"><?= !empty($anexo['arquivo']) ? h($anexo['arquivo']) : 'arquivo' ?></span>
+                                        <span class="anexo-arquivo"><?= !empty($anexo['arquivo']) ? h($anexo['arquivo']) : 'Não informado' ?></span>
                                         <span class="anexo-meta">
                                             Incluído por <?= !empty($anexo['usuario_nome']) ? h($anexo['usuario_nome']) : 'Não informado' ?>
                                             em
@@ -379,9 +379,13 @@ if (!$temDataInicio && !$temDataFim) {
                                             ?>
                                         </span>
                                     </div>
-                                    <a href="/uploads/anexos/<?= h($anexo['arquivo']) ?>" target="_blank" class="btn btn-light border btn-sm py-0 px-2" title="Download">
-                                        <i class="fa fa-download"></i>
-                                    </a>
+                                    <?php if (!empty($anexo['arquivo'])): ?>
+                                        <a href="/uploads/anexos/<?= h($anexo['arquivo']) ?>" target="_blank" class="btn btn-light border btn-sm py-0 px-2" title="Download">
+                                            <i class="fa fa-download"></i>
+                                        </a>
+                                    <?php else: ?>
+                                        <span class="badge border border-danger text-danger bg-transparent fw-normal">Não informado</span>
+                                    <?php endif; ?>
                                 </li>
                             <?php endforeach; ?>
                         </ul>
@@ -456,7 +460,7 @@ if (!$temDataInicio && !$temDataFim) {
                                     <li>
                                         <div class="anexo-titulo">
                                             <span class="anexo-tipo"><?= h($anexo['tipo_nome']) ?></span>
-                                            <span class="anexo-arquivo"><?= !empty($anexo['arquivo']) ? h($anexo['arquivo']) : 'arquivo' ?></span>
+                                            <span class="anexo-arquivo"><?= !empty($anexo['arquivo']) ? h($anexo['arquivo']) : 'Não informado' ?></span>
                                             <span class="anexo-meta">
                                                 Incluído por <?= !empty($anexo['usuario_nome']) ? h($anexo['usuario_nome']) : 'Não informado' ?>
                                                 em
@@ -472,9 +476,13 @@ if (!$temDataInicio && !$temDataFim) {
                                                 ?>
                                             </span>
                                         </div>
-                                        <a href="/uploads/anexos/<?= h($anexo['arquivo']) ?>" target="_blank" class="btn btn-light border btn-sm py-0 px-2" title="Download">
-                                            <i class="fa fa-download"></i>
-                                        </a>
+                                        <?php if (!empty($anexo['arquivo'])): ?>
+                                            <a href="/uploads/anexos/<?= h($anexo['arquivo']) ?>" target="_blank" class="btn btn-light border btn-sm py-0 px-2" title="Download">
+                                                <i class="fa fa-download"></i>
+                                            </a>
+                                        <?php else: ?>
+                                            <span class="badge border border-danger text-danger bg-transparent fw-normal">Não informado</span>
+                                        <?php endif; ?>
                                     </li>
                                 <?php endforeach; ?>
                             </ul>
@@ -545,7 +553,7 @@ if (!$temDataInicio && !$temDataFim) {
                                         <li>
                                             <div class="anexo-titulo">
                                                 <span class="anexo-tipo"><?= h($anexo['tipo_nome']) ?></span>
-                                                <span class="anexo-arquivo"><?= !empty($anexo['arquivo']) ? h($anexo['arquivo']) : 'arquivo' ?></span>
+                                                <span class="anexo-arquivo"><?= !empty($anexo['arquivo']) ? h($anexo['arquivo']) : 'Não informado' ?></span>
                                                 <span class="anexo-meta">
                                                     Incluído por <?= !empty($anexo['usuario_nome']) ? h($anexo['usuario_nome']) : 'Não informado' ?>
                                                     em
@@ -566,9 +574,13 @@ if (!$temDataInicio && !$temDataFim) {
                                                     </span>
                                                 <?php endif; ?>
                                             </div>
-                                            <a href="/uploads/anexos/<?= h($anexo['arquivo']) ?>" target="_blank" class="btn btn-light border btn-sm py-0 px-2" title="Download">
-                                                <i class="fa fa-download"></i>
-                                            </a>
+                                            <?php if (!empty($anexo['arquivo'])): ?>
+                                                <a href="/uploads/anexos/<?= h($anexo['arquivo']) ?>" target="_blank" class="btn btn-light border btn-sm py-0 px-2" title="Download">
+                                                    <i class="fa fa-download"></i>
+                                                </a>
+                                            <?php else: ?>
+                                                <span class="badge border border-danger text-danger bg-transparent fw-normal">Não informado</span>
+                                            <?php endif; ?>
                                         </li>
                                     <?php endforeach; ?>
                                 </ul>
@@ -584,7 +596,7 @@ if (!$temDataInicio && !$temDataFim) {
                                                 <li>
                                                     <div class="anexo-titulo">
                                                         <span class="anexo-tipo"><?= h($anexo['tipo_nome']) ?></span>
-                                                        <span class="anexo-arquivo"><?= !empty($anexo['arquivo']) ? h($anexo['arquivo']) : 'arquivo' ?></span>
+                                                        <span class="anexo-arquivo"><?= !empty($anexo['arquivo']) ? h($anexo['arquivo']) : 'Não informado' ?></span>
                                                         <span class="anexo-meta">
                                                             Incluído por <?= !empty($anexo['usuario_nome']) ? h($anexo['usuario_nome']) : 'Não informado' ?>
                                                             em
@@ -600,9 +612,13 @@ if (!$temDataInicio && !$temDataFim) {
                                                             ?>
                                                         </span>
                                                     </div>
-                                                    <a href="/uploads/anexos/<?= h($anexo['arquivo']) ?>" target="_blank" class="btn btn-light border btn-sm py-0 px-2" title="Download">
-                                                        <i class="fa fa-download"></i>
-                                                    </a>
+                                                    <?php if (!empty($anexo['arquivo'])): ?>
+                                                        <a href="/uploads/anexos/<?= h($anexo['arquivo']) ?>" target="_blank" class="btn btn-light border btn-sm py-0 px-2" title="Download">
+                                                            <i class="fa fa-download"></i>
+                                                        </a>
+                                                    <?php else: ?>
+                                                        <span class="badge border border-danger text-danger bg-transparent fw-normal">Não informado</span>
+                                                    <?php endif; ?>
                                                 </li>
                                             <?php endforeach; ?>
                                         </ul>
@@ -681,7 +697,7 @@ if (!$temDataInicio && !$temDataFim) {
                                         <li>
                                             <div class="anexo-titulo">
                                                 <span class="anexo-tipo"><?= h($anexo['tipo_nome']) ?></span>
-                                                <span class="anexo-arquivo"><?= !empty($anexo['arquivo']) ? h($anexo['arquivo']) : 'arquivo' ?></span>
+                                                <span class="anexo-arquivo"><?= !empty($anexo['arquivo']) ? h($anexo['arquivo']) : 'Não informado' ?></span>
                                                 <span class="anexo-meta">
                                                     Incluído por <?= !empty($anexo['usuario_nome']) ? h($anexo['usuario_nome']) : 'Não informado' ?>
                                                     em
@@ -697,9 +713,13 @@ if (!$temDataInicio && !$temDataFim) {
                                                     ?>
                                                 </span>
                                             </div>
-                                            <a href="/uploads/anexos/<?= h($anexo['arquivo']) ?>" target="_blank" class="btn btn-light border btn-sm py-0 px-2" title="Download">
-                                                <i class="fa fa-download"></i>
-                                            </a>
+                                            <?php if (!empty($anexo['arquivo'])): ?>
+                                                <a href="/uploads/anexos/<?= h($anexo['arquivo']) ?>" target="_blank" class="btn btn-light border btn-sm py-0 px-2" title="Download">
+                                                    <i class="fa fa-download"></i>
+                                                </a>
+                                            <?php else: ?>
+                                                <span class="badge border border-danger text-danger bg-transparent fw-normal">Não informado</span>
+                                            <?php endif; ?>
                                         </li>
                                     <?php endforeach; ?>
                                 </ul>
@@ -730,7 +750,7 @@ if (!$temDataInicio && !$temDataFim) {
                                 <li>
                                     <div class="anexo-titulo">
                                         <span class="anexo-tipo"><?= h($anexo['tipo_nome']) ?></span>
-                                        <span class="anexo-arquivo"><?= !empty($anexo['arquivo']) ? h($anexo['arquivo']) : 'arquivo' ?></span>
+                                        <span class="anexo-arquivo"><?= !empty($anexo['arquivo']) ? h($anexo['arquivo']) : 'Não informado' ?></span>
                                         <span class="anexo-meta">
                                             Incluído por <?= !empty($anexo['usuario_nome']) ? h($anexo['usuario_nome']) : 'Não informado' ?>
                                             em
@@ -746,9 +766,13 @@ if (!$temDataInicio && !$temDataFim) {
                                             ?>
                                         </span>
                                     </div>
-                                    <a href="/uploads/anexos/<?= h($anexo['arquivo']) ?>" target="_blank" class="btn btn-light border btn-sm py-0 px-2" title="Download">
-                                        <i class="fa fa-download"></i>
-                                    </a>
+                                    <?php if (!empty($anexo['arquivo'])): ?>
+                                        <a href="/uploads/anexos/<?= h($anexo['arquivo']) ?>" target="_blank" class="btn btn-light border btn-sm py-0 px-2" title="Download">
+                                            <i class="fa fa-download"></i>
+                                        </a>
+                                    <?php else: ?>
+                                        <span class="badge border border-danger text-danger bg-transparent fw-normal">Não informado</span>
+                                    <?php endif; ?>
                                 </li>
                             <?php endforeach; ?>
                         </ul>
