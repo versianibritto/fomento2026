@@ -70,9 +70,9 @@
 
                     <div class="card border">
                         <div class="card-body">
-                            <h5 class="card-title mb-2">Migração PDJ → Projeto Bolsistas</h5>
+                            <h5 class="card-title mb-2">Rotinas PDJ</h5>
                             <p class="text-muted mb-3">
-                                Cria inscrições em projeto_bolsistas a partir de registros em pdj_inscricoes.
+                                Migração e correção de referência dos anexos PDJ para projeto_bolsistas.
                             </p>
                             <div class="d-flex flex-wrap gap-2">
                                 <?= $this->Form->postLink(
@@ -81,6 +81,14 @@
                                     [
                                         'class' => 'btn btn-outline-warning',
                                         'confirm' => 'Confirma a migração de pdj_inscricoes para projeto_bolsistas?',
+                                    ]
+                                ) ?>
+                                <?= $this->Form->postLink(
+                                    'Reestabelecer Anexos PDJ Migrados',
+                                    ['controller' => 'Restrito', 'action' => 'reestabelecerAnexosPdjMigrados'],
+                                    [
+                                        'class' => 'btn btn-outline-danger',
+                                        'confirm' => 'Confirma o reestabelecimento de anexos PDJ migrados (incluindo registros deletados)?',
                                     ]
                                 ) ?>
                             </div>

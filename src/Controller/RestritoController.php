@@ -345,6 +345,100 @@ class RestritoController extends AppController
         return $this->redirect($this->referer());
     }
 
+    public function reestabelecerAnexosPdjMigrados()
+    {
+        $this->request->allowMethod(['post']);
+
+        $tblAnexos = TableRegistry::getTableLocator()->get('Anexos');
+        $tblProjetoBolsistas = TableRegistry::getTableLocator()->get('ProjetoBolsistas');
+        $connection = $tblAnexos->getConnection();
+        $schemaProjetoBolsistas = $tblProjetoBolsistas->getSchema();
+        $schemaAnexos = $tblAnexos->getSchema();
+
+        if (
+            !$schemaProjetoBolsistas->hasColumn('pdj_inscricoe_id') ||
+            !$schemaAnexos->hasColumn('pdj_inscricoe_id')
+        ) {
+            $this->Flash->error('As colunas pdj_inscricoe_id não estão disponíveis em anexos/projeto_bolsistas.');
+            return $this->redirect($this->referer(['action' => 'index']));
+        }
+
+        $whereAlvo = "a.projeto_bolsista_id < 645 AND YEAR(a.created) > 2020";
+        $sqlMapaUnico = "
+            SELECT pb.pdj_inscricoe_id AS pdj_legacy_id, MIN(pb.id) AS novo_projeto_bolsista_id
+            FROM projeto_bolsistas pb
+            WHERE pb.pdj_inscricoe_id IS NOT NULL
+            GROUP BY pb.pdj_inscricoe_id
+            HAVING COUNT(*) = 1
+        ";
+        $sqlMapaDuplicado = "
+            SELECT pb.pdj_inscricoe_id AS pdj_legacy_id
+            FROM projeto_bolsistas pb
+            WHERE pb.pdj_inscricoe_id IS NOT NULL
+            GROUP BY pb.pdj_inscricoe_id
+            HAVING COUNT(*) > 1
+        ";
+
+        try {
+            $resultado = $connection->transactional(function ($conn) use ($whereAlvo, $sqlMapaUnico, $sqlMapaDuplicado) {
+                $totalAlvo = (int)$conn->execute("
+                    SELECT COUNT(*) AS total
+                    FROM anexos a
+                    WHERE {$whereAlvo}
+                ")->fetch('assoc')['total'];
+
+                $mapeaveis = (int)$conn->execute("
+                    SELECT COUNT(*) AS total
+                    FROM anexos a
+                    INNER JOIN ({$sqlMapaUnico}) mapa ON mapa.pdj_legacy_id = a.projeto_bolsista_id
+                    WHERE {$whereAlvo}
+                ")->fetch('assoc')['total'];
+
+                $ambiguos = (int)$conn->execute("
+                    SELECT COUNT(*) AS total
+                    FROM anexos a
+                    INNER JOIN ({$sqlMapaDuplicado}) dup ON dup.pdj_legacy_id = a.projeto_bolsista_id
+                    WHERE {$whereAlvo}
+                ")->fetch('assoc')['total'];
+
+                $conn->execute("
+                    UPDATE anexos a
+                    SET a.pdj_inscricoe_id = a.projeto_bolsista_id
+                    WHERE {$whereAlvo}
+                ");
+                $pdjReplica = (int)$conn->execute('SELECT ROW_COUNT() AS total')->fetch('assoc')['total'];
+
+                $conn->execute("
+                    UPDATE anexos a
+                    INNER JOIN ({$sqlMapaUnico}) mapa ON mapa.pdj_legacy_id = a.projeto_bolsista_id
+                    SET a.projeto_bolsista_id = mapa.novo_projeto_bolsista_id
+                    WHERE {$whereAlvo}
+                ");
+                $atualizados = (int)$conn->execute('SELECT ROW_COUNT() AS total')->fetch('assoc')['total'];
+
+                return compact('totalAlvo', 'mapeaveis', 'ambiguos', 'pdjReplica', 'atualizados');
+            });
+
+            $semCorrespondencia = max(
+                0,
+                ((int)$resultado['totalAlvo']) - ((int)$resultado['mapeaveis']) - ((int)$resultado['ambiguos'])
+            );
+            $this->Flash->success(
+                'Reestabelecimento PDJ concluído. ' .
+                'Alvos=' . (int)$resultado['totalAlvo'] .
+                ', Mapeáveis=' . (int)$resultado['mapeaveis'] .
+                ', Ambíguos=' . (int)$resultado['ambiguos'] .
+                ', Sem correspondência=' . $semCorrespondencia .
+                ', PDJ replicado em anexos.pdj_inscricoe_id=' . (int)$resultado['pdjReplica'] .
+                ', Atualizados=' . (int)$resultado['atualizados'] . '.'
+            );
+        } catch (\Throwable $e) {
+            $this->Flash->error('Erro no reestabelecimento de anexos PDJ: ' . $e->getMessage());
+        }
+
+        return $this->redirect($this->referer(['action' => 'index']));
+    }
+
     public function atualizarDeletedTimestamp()
     {
         $this->request->allowMethod(['post']);

@@ -48,7 +48,7 @@ class PadraoController extends AppController
                 'Coorientadores' => ['Escolaridades', 'Vinculos'],
                 'Projetos' => ['Areas' => ['GrandesAreas'], 'Linhas' => ['AreasFiocruz']],
                 'Fases',
-                'Anexos' => ['conditions' => 'Anexos.deleted IS NULL', 'AnexosTipos'],
+                'Anexos' => ['conditions' => 'Anexos.deleted IS NULL', 'AnexosTipos', 'Usuarios'],
             ])
             ->where($conditions)
             ->first();
@@ -90,13 +90,17 @@ class PadraoController extends AppController
             'C' => [],
             'P' => [],
             'S' => [],
+            'O' => [],
             'OUTROS' => [],
         ];
+        $programaEdital = (int)($edital->programa_id ?? 0);
+        $ehPdj = $programaEdital === 1;
+        $anexosChaves = [];
         foreach ((array)$inscricao->anexos as $anexo) {
             $tipoId = (int)($anexo->anexos_tipo_id ?? 0);
             $meta = $tiposMap[$tipoId] ?? ['nome' => 'Anexo #' . $tipoId, 'bloco' => 'OUTROS'];
             $bloco = strtoupper((string)$meta['bloco']);
-            if (in_array($tipoId, [13, 20], true)) {
+            if (in_array($tipoId, [13, 20], true) || ($ehPdj && $tipoId === 12)) {
                 $bloco = 'S';
             } elseif (!array_key_exists($bloco, $anexosPorBloco)) {
                 $bloco = 'OUTROS';
@@ -106,8 +110,158 @@ class PadraoController extends AppController
                 'tipo_nome' => (string)$meta['nome'],
                 'arquivo' => (string)($anexo->anexo ?? ''),
                 'created' => $anexo->created ?? null,
+                'usuario_nome' => (string)($anexo->usuario->nome ?? ''),
+            ];
+            $anexosChaves[$tipoId . '|' . (string)($anexo->anexo ?? '')] = true;
+        }
+
+        // Regras da aba Projeto:
+        // - tipo 5: da inscrição atual (fallback por projeto_id sem projeto_bolsista_id);
+        // - tipos do bloco P diferentes de 5: trazer o ativo mais recente por tipo via projeto_id.
+        $tiposProjetoIds = [];
+        foreach ($tiposMap as $tipoId => $meta) {
+            if (strtoupper((string)($meta['bloco'] ?? '')) === 'P') {
+                $tiposProjetoIds[] = (int)$tipoId;
+            }
+        }
+        if (!empty($inscricao->projeto_id) && !empty($tiposProjetoIds)) {
+            $anexosPorBloco['P'] = [];
+
+            $anexoTipo5 = $this->fetchTable('Anexos')->find()
+                ->contain(['Usuarios'])
+                ->where([
+                    'Anexos.deleted IS' => null,
+                    'Anexos.anexos_tipo_id' => 5,
+                    'Anexos.projeto_bolsista_id' => (int)$inscricao->id,
+                ])
+                ->orderBy(['Anexos.created' => 'DESC', 'Anexos.id' => 'DESC'])
+                ->first();
+
+            if (!$anexoTipo5) {
+                $anexoTipo5 = $this->fetchTable('Anexos')->find()
+                    ->contain(['Usuarios'])
+                    ->where([
+                        'Anexos.deleted IS' => null,
+                        'Anexos.projeto_id' => (int)$inscricao->projeto_id,
+                        'Anexos.anexos_tipo_id' => 5,
+                        'OR' => [
+                            'Anexos.projeto_bolsista_id IS' => null,
+                            'Anexos.projeto_bolsista_id' => 0,
+                        ],
+                    ])
+                    ->orderBy(['Anexos.created' => 'DESC', 'Anexos.id' => 'DESC'])
+                    ->first();
+            }
+
+            if ($anexoTipo5) {
+                $tipoId = 5;
+                $meta = $tiposMap[$tipoId] ?? ['nome' => 'Anexo #5'];
+                $anexosPorBloco['P'][] = [
+                    'tipo_id' => $tipoId,
+                    'tipo_nome' => (string)$meta['nome'],
+                    'arquivo' => (string)($anexoTipo5->anexo ?? ''),
+                    'created' => $anexoTipo5->created ?? null,
+                    'usuario_nome' => (string)($anexoTipo5->usuario->nome ?? ''),
+                    'inscricao_origem_id' => null,
+                ];
+            }
+
+            $tiposProjetoNao5 = array_values(array_filter($tiposProjetoIds, static fn($id) => (int)$id !== 5));
+            if (!empty($tiposProjetoNao5)) {
+                $anexosProjetoAtivos = $this->fetchTable('Anexos')->find()
+                    ->contain(['Usuarios'])
+                    ->where([
+                        'Anexos.deleted IS' => null,
+                        'Anexos.projeto_id' => (int)$inscricao->projeto_id,
+                        'Anexos.anexos_tipo_id IN' => $tiposProjetoNao5,
+                    ])
+                    ->orderBy([
+                        'Anexos.anexos_tipo_id' => 'ASC',
+                        'Anexos.created' => 'DESC',
+                        'Anexos.id' => 'DESC',
+                    ])
+                    ->all();
+
+                $projetoAnexosPorTipo = [];
+                foreach ($anexosProjetoAtivos as $anexoProjeto) {
+                    $tipoId = (int)($anexoProjeto->anexos_tipo_id ?? 0);
+                    if ($tipoId <= 0 || isset($projetoAnexosPorTipo[$tipoId])) {
+                        continue;
+                    }
+                    $meta = $tiposMap[$tipoId] ?? ['nome' => 'Anexo #' . $tipoId];
+                    $origemInscricaoId = !empty($anexoProjeto->projeto_bolsista_id)
+                        ? (int)$anexoProjeto->projeto_bolsista_id
+                        : null;
+                    $projetoAnexosPorTipo[$tipoId] = [
+                        'tipo_id' => $tipoId,
+                        'tipo_nome' => (string)$meta['nome'],
+                        'arquivo' => (string)($anexoProjeto->anexo ?? ''),
+                        'created' => $anexoProjeto->created ?? null,
+                        'usuario_nome' => (string)($anexoProjeto->usuario->nome ?? ''),
+                        'inscricao_origem_id' => $origemInscricaoId,
+                    ];
+                }
+                foreach ($projetoAnexosPorTipo as $item) {
+                    $anexosPorBloco['P'][] = $item;
+                }
+            }
+
+            usort($anexosPorBloco['P'], static function (array $a, array $b): int {
+                return ((int)($a['tipo_id'] ?? 0)) <=> ((int)($b['tipo_id'] ?? 0));
+            });
+        }
+
+        $anexosProjetoTipos924 = [];
+        $anexos924 = $this->fetchTable('Anexos')->find()
+            ->contain(['Usuarios'])
+            ->where([
+                'Anexos.deleted IS' => null,
+                'Anexos.projeto_bolsista_id' => (int)$inscricao->id,
+                'Anexos.anexos_tipo_id IN' => [9, 24],
+            ])
+            ->orderBy([
+                'Anexos.anexos_tipo_id' => 'ASC',
+                'Anexos.created' => 'DESC',
+                'Anexos.id' => 'DESC',
+            ])
+            ->all();
+        foreach ($anexos924 as $anexo924) {
+            $tipoId = (int)($anexo924->anexos_tipo_id ?? 0);
+            $meta = $tiposMap[$tipoId] ?? ['nome' => 'Anexo #' . $tipoId];
+            $anexosProjetoTipos924[] = [
+                'tipo_id' => $tipoId,
+                'tipo_nome' => (string)$meta['nome'],
+                'arquivo' => (string)($anexo924->anexo ?? ''),
+                'created' => $anexo924->created ?? null,
+                'usuario_nome' => (string)($anexo924->usuario->nome ?? ''),
             ];
         }
+
+        $anexosSubprojetoTela = [];
+        $chavesSubprojeto = [];
+        foreach ((array)$anexosPorBloco['S'] as $anexoS) {
+            $chave = ((int)($anexoS['tipo_id'] ?? 0)) . '|' . (string)($anexoS['arquivo'] ?? '');
+            if (isset($chavesSubprojeto[$chave])) {
+                continue;
+            }
+            $anexosSubprojetoTela[] = $anexoS;
+            $chavesSubprojeto[$chave] = true;
+        }
+        foreach ((array)$anexosPorBloco['P'] as $anexoP) {
+            $tipoId = (int)($anexoP['tipo_id'] ?? 0);
+            if (!in_array($tipoId, [12, 13], true)) {
+                continue;
+            }
+            $chave = $tipoId . '|' . (string)($anexoP['arquivo'] ?? '');
+            if (isset($chavesSubprojeto[$chave])) {
+                continue;
+            }
+            $anexosSubprojetoTela[] = $anexoP;
+            $chavesSubprojeto[$chave] = true;
+        }
+        usort($anexosSubprojetoTela, static function (array $a, array $b): int {
+            return ((int)($a['tipo_id'] ?? 0)) <=> ((int)($b['tipo_id'] ?? 0));
+        });
 
         $historicos = $this->fetchTable('SituacaoHistoricos')->find()
             ->contain(['Usuarios', 'FaseOriginal', 'FaseAtual'])
@@ -174,6 +328,8 @@ class PadraoController extends AppController
             'inscricao',
             'edital',
             'anexosPorBloco',
+            'anexosProjetoTipos924',
+            'anexosSubprojetoTela',
             'historicos',
             'avaliacoes',
             'sumulasEdital',

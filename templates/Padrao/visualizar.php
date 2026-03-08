@@ -119,6 +119,12 @@ if (!$temDataInicio && !$temDataFim) {
         overflow: hidden;
         text-overflow: ellipsis;
     }
+    .anexos-lista .anexo-meta {
+        display: block;
+        color: #6c757d;
+        font-size: 0.78rem;
+        margin-top: 0.15rem;
+    }
     .historico-lista {
         display: flex;
         flex-direction: column;
@@ -134,6 +140,19 @@ if (!$temDataInicio && !$temDataFim) {
         color: #6c757d;
         font-size: 0.85rem;
         margin-bottom: 0.35rem;
+    }
+    .sumula-campos {
+        border: 1px solid #e9ecef;
+        border-radius: 0.5rem;
+        background: #f8f9fa;
+        padding: 0.75rem;
+        margin-bottom: 1rem;
+    }
+    .sumula-campos p:last-child {
+        margin-bottom: 0;
+    }
+    .sumula-separador {
+        margin: 1rem 0 0.75rem;
     }
 </style>
 <div class="container mt-4">
@@ -345,6 +364,20 @@ if (!$temDataInicio && !$temDataFim) {
                                     <div class="anexo-titulo">
                                         <span class="anexo-tipo"><?= h($anexo['tipo_nome']) ?></span>
                                         <span class="anexo-arquivo"><?= !empty($anexo['arquivo']) ? h($anexo['arquivo']) : 'arquivo' ?></span>
+                                        <span class="anexo-meta">
+                                            Incluído por <?= !empty($anexo['usuario_nome']) ? h($anexo['usuario_nome']) : 'Não informado' ?>
+                                            em
+                                            <?php
+                                                if (!empty($anexo['created']) && $anexo['created'] instanceof \Cake\I18n\FrozenTime) {
+                                                    echo h($anexo['created']->i18nFormat('dd/MM/yyyy HH:mm'));
+                                                } elseif (!empty($anexo['created'])) {
+                                                    $tsAnexo = strtotime((string)$anexo['created']);
+                                                    echo h($tsAnexo ? date('d/m/Y H:i', $tsAnexo) : 'Não informado');
+                                                } else {
+                                                    echo 'Não informado';
+                                                }
+                                            ?>
+                                        </span>
                                     </div>
                                     <a href="/uploads/anexos/<?= h($anexo['arquivo']) ?>" target="_blank" class="btn btn-light border btn-sm py-0 px-2" title="Download">
                                         <i class="fa fa-download"></i>
@@ -360,11 +393,33 @@ if (!$temDataInicio && !$temDataFim) {
                         <?php $mostrarFilhosOrientadora = strtoupper((string)($inscricao->orientadore->sexo ?? '')) === 'F'; ?>
                         <?php if ($mostrarFilhosOrientadora): ?>
                             <?php $filhosKey = $inscricao->filhos_menor !== null ? (string)$inscricao->filhos_menor : ''; ?>
-                            <p>
-                                <strong>Orientadora, possui filhos menores de 5 anos?</strong>
-                                <?= isset($filhosMap[$filhosKey]) ? h($filhosMap[$filhosKey]) : $naoInformado ?>
-                            </p>
                         <?php endif; ?>
+                        <div class="sumula-campos">
+                            <?php if ($mostrarFilhosOrientadora): ?>
+                                <p>
+                                    <strong>Orientadora, possui filhos menores de 5 anos?</strong>
+                                    <?= isset($filhosMap[$filhosKey]) ? h($filhosMap[$filhosKey]) : $naoInformado ?>
+                                </p>
+                            <?php endif; ?>
+                            <p>
+                                <strong>Ano de conclusão do doutorado:</strong>
+                                <?= $inscricao->ano_doutorado !== null && $inscricao->ano_doutorado !== '' ? h((string)$inscricao->ano_doutorado) : $naoInformado ?>
+                            </p>
+                            <p>
+                                <strong>Você ingressou na Fiocruz por meio dos concursos de 2016 e 2024?</strong>
+                                <?php
+                                    $recemServidorValor = $inscricao->recem_servidor;
+                                    if ((string)$recemServidorValor === '1') {
+                                        echo 'Sim, incluirei o anexo do DO';
+                                    } elseif ((string)$recemServidorValor === '0') {
+                                        echo 'Não';
+                                    } else {
+                                        echo $naoInformado;
+                                    }
+                                ?>
+                            </p>
+                        </div>
+                        <hr class="sumula-separador">
                         <h6 class="mb-2">Itens de Súmula</h6>
                         <?php if (empty($sumulasEdital) || $sumulasEdital->count() === 0): ?>
                             <p><span class="badge bg-danger">Nenhum item de súmula encontrado</span></p>
@@ -390,6 +445,39 @@ if (!$temDataInicio && !$temDataFim) {
                                     </tbody>
                                 </table>
                             </div>
+                        <?php endif; ?>
+                        <hr>
+                        <h6 class="mb-2">Anexos da Súmula</h6>
+                        <?php if (empty($anexosPorBloco['O'])): ?>
+                            <p><span class="badge bg-danger">Nenhum anexo encontrado</span></p>
+                        <?php else: ?>
+                            <ul class="anexos-lista">
+                                <?php foreach ($anexosPorBloco['O'] as $anexo): ?>
+                                    <li>
+                                        <div class="anexo-titulo">
+                                            <span class="anexo-tipo"><?= h($anexo['tipo_nome']) ?></span>
+                                            <span class="anexo-arquivo"><?= !empty($anexo['arquivo']) ? h($anexo['arquivo']) : 'arquivo' ?></span>
+                                            <span class="anexo-meta">
+                                                Incluído por <?= !empty($anexo['usuario_nome']) ? h($anexo['usuario_nome']) : 'Não informado' ?>
+                                                em
+                                                <?php
+                                                    if (!empty($anexo['created']) && $anexo['created'] instanceof \Cake\I18n\FrozenTime) {
+                                                        echo h($anexo['created']->i18nFormat('dd/MM/yyyy HH:mm'));
+                                                    } elseif (!empty($anexo['created'])) {
+                                                        $tsAnexo = strtotime((string)$anexo['created']);
+                                                        echo h($tsAnexo ? date('d/m/Y H:i', $tsAnexo) : 'Não informado');
+                                                    } else {
+                                                        echo 'Não informado';
+                                                    }
+                                                ?>
+                                            </span>
+                                        </div>
+                                        <a href="/uploads/anexos/<?= h($anexo['arquivo']) ?>" target="_blank" class="btn btn-light border btn-sm py-0 px-2" title="Download">
+                                            <i class="fa fa-download"></i>
+                                        </a>
+                                    </li>
+                                <?php endforeach; ?>
+                            </ul>
                         <?php endif; ?>
                     </div>
                 <?php endif; ?>
@@ -458,6 +546,25 @@ if (!$temDataInicio && !$temDataFim) {
                                             <div class="anexo-titulo">
                                                 <span class="anexo-tipo"><?= h($anexo['tipo_nome']) ?></span>
                                                 <span class="anexo-arquivo"><?= !empty($anexo['arquivo']) ? h($anexo['arquivo']) : 'arquivo' ?></span>
+                                                <span class="anexo-meta">
+                                                    Incluído por <?= !empty($anexo['usuario_nome']) ? h($anexo['usuario_nome']) : 'Não informado' ?>
+                                                    em
+                                                    <?php
+                                                        if (!empty($anexo['created']) && $anexo['created'] instanceof \Cake\I18n\FrozenTime) {
+                                                            echo h($anexo['created']->i18nFormat('dd/MM/yyyy HH:mm'));
+                                                        } elseif (!empty($anexo['created'])) {
+                                                            $tsAnexo = strtotime((string)$anexo['created']);
+                                                            echo h($tsAnexo ? date('d/m/Y H:i', $tsAnexo) : 'Não informado');
+                                                        } else {
+                                                            echo 'Não informado';
+                                                        }
+                                                    ?>
+                                                </span>
+                                                <?php if ((int)($anexo['tipo_id'] ?? 0) !== 5 && !empty($anexo['inscricao_origem_id'])): ?>
+                                                    <span class="anexo-meta">
+                                                        Carregado na inscrição #<?= h((string)$anexo['inscricao_origem_id']) ?>
+                                                    </span>
+                                                <?php endif; ?>
                                             </div>
                                             <a href="/uploads/anexos/<?= h($anexo['arquivo']) ?>" target="_blank" class="btn btn-light border btn-sm py-0 px-2" title="Download">
                                                 <i class="fa fa-download"></i>
@@ -466,6 +573,42 @@ if (!$temDataInicio && !$temDataFim) {
                                     <?php endforeach; ?>
                                 </ul>
                             <?php endif; ?>
+                            <div class="card border mt-3">
+                                <div class="card-body py-2">
+                                    <h6 class="mb-2">Anexos específicos da Inscrição: Anuência da Chefia e Termo da Inscrição</h6>
+                                    <?php if (empty($anexosProjetoTipos924)): ?>
+                                        <p class="mb-0"><span class="badge bg-danger">Nenhum anexo encontrado</span></p>
+                                    <?php else: ?>
+                                        <ul class="anexos-lista mb-0">
+                                            <?php foreach ($anexosProjetoTipos924 as $anexo): ?>
+                                                <li>
+                                                    <div class="anexo-titulo">
+                                                        <span class="anexo-tipo"><?= h($anexo['tipo_nome']) ?></span>
+                                                        <span class="anexo-arquivo"><?= !empty($anexo['arquivo']) ? h($anexo['arquivo']) : 'arquivo' ?></span>
+                                                        <span class="anexo-meta">
+                                                            Incluído por <?= !empty($anexo['usuario_nome']) ? h($anexo['usuario_nome']) : 'Não informado' ?>
+                                                            em
+                                                            <?php
+                                                                if (!empty($anexo['created']) && $anexo['created'] instanceof \Cake\I18n\FrozenTime) {
+                                                                    echo h($anexo['created']->i18nFormat('dd/MM/yyyy HH:mm'));
+                                                                } elseif (!empty($anexo['created'])) {
+                                                                    $tsAnexo = strtotime((string)$anexo['created']);
+                                                                    echo h($tsAnexo ? date('d/m/Y H:i', $tsAnexo) : 'Não informado');
+                                                                } else {
+                                                                    echo 'Não informado';
+                                                                }
+                                                            ?>
+                                                        </span>
+                                                    </div>
+                                                    <a href="/uploads/anexos/<?= h($anexo['arquivo']) ?>" target="_blank" class="btn btn-light border btn-sm py-0 px-2" title="Download">
+                                                        <i class="fa fa-download"></i>
+                                                    </a>
+                                                </li>
+                                            <?php endforeach; ?>
+                                        </ul>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -530,15 +673,29 @@ if (!$temDataInicio && !$temDataFim) {
                             </div>
                             <hr>
                             <h6>Anexos do Subprojeto/Relatório</h6>
-                            <?php if (empty($anexosPorBloco['S'])): ?>
+                            <?php if (empty($anexosSubprojetoTela)): ?>
                                 <p><span class="badge bg-danger">Nenhum anexo encontrado</span></p>
                             <?php else: ?>
                                 <ul class="anexos-lista">
-                                    <?php foreach ($anexosPorBloco['S'] as $anexo): ?>
+                                    <?php foreach ($anexosSubprojetoTela as $anexo): ?>
                                         <li>
                                             <div class="anexo-titulo">
                                                 <span class="anexo-tipo"><?= h($anexo['tipo_nome']) ?></span>
                                                 <span class="anexo-arquivo"><?= !empty($anexo['arquivo']) ? h($anexo['arquivo']) : 'arquivo' ?></span>
+                                                <span class="anexo-meta">
+                                                    Incluído por <?= !empty($anexo['usuario_nome']) ? h($anexo['usuario_nome']) : 'Não informado' ?>
+                                                    em
+                                                    <?php
+                                                        if (!empty($anexo['created']) && $anexo['created'] instanceof \Cake\I18n\FrozenTime) {
+                                                            echo h($anexo['created']->i18nFormat('dd/MM/yyyy HH:mm'));
+                                                        } elseif (!empty($anexo['created'])) {
+                                                            $tsAnexo = strtotime((string)$anexo['created']);
+                                                            echo h($tsAnexo ? date('d/m/Y H:i', $tsAnexo) : 'Não informado');
+                                                        } else {
+                                                            echo 'Não informado';
+                                                        }
+                                                    ?>
+                                                </span>
                                             </div>
                                             <a href="/uploads/anexos/<?= h($anexo['arquivo']) ?>" target="_blank" class="btn btn-light border btn-sm py-0 px-2" title="Download">
                                                 <i class="fa fa-download"></i>
@@ -574,6 +731,20 @@ if (!$temDataInicio && !$temDataFim) {
                                     <div class="anexo-titulo">
                                         <span class="anexo-tipo"><?= h($anexo['tipo_nome']) ?></span>
                                         <span class="anexo-arquivo"><?= !empty($anexo['arquivo']) ? h($anexo['arquivo']) : 'arquivo' ?></span>
+                                        <span class="anexo-meta">
+                                            Incluído por <?= !empty($anexo['usuario_nome']) ? h($anexo['usuario_nome']) : 'Não informado' ?>
+                                            em
+                                            <?php
+                                                if (!empty($anexo['created']) && $anexo['created'] instanceof \Cake\I18n\FrozenTime) {
+                                                    echo h($anexo['created']->i18nFormat('dd/MM/yyyy HH:mm'));
+                                                } elseif (!empty($anexo['created'])) {
+                                                    $tsAnexo = strtotime((string)$anexo['created']);
+                                                    echo h($tsAnexo ? date('d/m/Y H:i', $tsAnexo) : 'Não informado');
+                                                } else {
+                                                    echo 'Não informado';
+                                                }
+                                            ?>
+                                        </span>
                                     </div>
                                     <a href="/uploads/anexos/<?= h($anexo['arquivo']) ?>" target="_blank" class="btn btn-light border btn-sm py-0 px-2" title="Download">
                                         <i class="fa fa-download"></i>
