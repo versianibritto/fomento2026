@@ -1259,3 +1259,20 @@ UPDATE `anexos_tipos` SET `nome` = 'RANI' WHERE (`id` = '26');
 UPDATE `anexos_tipos` SET `nome` = 'Relatório Parcial' WHERE (`id` = '13');
 UPDATE `anexos_tipos` SET `nome` = 'Anexo Sub Projeto' WHERE (`id` = '20');
 UPDATE `anexos_tipos` SET `nome` = 'Comprovante de Histórico' WHERE (`id` = '16');
+
+
+-- aqui 4
+CREATE TABLE `vitrines` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `deleted` TIMESTAMP NULL,
+  `created` TIMESTAMP NULL,
+  `modified` TIMESTAMP NULL,
+  `nome` TEXT NULL,
+  `anexo_edital` VARCHAR(45) NULL,
+  `anexo_resultado` VARCHAR(45) NULL,
+  `anexo_resultado_recurso` VARCHAR(45) NULL,
+  `anexo_modelo_relatorio` VARCHAR(45) NULL,
+  `anexo_modelo_consentimento` VARCHAR(45) NULL,
+  `divulgacao` TIMESTAMP NULL,
+  `obs` TEXT NULL,
+  PRIMARY KEY (`id`));

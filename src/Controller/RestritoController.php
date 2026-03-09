@@ -76,9 +76,93 @@ class RestritoController extends AppController
                 'class' => 'btn-secondary',
                 'icon' => 'fas fa-file-upload',
             ],
+            [
+                'titulo' => 'Vitrines',
+                'descricao' => 'Manutenção de vitrines (criar, alterar e deletar)',
+                'url' => ['controller' => 'Restrito', 'action' => 'vitrines'],
+                'class' => 'btn-dark',
+                'icon' => 'fas fa-images',
+            ],
         ];
 
         $this->set(compact('atalhos'));
+    }
+
+    public function vitrines($id = null)
+    {
+        $this->viewBuilder()->setLayout('admin');
+        $tblVitrines = $this->fetchTable('Vitrines');
+
+        $isEdicao = (bool)$id;
+        if ($isEdicao) {
+            $vitrine = $tblVitrines->find()
+                ->where([
+                    'Vitrines.id' => (int)$id,
+                    'Vitrines.deleted IS' => null,
+                ])
+                ->first();
+            if (!$vitrine) {
+                $this->Flash->error('Vitrine não localizada para edição.');
+                return $this->redirect(['action' => 'vitrines']);
+            }
+        } else {
+            $vitrine = $tblVitrines->newEmptyEntity();
+        }
+
+        if ($this->request->is(['post', 'put', 'patch'])) {
+            $dados = $this->request->getData();
+            $acao = trim((string)($dados['acao'] ?? 'salvar'));
+
+            if ($acao === 'deletar') {
+                $idDelete = (int)($dados['id'] ?? $id ?? 0);
+                if ($idDelete <= 0) {
+                    $this->Flash->error('Registro inválido para exclusão.');
+                    return $this->redirect(['action' => 'vitrines']);
+                }
+                $registro = $tblVitrines->find()
+                    ->where([
+                        'Vitrines.id' => $idDelete,
+                        'Vitrines.deleted IS' => null,
+                    ])
+                    ->first();
+                if (!$registro) {
+                    $this->Flash->error('Vitrine não encontrada para exclusão.');
+                    return $this->redirect(['action' => 'vitrines']);
+                }
+                $registro->deleted = date('Y-m-d H:i:s');
+                if ($tblVitrines->save($registro)) {
+                    $this->Flash->success('Vitrine excluída com sucesso.');
+                } else {
+                    $this->Flash->error('Não foi possível excluir a vitrine.');
+                }
+                return $this->redirect(['action' => 'vitrines']);
+            }
+
+            if (array_key_exists('divulgacao', $dados) && trim((string)$dados['divulgacao']) === '') {
+                $dados['divulgacao'] = null;
+            }
+            $dados = $this->handleUpload($dados, 'anexo_edital', 'editais');
+            $dados = $this->handleUpload($dados, 'anexo_resultado', 'editais');
+            $dados = $this->handleUpload($dados, 'anexo_resultado_recurso', 'editais');
+            $dados = $this->handleUpload($dados, 'anexo_modelo_relatorio', 'editais');
+            $dados = $this->handleUpload($dados, 'anexo_modelo_consentimento', 'editais');
+            if (!$isEdicao) {
+                $dados['deleted'] = null;
+            }
+            $vitrine = $tblVitrines->patchEntity($vitrine, $dados);
+            if ($tblVitrines->save($vitrine)) {
+                $this->Flash->success($isEdicao ? 'Vitrine atualizada com sucesso.' : 'Vitrine cadastrada com sucesso.');
+                return $this->redirect(['action' => 'vitrines']);
+            }
+            $this->Flash->error('Não foi possível salvar a vitrine.');
+        }
+
+        $vitrines = $tblVitrines->find()
+            ->where(['Vitrines.deleted IS' => null])
+            ->orderBy(['Vitrines.id' => 'DESC'])
+            ->all();
+
+        $this->set(compact('vitrine', 'vitrines', 'isEdicao'));
     }
 
     public function replicarAnexos()
