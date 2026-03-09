@@ -439,6 +439,87 @@ class RestritoController extends AppController
         return $this->redirect($this->referer(['action' => 'index']));
     }
 
+    public function migrarHistoricosPdjParaSituacaoHistoricos()
+    {
+        $this->request->allowMethod(['post']);
+
+        $tblSituacaoHistoricos = TableRegistry::getTableLocator()->get('SituacaoHistoricos');
+        $tblFases = TableRegistry::getTableLocator()->get('Fases');
+        $connection = $tblSituacaoHistoricos->getConnection();
+
+        $schemaFases = $tblFases->getSchema();
+        if (!$schemaFases->hasColumn('letra')) {
+            $this->Flash->error('Tabela fases sem a coluna "letra" necessária para mapear situação.');
+            return $this->redirect($this->referer(['action' => 'index']));
+        }
+
+        $sqlInsert = "
+            INSERT INTO situacao_historicos (
+                projeto_bolsista_id,
+                usuario_id,
+                situacao_original,
+                situacao_atual,
+                created,
+                modified,
+                justificativa,
+                fase_original,
+                fase_atual,
+                editai_id
+            )
+            SELECT
+                pb.id AS projeto_bolsista_id,
+                ph.usuario_id,
+                ph.situacao_original,
+                ph.situacao_atual,
+                ph.created,
+                ph.modified,
+                ph.justificativa,
+                fo.id AS fase_original,
+                fa.id AS fase_atual,
+                pb.editai_id
+            FROM pdj_historicos ph
+            INNER JOIN projeto_bolsistas pb
+                ON pb.pdj_inscricoe_id = ph.pdj_inscricoe_id
+            LEFT JOIN fases fo ON fo.letra = ph.situacao_original
+            LEFT JOIN fases fa ON fa.letra = ph.situacao_atual
+            WHERE NOT EXISTS (
+                SELECT 1
+                FROM situacao_historicos sh
+                WHERE sh.projeto_bolsista_id = pb.id
+                  AND (sh.usuario_id <=> ph.usuario_id)
+                  AND (sh.situacao_original <=> ph.situacao_original)
+                  AND (sh.situacao_atual <=> ph.situacao_atual)
+                  AND (sh.created <=> ph.created)
+                  AND (sh.justificativa <=> ph.justificativa)
+            )
+        ";
+
+        $sqlFasesNulas = "
+            SELECT COUNT(*) AS total
+            FROM situacao_historicos sh
+            WHERE sh.fase_original IS NULL OR sh.fase_atual IS NULL
+        ";
+
+        try {
+            $resultado = $connection->transactional(function ($conn) use ($sqlInsert, $sqlFasesNulas) {
+                $insertResult = $conn->execute($sqlInsert);
+                $inseridos = (int)$insertResult->rowCount();
+                $fasesNulas = (int)$conn->execute($sqlFasesNulas)->fetch('assoc')['total'];
+
+                return compact('inseridos', 'fasesNulas');
+            });
+
+            $this->Flash->success(
+                'Migração de históricos PDJ concluída. Inseridos=' . (int)$resultado['inseridos'] .
+                ', registros com fase_original/fase_atual nulas=' . (int)$resultado['fasesNulas'] . '.'
+            );
+        } catch (\Throwable $e) {
+            $this->Flash->error('Erro na migração de históricos PDJ: ' . $e->getMessage());
+        }
+
+        return $this->redirect($this->referer(['action' => 'index']));
+    }
+
     public function atualizarDeletedTimestamp()
     {
         $this->request->allowMethod(['post']);

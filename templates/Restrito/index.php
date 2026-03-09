@@ -91,6 +91,14 @@
                                         'confirm' => 'Confirma o reestabelecimento de anexos PDJ migrados (incluindo registros deletados)?',
                                     ]
                                 ) ?>
+                                <?= $this->Form->postLink(
+                                    'Migrar Históricos PDJ',
+                                    ['controller' => 'Restrito', 'action' => 'migrarHistoricosPdjParaSituacaoHistoricos'],
+                                    [
+                                        'class' => 'btn btn-outline-dark',
+                                        'confirm' => 'Confirma a migração de pdj_historicos para situacao_historicos?',
+                                    ]
+                                ) ?>
                             </div>
                         </div>
                     </div>

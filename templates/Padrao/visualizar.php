@@ -8,6 +8,7 @@ $filhosMap = [
 $origemAtual = strtoupper((string)($origemAtual ?? ($inscricao->origem ?? '')));
 $ehYoda = !empty($this->request->getAttribute('identity')['yoda']);
 $isRenovacao = $origemAtual === 'R';
+$pdjInscricaoId = !empty($inscricao->pdj_inscricoe_id) ? (int)$inscricao->pdj_inscricoe_id : null;
 $mostrarReferenciaAnterior = in_array($origemAtual, ['R', 'S', 'A'], true);
 $referenciaAnteriorValor = null;
 if ($origemAtual === 'R') {
@@ -158,6 +159,9 @@ if (!$temDataInicio && !$temDataFim) {
 <div class="container mt-4">
     <h4 class="mb-2">
         Visualização da <?= $isRenovacao ? 'Renovação' : 'Inscrição' ?> #<?= (int)$inscricao->id ?>
+        <?php if ($pdjInscricaoId !== null): ?>
+            / PDJ Inscrição #<?= h((string)$pdjInscricaoId) ?>
+        <?php endif; ?>
         <?php if (!empty($inscricao->deleted)): ?>
             <span class="badge bg-danger ms-2">Deletado</span>
         <?php endif; ?>

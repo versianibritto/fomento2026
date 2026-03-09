@@ -259,7 +259,10 @@ class PadraoController extends AppController
         $historicos = $this->fetchTable('SituacaoHistoricos')->find()
             ->contain(['Usuarios', 'FaseOriginal', 'FaseAtual'])
             ->where(['SituacaoHistoricos.projeto_bolsista_id' => (int)$inscricao->id])
-            ->orderBy(['SituacaoHistoricos.id' => 'DESC'])
+            ->orderBy([
+                'SituacaoHistoricos.created' => 'DESC',
+                'SituacaoHistoricos.id' => 'DESC',
+            ])
             ->all();
 
         $avaliacoes = $this->fetchTable('AvaliadorBolsistas')->find()
