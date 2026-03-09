@@ -20,6 +20,8 @@ use Cake\ORM\Entity;
  * @property string|null $anexo_modelo_consentimento
  * @property \Cake\I18n\DateTime|null $divulgacao
  * @property string|null $obs
+ * @property \Cake\I18n\DateTime|null $inicio
+ * @property \Cake\I18n\DateTime|null $fim
  */
 class Vitrine extends Entity
 {
@@ -35,5 +37,7 @@ class Vitrine extends Entity
         'anexo_modelo_consentimento' => true,
         'divulgacao' => true,
         'obs' => true,
+        'inicio' => true,
+        'fim' => true,
     ];
 }

@@ -71,6 +71,14 @@ class VitrinesTable extends Table
             ->allowEmptyDateTime('divulgacao');
 
         $validator
+            ->dateTime('inicio')
+            ->allowEmptyDateTime('inicio');
+
+        $validator
+            ->dateTime('fim')
+            ->allowEmptyDateTime('fim');
+
+        $validator
             ->scalar('obs')
             ->allowEmptyString('obs');
 

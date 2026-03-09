@@ -96,18 +96,19 @@ class IndexController extends AppController
     //ok
     public function editais()
     {
-        $editaisTable = TableRegistry::getTableLocator()->get('Editais');
+        $vitrinesTable = TableRegistry::getTableLocator()->get('Vitrines');
 
-        $editais = $editaisTable->find()->contain([
-            'Erratas' => ['sort' => ['Erratas.id' => 'DESC']],
-            'Programas',
-        ])
-        ->where([
-            'Editais.visualizar' => 'E',
-            'Editais.deleted' => 0,
-        ])
-            ->orderBy(['fim_inscricao' => 'DESC']);
-        $this->set(compact('editais'));
+        $vitrines = $vitrinesTable->find()
+            ->where([
+                'Vitrines.deleted IS' => null,
+                'Vitrines.divulgacao <=' => FrozenTime::now(),
+            ])
+            ->orderBy([
+                'Vitrines.divulgacao' => 'DESC',
+                'Vitrines.id' => 'DESC',
+            ]);
+
+        $this->set(compact('vitrines'));
     }
 
     //ok

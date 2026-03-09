@@ -1,6 +1,16 @@
 <?php
 $titulo = $isEdicao ? 'Editar Vitrine' : 'Cadastrar Vitrine';
 $textoBotao = $isEdicao ? 'Salvar alterações' : 'Cadastrar vitrine';
+$formatarDataTabela = function ($valor) {
+    if (empty($valor)) {
+        return '-';
+    }
+    try {
+        return $valor->modify('+3 hours')->format('d/m/Y H:i');
+    } catch (\Throwable $e) {
+        return '-';
+    }
+};
 ?>
 <section class="mt-n3">
     <div class="card card-primary card-outline mb-3">
@@ -25,6 +35,22 @@ $textoBotao = $isEdicao ? 'Salvar alterações' : 'Cadastrar vitrine';
                         'type' => 'datetime-local',
                         'class' => 'form-control',
                         'value' => !empty($vitrine->divulgacao) ? $vitrine->divulgacao->format('Y-m-d\TH:i') : '',
+                    ]) ?>
+                </div>
+                <div class="col-md-3">
+                    <?= $this->Form->control('inicio', [
+                        'label' => 'Data de início',
+                        'type' => 'datetime-local',
+                        'class' => 'form-control',
+                        'value' => !empty($vitrine->inicio) ? $vitrine->inicio->format('Y-m-d\TH:i') : '',
+                    ]) ?>
+                </div>
+                <div class="col-md-3">
+                    <?= $this->Form->control('fim', [
+                        'label' => 'Data de fim',
+                        'type' => 'datetime-local',
+                        'class' => 'form-control',
+                        'value' => !empty($vitrine->fim) ? $vitrine->fim->format('Y-m-d\TH:i') : '',
                     ]) ?>
                 </div>
                 <div class="col-md-6">
@@ -93,6 +119,9 @@ $textoBotao = $isEdicao ? 'Salvar alterações' : 'Cadastrar vitrine';
                                 <th style="width: 80px;">ID</th>
                                 <th>Nome</th>
                                 <th>Divulgação</th>
+                                <th>Início</th>
+                                <th>Fim</th>
+                                <th>Status</th>
                                 <th style="width: 190px;">Ações</th>
                             </tr>
                         </thead>
@@ -101,20 +130,41 @@ $textoBotao = $isEdicao ? 'Salvar alterações' : 'Cadastrar vitrine';
                                 <tr>
                                     <td><?= (int)$item->id ?></td>
                                     <td><?= !empty($item->nome) ? $this->Text->truncate(strip_tags((string)$item->nome), 100) : '-' ?></td>
-                                    <td><?= !empty($item->divulgacao) ? h($item->divulgacao->format('d/m/Y H:i')) : '-' ?></td>
+                                    <td><?= h($formatarDataTabela($item->divulgacao ?? null)) ?></td>
+                                    <td><?= h($formatarDataTabela($item->inicio ?? null)) ?></td>
+                                    <td><?= h($formatarDataTabela($item->fim ?? null)) ?></td>
                                     <td>
-                                        <div class="d-flex gap-2">
-                                            <?= $this->Html->link('Editar', ['controller' => 'Restrito', 'action' => 'vitrines', (int)$item->id], ['class' => 'btn btn-outline-primary btn-sm']) ?>
+                                        <?php if (!empty($item->deleted)): ?>
+                                            <span class="badge bg-danger">Deletado em <?= h($formatarDataTabela($item->deleted)) ?></span>
+                                        <?php else: ?>
+                                            <span class="badge bg-success">Ativo</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <?php if (empty($item->deleted)): ?>
+                                            <div class="d-flex gap-2">
+                                                <?= $this->Html->link('Editar', ['controller' => 'Restrito', 'action' => 'vitrines', (int)$item->id], ['class' => 'btn btn-outline-primary btn-sm']) ?>
+                                                <?= $this->Form->postLink(
+                                                    'Excluir',
+                                                    ['controller' => 'Restrito', 'action' => 'vitrines', (int)$item->id],
+                                                    [
+                                                        'class' => 'btn btn-outline-danger btn-sm',
+                                                        'confirm' => 'Confirma a exclusão da vitrine #' . (int)$item->id . '?',
+                                                        'data' => ['acao' => 'deletar', 'id' => (int)$item->id],
+                                                    ]
+                                                ) ?>
+                                            </div>
+                                        <?php else: ?>
                                             <?= $this->Form->postLink(
-                                                'Excluir',
+                                                'Reativar',
                                                 ['controller' => 'Restrito', 'action' => 'vitrines', (int)$item->id],
                                                 [
-                                                    'class' => 'btn btn-outline-danger btn-sm',
-                                                    'confirm' => 'Confirma a exclusão da vitrine #' . (int)$item->id . '?',
-                                                    'data' => ['acao' => 'deletar', 'id' => (int)$item->id],
+                                                    'class' => 'btn btn-outline-success btn-sm',
+                                                    'confirm' => 'Confirma a reativação da vitrine #' . (int)$item->id . '?',
+                                                    'data' => ['acao' => 'reativar', 'id' => (int)$item->id],
                                                 ]
                                             ) ?>
-                                        </div>
+                                        <?php endif; ?>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>

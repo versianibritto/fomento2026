@@ -1276,3 +1276,50 @@ CREATE TABLE `vitrines` (
   `divulgacao` TIMESTAMP NULL,
   `obs` TEXT NULL,
   PRIMARY KEY (`id`));
+
+  ALTER TABLE `vitrines` 
+ADD COLUMN `inicio` TIMESTAMP NULL AFTER `obs`,
+ADD COLUMN `fim` TIMESTAMP NULL AFTER `inicio`;
+
+-- populando vitrines dinamicamente
+INSERT INTO vitrines (
+    deleted,
+    created,
+    modified,
+    nome,
+    anexo_edital,
+    anexo_resultado,
+    anexo_resultado_recurso,
+    anexo_modelo_relatorio,
+    anexo_modelo_consentimento,
+    divulgacao,
+    obs,
+    inicio,
+    fim
+)
+SELECT
+    NULL AS deleted,
+    NOW() AS created,
+    NOW() AS modified,
+    e.nome,
+    e.arquivo AS anexo_edital,
+    e.resultado_arquivo AS anexo_resultado,
+    NULL AS anexo_resultado_recurso,
+    NULL AS anexo_modelo_relatorio,
+    NULL AS anexo_modelo_consentimento,
+    e.inicio_inscricao AS divulgacao,
+    NULL AS obs,
+    e.inicio_inscricao AS inicio,
+    e.fim_inscricao AS fim
+FROM editais e
+WHERE e.visualizar = 'E'
+  AND NOT EXISTS (
+      SELECT 1
+      FROM vitrines v
+      WHERE v.deleted IS NULL
+        AND v.divulgacao <=> e.inicio_inscricao
+        AND v.inicio <=> e.inicio_inscricao
+        AND v.fim <=> e.fim_inscricao
+  );
+
+

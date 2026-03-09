@@ -92,24 +92,30 @@ class RestritoController extends AppController
     {
         $this->viewBuilder()->setLayout('admin');
         $tblVitrines = $this->fetchTable('Vitrines');
+        $isEnvio = $this->request->is(['post', 'put', 'patch']);
+        $acaoSolicitada = $isEnvio ? trim((string)$this->request->getData('acao', 'salvar')) : 'salvar';
 
         $isEdicao = (bool)$id;
         if ($isEdicao) {
-            $vitrine = $tblVitrines->find()
-                ->where([
-                    'Vitrines.id' => (int)$id,
-                    'Vitrines.deleted IS' => null,
-                ])
-                ->first();
-            if (!$vitrine) {
-                $this->Flash->error('Vitrine não localizada para edição.');
-                return $this->redirect(['action' => 'vitrines']);
+            if ($isEnvio && $acaoSolicitada === 'reativar') {
+                $vitrine = $tblVitrines->newEmptyEntity();
+            } else {
+                $vitrine = $tblVitrines->find()
+                    ->where([
+                        'Vitrines.id' => (int)$id,
+                        'Vitrines.deleted IS' => null,
+                    ])
+                    ->first();
+                if (!$vitrine) {
+                    $this->Flash->error('Vitrine não localizada para edição.');
+                    return $this->redirect(['action' => 'vitrines']);
+                }
             }
         } else {
             $vitrine = $tblVitrines->newEmptyEntity();
         }
 
-        if ($this->request->is(['post', 'put', 'patch'])) {
+        if ($isEnvio) {
             $dados = $this->request->getData();
             $acao = trim((string)($dados['acao'] ?? 'salvar'));
 
@@ -138,8 +144,40 @@ class RestritoController extends AppController
                 return $this->redirect(['action' => 'vitrines']);
             }
 
+            if ($acao === 'reativar') {
+                $idReativar = (int)($dados['id'] ?? $id ?? 0);
+                if ($idReativar <= 0) {
+                    $this->Flash->error('Registro inválido para reativação.');
+                    return $this->redirect(['action' => 'vitrines']);
+                }
+                $registro = $tblVitrines->find()
+                    ->where(['Vitrines.id' => $idReativar])
+                    ->first();
+                if (!$registro) {
+                    $this->Flash->error('Vitrine não encontrada para reativação.');
+                    return $this->redirect(['action' => 'vitrines']);
+                }
+                if ($registro->deleted === null) {
+                    $this->Flash->info('A vitrine selecionada já está ativa.');
+                    return $this->redirect(['action' => 'vitrines']);
+                }
+                $registro->deleted = null;
+                if ($tblVitrines->save($registro)) {
+                    $this->Flash->success('Vitrine reativada com sucesso.');
+                } else {
+                    $this->Flash->error('Não foi possível reativar a vitrine.');
+                }
+                return $this->redirect(['action' => 'vitrines']);
+            }
+
             if (array_key_exists('divulgacao', $dados) && trim((string)$dados['divulgacao']) === '') {
                 $dados['divulgacao'] = null;
+            }
+            if (array_key_exists('inicio', $dados) && trim((string)$dados['inicio']) === '') {
+                $dados['inicio'] = null;
+            }
+            if (array_key_exists('fim', $dados) && trim((string)$dados['fim']) === '') {
+                $dados['fim'] = null;
             }
             $dados = $this->handleUpload($dados, 'anexo_edital', 'editais');
             $dados = $this->handleUpload($dados, 'anexo_resultado', 'editais');
@@ -158,7 +196,6 @@ class RestritoController extends AppController
         }
 
         $vitrines = $tblVitrines->find()
-            ->where(['Vitrines.deleted IS' => null])
             ->orderBy(['Vitrines.id' => 'DESC'])
             ->all();
 
