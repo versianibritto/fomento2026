@@ -261,7 +261,7 @@ class UsersController extends AppController
                             if (
                                 ($usuario->last_data_update_date == '') || 
                                 ($usuario->last_data_update_date->i18nFormat('yyyy-MM-dd HH:mm') < date('Y-m-d H:i', strtotime('6 months ago')))
-                                ) { //ultima atialização manual nao existe ou tem mais de seis meses
+                                ) { //ultima atialização manual não existe ou tem mais de seis meses
 
                                 $usuario->nome = $attrs['nome completo'][0];
                                 $usuario->email = $attrs['email'][0]?? $attrs['email alternativo'][0];
@@ -618,7 +618,7 @@ class UsersController extends AppController
             $dados = $this->request->getData();
             $original = $user->toArray();
 
-            // Campos desabilitados no form nao sao enviados no POST.
+            // Campos desabilitados no form não sao enviados no POST.
             // Preserva o valor atual para evitar validacao indevida.
             if (!array_key_exists('escolaridade_id', $dados)) {
                 $dados['escolaridade_id'] = $user->escolaridade_id;

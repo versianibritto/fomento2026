@@ -25,7 +25,7 @@
                     <strong>Email:</strong>
                     <?= !empty($erro->usuario_email)
                         ? h($erro->usuario_email)
-                        : '<span class="badge bg-danger">Nao informado</span>' ?>
+                        : '<span class="badge bg-danger">não informado</span>' ?>
                 </div>
             </div>
             <div class="row mt-2 mb-3">
@@ -33,13 +33,13 @@
                     <strong>Email Alternativo:</strong>
                     <?= !empty($erro->usuario_email_alternativo)
                         ? h($erro->usuario_email_alternativo)
-                        : '<span class="badge bg-danger">Nao informado</span>' ?>
+                        : '<span class="badge bg-danger">não informado</span>' ?>
                 </div>
                 <div class="col-md-6">
                     <strong>Email Contato:</strong>
                     <?= !empty($erro->usuario_email_contato)
                         ? h($erro->usuario_email_contato)
-                        : '<span class="badge bg-danger">Nao informado</span>' ?>
+                        : '<span class="badge bg-danger">não informado</span>' ?>
                 </div>
             </div>
             <div class="row mt-2 mb-4">

@@ -99,6 +99,11 @@ class IndexController extends AppController
         $vitrinesTable = TableRegistry::getTableLocator()->get('Vitrines');
 
         $vitrines = $vitrinesTable->find()
+            ->contain([
+                'Erratas' => function ($q) {
+                    return $q->orderBy(['Erratas.id' => 'DESC']);
+                },
+            ])
             ->where([
                 'Vitrines.deleted IS' => null,
                 'Vitrines.divulgacao <=' => FrozenTime::now(),

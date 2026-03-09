@@ -166,7 +166,7 @@
     <script>
     (function () {
       var LIMITE_BYTES = 2 * 1024 * 1024; // 2MB
-      var MENSAGEM = 'Arquivo maior que 2Mb.  Selecione outro pois este tamanho nao é permitido.';
+      var MENSAGEM = 'Arquivo maior que 2Mb.  Selecione outro pois este tamanho não é permitido.';
 
       document.addEventListener('change', function (event) {
         var input = event.target;

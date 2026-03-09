@@ -1,16 +1,6 @@
 <?php
 $titulo = $isEdicao ? 'Editar Vitrine' : 'Cadastrar Vitrine';
 $textoBotao = $isEdicao ? 'Salvar alterações' : 'Cadastrar vitrine';
-$formatarDataTabela = function ($valor) {
-    if (empty($valor)) {
-        return '-';
-    }
-    try {
-        return $valor->modify('+3 hours')->format('d/m/Y H:i');
-    } catch (\Throwable $e) {
-        return '-';
-    }
-};
 ?>
 <section class="mt-n3">
     <div class="card card-primary card-outline mb-3">
@@ -108,70 +98,71 @@ $formatarDataTabela = function ($valor) {
 
     <div class="card card-secondary card-outline">
         <div class="card-body">
-            <h4 class="mb-3">Vitrines cadastradas</h4>
-            <?php if (empty($vitrines) || $vitrines->count() === 0): ?>
-                <div class="alert alert-warning mb-0">Nenhuma vitrine cadastrada.</div>
+            <h4 class="mb-3">Cadastrar Erratas (PDF) por Vitrine</h4>
+            <div class="alert alert-warning py-2">
+                Novas erratas serão vinculadas apenas à <strong>vitrine</strong> (`vitrine_id`). O campo `editai_id` não será usado em novos cadastros.
+            </div>
+            <?= $this->Form->create(null, ['type' => 'file', 'url' => ['controller' => 'Restrito', 'action' => 'erratasVitrine'], 'class' => 'row g-3']) ?>
+                <?= $this->Form->hidden('acao', ['value' => 'cadastrar_erratas_vitrine']) ?>
+                <div class="col-md-5">
+                    <?= $this->Form->control('vitrine_id', [
+                        'label' => 'Vitrine',
+                        'type' => 'select',
+                        'options' => $vitrinesAtivas ?? [],
+                        'empty' => 'Selecione',
+                        'default' => !empty($preselectedErrataVitrineId) ? (int)$preselectedErrataVitrineId : null,
+                        'class' => 'form-select',
+                    ]) ?>
+                </div>
+                <div class="col-md-5">
+                    <label class="form-label" for="erratas-arquivos">Arquivos PDF (múltiplos)</label>
+                    <input id="erratas-arquivos" type="file" name="erratas_arquivos[]" accept="application/pdf,.pdf" multiple class="form-control">
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <?= $this->Form->button('Cadastrar PDFs', ['class' => 'btn btn-primary w-100']) ?>
+                </div>
+            <?= $this->Form->end() ?>
+
+            <hr>
+            <h5 class="mb-3">Erratas recentes</h5>
+            <?php if (empty($erratasRecentes) || $erratasRecentes->count() === 0): ?>
+                <div class="alert alert-light border mb-0">Nenhuma errata cadastrada por vitrine.</div>
             <?php else: ?>
-                <div class="table-responsive">
+                <div class="table-responsive mb-3">
                     <table class="table table-sm table-striped align-middle">
                         <thead>
                             <tr>
                                 <th style="width: 80px;">ID</th>
-                                <th>Nome</th>
-                                <th>Divulgação</th>
-                                <th>Início</th>
-                                <th>Fim</th>
-                                <th>Status</th>
-                                <th style="width: 190px;">Ações</th>
+                                <th>Vitrine</th>
+                                <th>Arquivo</th>
+                                <th style="width: 160px;">Data</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <?php foreach ($vitrines as $item): ?>
+                            <?php foreach ($erratasRecentes as $errata): ?>
                                 <tr>
-                                    <td><?= (int)$item->id ?></td>
-                                    <td><?= !empty($item->nome) ? $this->Text->truncate(strip_tags((string)$item->nome), 100) : '-' ?></td>
-                                    <td><?= h($formatarDataTabela($item->divulgacao ?? null)) ?></td>
-                                    <td><?= h($formatarDataTabela($item->inicio ?? null)) ?></td>
-                                    <td><?= h($formatarDataTabela($item->fim ?? null)) ?></td>
+                                    <td><?= (int)$errata->id ?></td>
+                                    <td><?= !empty($errata->vitrine) ? ('#' . (int)$errata->vitrine->id . ' - ' . $this->Text->truncate(strip_tags((string)$errata->vitrine->nome), 70)) : '-' ?></td>
                                     <td>
-                                        <?php if (!empty($item->deleted)): ?>
-                                            <span class="badge bg-danger">Deletado em <?= h($formatarDataTabela($item->deleted)) ?></span>
+                                        <?php if (!empty($errata->arquivo)): ?>
+                                            <a href="/uploads/editais/<?= h($errata->arquivo) ?>" target="_blank"><?= h($errata->arquivo) ?></a>
                                         <?php else: ?>
-                                            <span class="badge bg-success">Ativo</span>
+                                            -
                                         <?php endif; ?>
                                     </td>
-                                    <td>
-                                        <?php if (empty($item->deleted)): ?>
-                                            <div class="d-flex gap-2">
-                                                <?= $this->Html->link('Editar', ['controller' => 'Restrito', 'action' => 'vitrines', (int)$item->id], ['class' => 'btn btn-outline-primary btn-sm']) ?>
-                                                <?= $this->Form->postLink(
-                                                    'Excluir',
-                                                    ['controller' => 'Restrito', 'action' => 'vitrines', (int)$item->id],
-                                                    [
-                                                        'class' => 'btn btn-outline-danger btn-sm',
-                                                        'confirm' => 'Confirma a exclusão da vitrine #' . (int)$item->id . '?',
-                                                        'data' => ['acao' => 'deletar', 'id' => (int)$item->id],
-                                                    ]
-                                                ) ?>
-                                            </div>
-                                        <?php else: ?>
-                                            <?= $this->Form->postLink(
-                                                'Reativar',
-                                                ['controller' => 'Restrito', 'action' => 'vitrines', (int)$item->id],
-                                                [
-                                                    'class' => 'btn btn-outline-success btn-sm',
-                                                    'confirm' => 'Confirma a reativação da vitrine #' . (int)$item->id . '?',
-                                                    'data' => ['acao' => 'reativar', 'id' => (int)$item->id],
-                                                ]
-                                            ) ?>
-                                        <?php endif; ?>
-                                    </td>
+                                    <td><?= !empty($errata->created) ? h($errata->created->format('d/m/Y H:i')) : '-' ?></td>
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>
                     </table>
                 </div>
             <?php endif; ?>
+
+            <h4 class="mb-3">Listagem de Vitrines</h4>
+            <div class="d-flex flex-wrap gap-2">
+                <?= $this->Html->link('Abrir lista paginada', ['controller' => 'Restrito', 'action' => 'vitrinesLista'], ['class' => 'btn btn-outline-dark']) ?>
+                <?= $this->Html->link('Editar/Excluir/Reativar vitrines', ['controller' => 'Restrito', 'action' => 'vitrinesLista'], ['class' => 'btn btn-outline-secondary']) ?>
+            </div>
         </div>
     </div>
 </section>

@@ -291,7 +291,7 @@ $hasEscolaridades = !empty($escolaridadesPermitidas);
             }
             var size = input.files[0].size;
             if(size > 2097152) {
-                alert('Arquivo maior que 2Mb.  Selecione outro pois este tamanho nao é permitido.');
+                alert('Arquivo maior que 2Mb.  Selecione outro pois este tamanho não é permitido.');
                 input.value = "";
             }
             e.preventDefault();

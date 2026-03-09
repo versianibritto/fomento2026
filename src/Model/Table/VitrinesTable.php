@@ -17,6 +17,10 @@ class VitrinesTable extends Table
         $this->setPrimaryKey('id');
 
         $this->addBehavior('Timestamp');
+
+        $this->hasMany('Erratas', [
+            'foreignKey' => 'vitrine_id',
+        ]);
     }
 
     public function validationDefault(Validator $validator): Validator

@@ -79,7 +79,7 @@ class RestritoController extends AppController
             [
                 'titulo' => 'Vitrines',
                 'descricao' => 'Manutenção de vitrines (criar, alterar e deletar)',
-                'url' => ['controller' => 'Restrito', 'action' => 'vitrines'],
+                'url' => ['controller' => 'Restrito', 'action' => 'vitrinesLista'],
                 'class' => 'btn-dark',
                 'icon' => 'fas fa-images',
             ],
@@ -92,6 +92,7 @@ class RestritoController extends AppController
     {
         $this->viewBuilder()->setLayout('admin');
         $tblVitrines = $this->fetchTable('Vitrines');
+        $preselectedErrataVitrineId = (int)$this->request->getQuery('vitrine_id', 0);
         $isEnvio = $this->request->is(['post', 'put', 'patch']);
         $acaoSolicitada = $isEnvio ? trim((string)$this->request->getData('acao', 'salvar')) : 'salvar';
 
@@ -199,7 +200,144 @@ class RestritoController extends AppController
             ->orderBy(['Vitrines.id' => 'DESC'])
             ->all();
 
-        $this->set(compact('vitrine', 'vitrines', 'isEdicao'));
+        $vitrinesAtivas = $tblVitrines->find('list', [
+            'keyField' => 'id',
+            'valueField' => function ($row) {
+                return '#' . $row->id . ' - ' . ($row->nome ?: 'Sem nome');
+            },
+        ])
+            ->where(['Vitrines.deleted IS' => null])
+            ->orderBy(['Vitrines.id' => 'DESC'])
+            ->toArray();
+
+        $erratasRecentes = $this->fetchTable('Erratas')->find()
+            ->contain(['Vitrines'])
+            ->where(['Erratas.vitrine_id IS NOT' => null])
+            ->orderBy(['Erratas.id' => 'DESC'])
+            ->limit(50)
+            ->all();
+
+        $this->set(compact('vitrine', 'vitrines', 'isEdicao', 'vitrinesAtivas', 'erratasRecentes', 'preselectedErrataVitrineId'));
+    }
+
+    public function vitrinesLista()
+    {
+        $this->viewBuilder()->setLayout('admin');
+        $tblVitrines = $this->fetchTable('Vitrines');
+
+        $query = $tblVitrines->find()
+            ->orderBy(['Vitrines.id' => 'DESC']);
+
+        $vitrines = $this->paginate($query, [
+            'limit' => 15,
+        ]);
+
+        $this->set(compact('vitrines'));
+    }
+
+    public function erratasVitrine()
+    {
+        $this->viewBuilder()->setLayout('admin');
+        $tblVitrines = $this->fetchTable('Vitrines');
+        $tblErratas = $this->fetchTable('Erratas');
+        $preselectedErrataVitrineId = (int)$this->request->getQuery('vitrine_id', 0);
+
+        if ($this->request->is(['post', 'put', 'patch'])) {
+            $dados = $this->request->getData();
+            $acao = trim((string)($dados['acao'] ?? ''));
+
+            if ($acao === 'cadastrar_erratas_vitrine') {
+                $vitrineId = (int)($dados['vitrine_id'] ?? 0);
+                if ($vitrineId <= 0) {
+                    $this->Flash->error('Selecione uma vitrine para cadastrar as erratas.');
+                    return $this->redirect(['action' => 'erratasVitrine']);
+                }
+
+                $vitrineRef = $tblVitrines->find()
+                    ->where([
+                        'Vitrines.id' => $vitrineId,
+                        'Vitrines.deleted IS' => null,
+                    ])
+                    ->first();
+                if (!$vitrineRef) {
+                    $this->Flash->error('Vitrine inválida para cadastro de erratas.');
+                    return $this->redirect(['action' => 'erratasVitrine']);
+                }
+
+                $arquivos = (array)($dados['erratas_arquivos'] ?? []);
+                $arquivosValidos = [];
+                foreach ($arquivos as $arquivo) {
+                    if (is_object($arquivo) && $arquivo->getClientFileName() !== '') {
+                        $arquivosValidos[] = $arquivo;
+                    }
+                }
+                if (empty($arquivosValidos)) {
+                    $this->Flash->error('Selecione ao menos um PDF para cadastrar.');
+                    return $this->redirect(['action' => 'erratasVitrine', '?' => ['vitrine_id' => $vitrineId]]);
+                }
+
+                $salvos = 0;
+                foreach ($arquivosValidos as $arquivo) {
+                    $nomeOriginal = (string)$arquivo->getClientFileName();
+                    $extensao = strtolower((string)pathinfo($nomeOriginal, PATHINFO_EXTENSION));
+                    if ($extensao !== 'pdf') {
+                        $this->Flash->error('Arquivo inválido: ' . $nomeOriginal . '. Envie apenas PDF.');
+                        continue;
+                    }
+                    if ((int)$arquivo->getSize() > 10485760) {
+                        $this->Flash->error('Arquivo acima de 10MB: ' . $nomeOriginal . '.');
+                        continue;
+                    }
+
+                    $nomeArquivo = date('ymdHis') . '_' . uniqid('e', false) . '.pdf';
+                    $caminho = WWW_ROOT . 'uploads' . DS . 'editais' . DS . $nomeArquivo;
+
+                    try {
+                        $arquivo->moveTo($caminho);
+                    } catch (\Throwable $e) {
+                        $this->Flash->error('Falha no upload de: ' . $nomeOriginal . '.');
+                        continue;
+                    }
+
+                    $novaErrata = $tblErratas->newEntity([
+                        'vitrine_id' => $vitrineId,
+                        'editai_id' => null,
+                        'arquivo' => $nomeArquivo,
+                    ]);
+
+                    if ($tblErratas->save($novaErrata)) {
+                        $salvos++;
+                    } else {
+                        $this->Flash->error('Não foi possível gravar a errata: ' . $nomeOriginal . '.');
+                    }
+                }
+
+                if ($salvos > 0) {
+                    $this->Flash->success($salvos . ' errata(s) cadastrada(s) com sucesso.');
+                }
+
+                return $this->redirect(['action' => 'erratasVitrine', '?' => ['vitrine_id' => $vitrineId]]);
+            }
+        }
+
+        $vitrinesAtivas = $tblVitrines->find('list', [
+            'keyField' => 'id',
+            'valueField' => function ($row) {
+                return '#' . $row->id . ' - ' . ($row->nome ?: 'Sem nome');
+            },
+        ])
+            ->where(['Vitrines.deleted IS' => null])
+            ->orderBy(['Vitrines.id' => 'DESC'])
+            ->toArray();
+
+        $erratasRecentes = $tblErratas->find()
+            ->contain(['Vitrines'])
+            ->where(['Erratas.vitrine_id IS NOT' => null])
+            ->orderBy(['Erratas.id' => 'DESC'])
+            ->limit(100)
+            ->all();
+
+        $this->set(compact('vitrinesAtivas', 'erratasRecentes', 'preselectedErrataVitrineId'));
     }
 
     public function replicarAnexos()
@@ -753,9 +891,9 @@ class RestritoController extends AppController
             foreach ($rows as $erro) {
                 $tipo = $erro->ti_tipo;
                 $statusLabel = ($erro->status ?? 'N') === 'R' ? 'Respondido' : 'Nova';
-                $email = !empty($erro->usuario_email) ? $erro->usuario_email : 'Nao informado';
-                $emailAlt = !empty($erro->usuario_email_alternativo) ? $erro->usuario_email_alternativo : 'Nao informado';
-                $emailContato = !empty($erro->usuario_email_contato) ? $erro->usuario_email_contato : 'Nao informado';
+                $email = !empty($erro->usuario_email) ? $erro->usuario_email : 'não informado';
+                $emailAlt = !empty($erro->usuario_email_alternativo) ? $erro->usuario_email_alternativo : 'não informado';
+                $emailContato = !empty($erro->usuario_email_contato) ? $erro->usuario_email_contato : 'não informado';
                 $tipoLabel = '';
                 if (!empty($tipo->tipo)) {
                     $tipoMap = [
@@ -827,7 +965,7 @@ class RestritoController extends AppController
         $erro = $this->TiExceptions->get($id);
 
         if (!empty($erro->repeticao)) {
-            $this->Flash->error('Nao e permitido responder uma repeticao. Responda a ocorrencia principal.');
+            $this->Flash->error('não e permitido responder uma repeticao. Responda a ocorrencia principal.');
             return $this->redirect(['action' => 'erros']);
         }
 
@@ -848,14 +986,14 @@ class RestritoController extends AppController
                 ->where(['id' => $classificacaoId])
                 ->first()
                 ?->nome;
-            $classificacaoNome = $classificacaoNome ?: 'Nao informado';
+            $classificacaoNome = $classificacaoNome ?: 'não informado';
 
             $nomeUsuario = trim((string)($erro->usuario_nome ?? ''));
             if ($nomeUsuario === '') {
                 $nomeUsuario = 'Usuario';
             }
 
-            $dataCriacao = $erro->created ? $erro->created->format('d/m/Y H:i:s') : 'Nao informada';
+            $dataCriacao = $erro->created ? $erro->created->format('d/m/Y H:i:s') : 'não informada';
             $mensagemCompleta = implode("\n", [
                 "Prezado(a) sr(a) {$nomeUsuario}",
                 "Recebemos a notificacao de um erro na acao {$erro->url} em {$dataCriacao}.",
@@ -919,11 +1057,11 @@ class RestritoController extends AppController
                     $mailer->deliver($prefixo . '<p>' . $respostaHtml . '</p>');
                     $emailEnviado = true;
                 } catch (\Throwable $mailError) {
-                    $this->Flash->error('Nao foi possivel enviar o email. A resposta nao foi registrada.');
+                    $this->Flash->error('não foi possivel enviar o email. A resposta não foi registrada.');
                     $emailEnviado = false;
                 }
             } else {
-                $this->Flash->error('Email nao enviado. A resposta nao foi registrada.');
+                $this->Flash->error('Email não enviado. A resposta não foi registrada.');
             }
 
             if ($emailEnviado) {
@@ -950,7 +1088,7 @@ class RestritoController extends AppController
                     return $this->redirect(['action' => 'erros']);
                 }
 
-                $this->Flash->error('Nao foi possivel salvar a resposta.');
+                $this->Flash->error('não foi possivel salvar a resposta.');
             }
 
             return $this->redirect(['action' => 'respondererro', $id]);
@@ -1035,7 +1173,7 @@ class RestritoController extends AppController
                 return $this->redirect(['action' => 'uploadArquivos']);
             }
 
-            $this->Flash->error((string)($upload['mensagem'] ?? 'Nao foi possivel enviar o arquivo.'));
+            $this->Flash->error((string)($upload['mensagem'] ?? 'não foi possivel enviar o arquivo.'));
         }
 
         $this->set(compact('pastasUpload'));

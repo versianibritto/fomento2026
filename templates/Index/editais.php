@@ -20,6 +20,23 @@
         color: #15324f;
     }
 
+    .anexo-chip-errata {
+        border-color: #f1c7c7;
+        background: #fff2f2;
+        color: #a13030;
+    }
+
+    .anexo-chip-errata:hover {
+        background: #ffe6e6;
+        border-color: #e9a8a8;
+        color: #8f1f1f;
+    }
+
+    .anexo-chip-errata .anexo-chip-icon {
+        background: #ffdede;
+        color: #a13030;
+    }
+
     .anexo-chip-icon {
         display: inline-flex;
         align-items: center;
@@ -166,6 +183,15 @@
                                         <button type="button" class="anexo-chip" onclick="window.open('/uploads/editais/<?= h($vitrine->anexo_resultado_recurso) ?>', '_blank', 'noopener,noreferrer');"><span class="anexo-chip-icon" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none"><path d="M8 2v7m0 0 3-3m-3 3-3-3M3 11.5V13h10v-1.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Resultado Recurso</button>
                                     <?php } ?>
                                 </div>
+                                <div class="mt-1">
+                                    <?php if (!empty($vitrine->erratas)): ?>
+                                        <?php foreach ($vitrine->erratas as $errata): ?>
+                                            <?php if (!empty($errata->arquivo)): ?>
+                                                <button type="button" class="anexo-chip anexo-chip-errata me-2 mb-1" onclick="window.open('/uploads/editais/<?= h($errata->arquivo) ?>', '_blank', 'noopener,noreferrer');"><span class="anexo-chip-icon" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none"><path d="M8 2v7m0 0 3-3m-3 3-3-3M3 11.5V13h10v-1.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Errata #<?= (int)$errata->id ?></button>
+                                            <?php endif; ?>
+                                        <?php endforeach; ?>
+                                    <?php endif; ?>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -208,6 +234,15 @@
                                         <?php if (!empty($vitrine->anexo_resultado_recurso)) { ?>
                                             <button type="button" class="anexo-chip" onclick="window.open('/uploads/editais/<?= h($vitrine->anexo_resultado_recurso) ?>', '_blank', 'noopener,noreferrer');"><span class="anexo-chip-icon" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none"><path d="M8 2v7m0 0 3-3m-3 3-3-3M3 11.5V13h10v-1.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Resultado Recurso</button>
                                         <?php } ?>
+                                    </div>
+                                    <div class="mt-1">
+                                        <?php if (!empty($vitrine->erratas)): ?>
+                                            <?php foreach ($vitrine->erratas as $errata): ?>
+                                                <?php if (!empty($errata->arquivo)): ?>
+                                                    <button type="button" class="anexo-chip anexo-chip-errata me-2 mb-1" onclick="window.open('/uploads/editais/<?= h($errata->arquivo) ?>', '_blank', 'noopener,noreferrer');"><span class="anexo-chip-icon" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none"><path d="M8 2v7m0 0 3-3m-3 3-3-3M3 11.5V13h10v-1.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Errata #<?= (int)$errata->id ?></button>
+                                                <?php endif; ?>
+                                            <?php endforeach; ?>
+                                        <?php endif; ?>
                                     </div>
                                 </div>
                             </div>

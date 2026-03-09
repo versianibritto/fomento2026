@@ -35,7 +35,7 @@
 
                 <div class="col-12">
                     <?= $this->Form->control('nao_enviar', [
-                        'label' => 'Nao farei upload do relatorio final neste formulario',
+                        'label' => 'não farei upload do relatorio final neste formulario',
                         'type' => 'checkbox',
                     ]) ?>
                 </div>

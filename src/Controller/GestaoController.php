@@ -1263,7 +1263,7 @@ class GestaoController extends AppController
             ->first();
 
         if (!$bolsista) {
-            $this->Flash->error('Inscricao nao localizada para confirmação.');
+            $this->Flash->error('Inscricao não localizada para confirmação.');
             return $this->redirect(['controller' => 'Index', 'action' => 'index']);
         }
 

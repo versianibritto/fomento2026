@@ -10,6 +10,7 @@ use Cake\ORM\Entity;
  *
  * @property int $id
  * @property int|null $editai_id
+ * @property int|null $vitrine_id
  * @property string|null $introducao
  * @property string|null $onde_le
  * @property string|null $leia_se
@@ -31,6 +32,7 @@ class Errata extends Entity
      */
     protected array $_accessible = [
         'editai_id' => true,
+        'vitrine_id' => true,
         'introducao' => true,
         'onde_le' => true,
         'leia_se' => true,

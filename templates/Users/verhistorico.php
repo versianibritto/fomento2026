@@ -78,14 +78,14 @@ $programaMap = $programa ?? [];
 
 $formatValue = function (string $field, mixed $value) use ($valueMaps, $unidadesMap, $programaMap): string {
     if ($value === null || $value === '') {
-        return '<i class="badge bg-danger me-2">Nao Informado</i>';
+        return '<i class="badge bg-danger me-2">não Informado</i>';
     }
 
     if (is_string($value)) {
         if (in_array($field, ['jedi', 'padauan'], true)) {
             $items = array_filter(array_map('trim', explode(',', $value)));
             if (empty($items)) {
-                return '<i class="badge bg-danger me-2">Nao Informado</i>';
+                return '<i class="badge bg-danger me-2">não Informado</i>';
             }
 
             $map = $field === 'jedi' ? $unidadesMap : $programaMap;
@@ -347,7 +347,7 @@ body.sidebar-collapse .user-id-bar {
     <div class="col-md-12">
             <div class="card">
                 <div class="bg-warning p-3">
-                Nao ha registro de historico para este usuario com os filtros selecionados. Refaça os filtros e tente novamente
+                não ha registro de historico para este usuario com os filtros selecionados. Refaça os filtros e tente novamente
                 </div>
             </div>
         </div>

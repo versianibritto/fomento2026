@@ -54,7 +54,7 @@ class PadraoController extends AppController
             ->first();
 
         if (!$inscricao) {
-            $this->Flash->error('Inscricao nao localizada para visualizacao.');
+            $this->Flash->error('Inscricao não localizada para visualizacao.');
             return $this->redirect(['controller' => 'Index', 'action' => 'dashdetalhes', 'T']);
         }
 
@@ -69,7 +69,7 @@ class PadraoController extends AppController
                 ->first();
         }
         if (!$edital) {
-            $this->Flash->error('Edital nao localizado para visualizacao.');
+            $this->Flash->error('Edital não localizado para visualizacao.');
             return $this->redirect(['controller' => 'Index', 'action' => 'index']);
         }
 
@@ -362,12 +362,12 @@ class PadraoController extends AppController
             ->where($conditions)
             ->first();
         if (!$inscricao) {
-            $this->Flash->error('Inscricao nao localizada ou não possui acesso para cancelamento.');
+            $this->Flash->error('Inscricao não localizada ou não possui acesso para cancelamento.');
             return $this->redirect(['controller' => 'Index', 'action' => 'dashdetalhes', 'V']);
         }
 
         if ($inscricao->deleted !== null) {
-            $this->Flash->error('Registro inativado. Nao e possivel cancelar.');
+            $this->Flash->error('Registro inativado. não e possivel cancelar.');
             return $this->redirect(['action' => 'visualizar', (int)$inscricao->id]);
         }
         $faseAtual = (int)$inscricao->fase_id;
@@ -406,7 +406,7 @@ class PadraoController extends AppController
             $arquivoRelatorio = $dados['anexos'][14] ?? null;
             $enviouRelatorio = is_object($arquivoRelatorio) && $arquivoRelatorio->getClientFilename() !== '';
             if (!$naoEnviar && !$enviouRelatorio) {
-                $erros[] = 'Anexe o relatorio final ou marque que nao enviara neste momento.';
+                $erros[] = 'Anexe o relatorio final ou marque que não enviara neste momento.';
             }
 
             if (!empty($erros)) {
@@ -469,7 +469,7 @@ class PadraoController extends AppController
                 $this->flashFriendlyException(
                     $e,
                     'Erro no Sistema - solicitar cancelamento da inscricao',
-                    'Nao foi possivel solicitar o cancelamento.'
+                    'não foi possivel solicitar o cancelamento.'
                 );
                 return $this->redirect(['action' => 'cancelar', (int)$inscricao->id]);
             }
@@ -492,7 +492,7 @@ class PadraoController extends AppController
     {
         $identity = $this->identityLogado;
         if (empty($inscricaoId)) {
-            $this->Flash->error('Inscricao nao informada para substituicao.');
+            $this->Flash->error('Inscricao não informada para substituicao.');
             return $this->redirect(['controller' => 'Index', 'action' => 'dashdetalhes', 'V']);
         }
 
@@ -509,7 +509,7 @@ class PadraoController extends AppController
             ->where($conditions)
             ->first();
         if (!$inscricao) {
-            $this->Flash->error('Inscricao nao localizada oi deletada para substituicao.');
+            $this->Flash->error('Inscricao não localizada oi deletada para substituicao.');
             return $this->redirect(['controller' => 'Index', 'action' => 'dashdetalhes', 'V']);
         }
 
@@ -519,7 +519,7 @@ class PadraoController extends AppController
                 ->where(['Editais.id' => (int)$inscricao->editai_id])
                 ->first();
             if (!$edital) {
-                $this->Flash->error('Edital nao localizado para substituicao.');
+                $this->Flash->error('Edital não localizado para substituicao.');
                 return $this->redirect(['action' => 'visualizar', (int)$inscricao->id]);
             }
             $wkSubstituicaoId = 4;
@@ -537,7 +537,7 @@ class PadraoController extends AppController
             }
         }
 
-        $this->Flash->info('Fluxo de substituicao ainda nao foi disponibilizado.');
+        $this->Flash->info('Fluxo de substituicao ainda não foi disponibilizado.');
         return $this->redirect(['action' => 'visualizar', (int)$inscricao->id]);
     }
 
@@ -550,7 +550,7 @@ class PadraoController extends AppController
         }
 
         if (empty($inscricaoId)) {
-            $this->Flash->error('Inscricao nao informada para exclusao.');
+            $this->Flash->error('Inscricao não informada para exclusao.');
             return $this->redirect(['controller' => 'Index', 'action' => 'index']);
         }
 
@@ -561,7 +561,7 @@ class PadraoController extends AppController
             ->first();
 
         if (!$inscricao) {
-            $this->Flash->error('Inscricao nao localizada para exclusao.');
+            $this->Flash->error('Inscricao não localizada para exclusao.');
             return $this->redirect(['controller' => 'Index', 'action' => 'index']);
         }
 
@@ -669,7 +669,7 @@ class PadraoController extends AppController
                 $this->flashFriendlyException(
                     $e,
                     'Erro no Sistema - exclusao de inscricao no PadraoController',
-                    'Nao foi possivel concluir a exclusao.'
+                    'não foi possivel concluir a exclusao.'
                 );
                 return $this->redirect(['action' => 'deletar', (int)$inscricao->id]);
             }
@@ -694,7 +694,7 @@ class PadraoController extends AppController
         }
 
         if (empty($inscricaoId)) {
-            $this->Flash->error('Inscricao nao informada.');
+            $this->Flash->error('Inscricao não informada.');
             return $this->redirect(['controller' => 'Index', 'action' => 'index']);
         }
 
@@ -703,14 +703,14 @@ class PadraoController extends AppController
             ->where(['ProjetoBolsistas.id' => (int)$inscricaoId])
             ->first();
         if (!$inscricao) {
-            $this->Flash->error('Inscricao nao localizada.');
+            $this->Flash->error('Inscricao não localizada.');
             return $this->redirect(['controller' => 'Index', 'action' => 'index']);
         }
 
         $faseOriginal = (int)$inscricao->fase_id;
         $erros = [];
         if ($inscricao->deleted !== null) {
-            $erros[] = 'O registro esta inativado. Nao pode ser alterado.';
+            $erros[] = 'O registro esta inativado. não pode ser alterado.';
         }
         if ($faseOriginal === 14) {
             $contaSubstituto = $tblProjetoBolsistas->find()
@@ -726,7 +726,7 @@ class PadraoController extends AppController
 
         $textoDataFim = !empty($inscricao->data_fim)
             ? 'A data de finalizacao da bolsa cadastrada (' . $inscricao->data_fim->i18nFormat('yyyy-MM-dd') . ') foi removida. O bolsista esta vigente novamente.'
-            : 'Nao havia data de finalizacao registrada. O bolsista esta vigente novamente.';
+            : 'não havia data de finalizacao registrada. O bolsista esta vigente novamente.';
 
         if ($this->request->is(['post', 'put', 'patch'])) {
             if (!empty($erros)) {
@@ -764,7 +764,7 @@ class PadraoController extends AppController
                 $this->flashFriendlyException(
                     $e,
                     'Erro no Sistema - reativar inscricao no PadraoController',
-                    'Nao foi possivel gravar a reativacao.'
+                    'não foi possivel gravar a reativacao.'
                 );
                 return $this->redirect(['action' => 'reativar', (int)$inscricao->id]);
             }
@@ -789,7 +789,7 @@ class PadraoController extends AppController
         }
 
         if (empty($inscricaoId)) {
-            $this->Flash->error('Inscricao nao informada.');
+            $this->Flash->error('Inscricao não informada.');
             return $this->redirect(['controller' => 'Index', 'action' => 'index']);
         }
 
@@ -799,7 +799,7 @@ class PadraoController extends AppController
             ->where(['ProjetoBolsistas.id' => (int)$inscricaoId])
             ->first();
         if (!$inscricao) {
-            $this->Flash->error('Inscricao nao localizada.');
+            $this->Flash->error('Inscricao não localizada.');
             return $this->redirect(['controller' => 'Index', 'action' => 'index']);
         }
 

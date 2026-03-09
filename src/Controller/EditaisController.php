@@ -199,7 +199,7 @@ class EditaisController extends AppController
             $edital = $this->prepareEdital($edital, $dados);
 
             if (empty($edital->arquivo)) {
-                $this->Flash->error('O arquivo do edital nao pode ficar vazio.');
+                $this->Flash->error('O arquivo do edital não pode ficar vazio.');
                 return $this->redirect($this->request->getRequestTarget());
             }
 

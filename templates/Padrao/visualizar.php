@@ -1,7 +1,7 @@
 <?php
 $naoInformado = '<span class="badge border border-danger text-danger bg-transparent fw-normal">Não informado</span>';
 $filhosMap = [
-    '0' => 'Nao possui filhos, ou sao maiores de 5 anos',
+    '0' => 'não possui filhos, ou sao maiores de 5 anos',
     '1' => 'Possui um filho menor de 5 anos',
     '2' => 'Possui mais de um filho menor de 5 anos',
 ];

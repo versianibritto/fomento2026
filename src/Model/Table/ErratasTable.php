@@ -12,6 +12,7 @@ use Cake\Validation\Validator;
  * Erratas Model
  *
  * @property \App\Model\Table\EditaisTable&\Cake\ORM\Association\BelongsTo $Editais
+ * @property \App\Model\Table\VitrinesTable&\Cake\ORM\Association\BelongsTo $Vitrines
  *
  * @method \App\Model\Entity\Errata newEmptyEntity()
  * @method \App\Model\Entity\Errata newEntity(array $data, array $options = [])
@@ -50,6 +51,10 @@ class ErratasTable extends Table
         $this->belongsTo('Editais', [
             'foreignKey' => 'editai_id',
         ]);
+
+        $this->belongsTo('Vitrines', [
+            'foreignKey' => 'vitrine_id',
+        ]);
     }
 
     /**
@@ -63,6 +68,10 @@ class ErratasTable extends Table
         $validator
             ->nonNegativeInteger('editai_id')
             ->allowEmptyString('editai_id');
+
+        $validator
+            ->nonNegativeInteger('vitrine_id')
+            ->allowEmptyString('vitrine_id');
 
         $validator
             ->scalar('introducao')
@@ -97,6 +106,7 @@ class ErratasTable extends Table
     public function buildRules(RulesChecker $rules): RulesChecker
     {
         $rules->add($rules->existsIn(['editai_id'], 'Editais'), ['errorField' => 'editai_id']);
+        $rules->add($rules->existsIn(['vitrine_id'], 'Vitrines'), ['errorField' => 'vitrine_id']);
 
         return $rules;
     }

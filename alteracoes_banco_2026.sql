@@ -1277,7 +1277,7 @@ CREATE TABLE `vitrines` (
   `obs` TEXT NULL,
   PRIMARY KEY (`id`));
 
-  ALTER TABLE `vitrines` 
+ALTER TABLE `vitrines` 
 ADD COLUMN `inicio` TIMESTAMP NULL AFTER `obs`,
 ADD COLUMN `fim` TIMESTAMP NULL AFTER `inicio`;
 
@@ -1322,4 +1322,7 @@ WHERE e.visualizar = 'E'
         AND v.fim <=> e.fim_inscricao
   );
 
+ALTER TABLE `erratas` 
+ADD COLUMN `vitrine_id` INT NULL AFTER `arquivo`,
+CHANGE COLUMN `arquivo` `arquivo` VARCHAR(45) CHARACTER SET 'latin1' NULL DEFAULT NULL ;
 

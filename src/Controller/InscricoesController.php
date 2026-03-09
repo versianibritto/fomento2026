@@ -500,7 +500,7 @@ class InscricoesController extends AppController
             return $this->redirect(['action' => 'dadosBolsista', $edital->id, $inscricao->id]);
         }
 
-        // aqui eu preciso verificar se o cpf vincular existe na base: se sim chamo check bolsista.... se nao chamo cadastro usuario
+        // aqui eu preciso verificar se o cpf vincular existe na base: se sim chamo check bolsista.... se não chamo cadastro usuario
         if ($cpfVincular !== '') {
             $cpfVincularNumerico = preg_replace('/\D/', '', $cpfVincular);
             $bolsistaVincular = $this->fetchTable('Usuarios')->find()

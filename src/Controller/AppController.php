@@ -649,7 +649,7 @@ class AppController extends Controller
         }
 
         if (empty($inscricaoId)) {
-            $this->Flash->error('Inscricao nao informada.');
+            $this->Flash->error('Inscricao não informada.');
             return ['redirect' => $this->redirect(['controller' => 'Index', 'action' => 'index'])];
         }
 
@@ -662,7 +662,7 @@ class AppController extends Controller
             ->first();
 
         if (!$inscricao) {
-            $this->Flash->error('Inscricao nao localizada iu deletada. Reinicie o processo.');
+            $this->Flash->error('Inscricao não localizada iu deletada. Reinicie o processo.');
             return ['redirect' => $this->redirect(['controller' => 'Index', 'action' => 'index'])];
         }
 
@@ -920,7 +920,7 @@ class AppController extends Controller
             ->where(['Usuarios.id' => $coorientadorId])
             ->first();
         if (!$coorientador) {
-            return 'Coorientador nao localizado na base.';
+            return 'Coorientador não localizado na base.';
         }
 
         if ($coorientadorId === $orientadorId) {
@@ -959,7 +959,7 @@ class AppController extends Controller
                 $orientadorServidor = $porId[(int)$orientador->vinculo_id] ?? 0;
                 $coorientadorServidor = $porId[(int)($coorientador->vinculo_id ?? 0)] ?? 0;
                 if ($orientadorServidor === 0 && $coorientadorServidor !== 1) {
-                    return 'Coorientador inelegível: para orientador com vinculo nao servidor, o coorientador precisa ter vinculo de servidor.';
+                    return 'Coorientador inelegível: para orientador com vinculo não servidor, o coorientador precisa ter vinculo de servidor.';
                 }
             }
         }
