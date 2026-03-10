@@ -252,6 +252,23 @@ class PadraoController extends AppController
             $anexosSubprojetoTela[] = $anexoP;
             $chavesSubprojeto[$chave] = true;
         }
+
+        // O tipo 14 (relatório final do cancelamento) deve aparecer na aba Subprojeto/Relatório
+        // independentemente do bloco de origem no cadastro de tipos de anexo.
+        foreach ($anexosPorBloco as $blocoAnexo) {
+            foreach ((array)$blocoAnexo as $anexoItem) {
+                $tipoId = (int)($anexoItem['tipo_id'] ?? 0);
+                if ($tipoId !== 14) {
+                    continue;
+                }
+                $chave = $tipoId . '|' . (string)($anexoItem['arquivo'] ?? '');
+                if (isset($chavesSubprojeto[$chave])) {
+                    continue;
+                }
+                $anexosSubprojetoTela[] = $anexoItem;
+                $chavesSubprojeto[$chave] = true;
+            }
+        }
         usort($anexosSubprojetoTela, static function (array $a, array $b): int {
             return ((int)($a['tipo_id'] ?? 0)) <=> ((int)($b['tipo_id'] ?? 0));
         });

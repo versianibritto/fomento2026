@@ -2,14 +2,11 @@
     <div class="card">
         <div class="card-body">
             <div class="p-3 mb-4 bg-light border rounded">
-                <h4 class="mb-2">Solicitar cancelamento da <?= strtoupper((string)($origemAtual ?? '')) === 'R' ? 'renovacao' : 'inscricao' ?> #<?= (int)$inscricao->id ?></h4>
-                <div class="text-muted">Regra desta versao: cancelamento sem prazo, permitido somente para inscrições na fase 11.</div>
+                <h4 class="mb-2">Solicitar cancelamento da <?= strtoupper((string)($origemAtual ?? '')) === 'R' ? 'renoovação' : 'inscrição' ?> #<?= (int)$inscricao->id ?></h4>
+                <div class="text-muted">O cancelamento incide em perda da bolsa. Para alterar o bolsista, use a função substituir.</div>
             </div>
 
-            <div class="alert alert-warning">
-                <strong>Atenção:</strong> use a justificativa para fundamentar o cancelamento.
-                Se não anexar o relatório final neste momento, marque a opção correspondente.
-            </div>
+          
 
             <?= $this->Form->create($inscricao, ['type' => 'file', 'class' => 'row g-3']) ?>
                 <div class="col-md-6">
@@ -35,14 +32,14 @@
 
                 <div class="col-12">
                     <?= $this->Form->control('nao_enviar', [
-                        'label' => 'não farei upload do relatorio final neste formulario',
+                        'label' => 'não farei upload do relatório final neste formulário',
                         'type' => 'checkbox',
                     ]) ?>
                 </div>
 
                 <div class="col-md-6">
                     <?= $this->Form->control('anexos[14]', [
-                        'label' => 'Relatorio final (PDF)',
+                        'label' => 'Relatório final (PDF)',
                         'type' => 'file',
                         'class' => 'form-control',
                     ]) ?>
