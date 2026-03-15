@@ -1366,7 +1366,7 @@ class UsersController extends AppController
                         throw new \RuntimeException('Falha ao salvar usuário.');
                     }
 
-                    if (!$this->saveUserHistory((int)$user->id, $diff, 'W')) {
+                    if (!$this->saveUserHistory((int)$user->id, $diff, 'P')) {
                         throw new \RuntimeException('Falha ao salvar histórico.');
                     }
                 });
@@ -1482,19 +1482,19 @@ class UsersController extends AppController
         {
             $diff = [];
 
-                foreach ($fields as $field) {
-                    $old = $original[$field] ?? null;
-                    $new = $user->get($field);
+            foreach ($fields as $field) {
+                $oldNorm = $this->normalizeHistoryValue($original[$field] ?? null);
+                $newNorm = $this->normalizeHistoryValue($user->get($field));
 
-                    if ($this->historyValuesEqual($old, $new)) {
-                        continue;
-                    }
-
-                    $diff[$field] = [
-                        'de' => $this->normalizeHistoryValue($old),
-                        'para' => $this->normalizeHistoryValue($new),
-                    ];
+                if ($this->historyValuesEqual($oldNorm, $newNorm)) {
+                    continue;
                 }
+
+                $diff[$field] = [
+                    'de' => $oldNorm,
+                    'para' => $newNorm,
+                ];
+            }
 
             return $diff;
         }
@@ -1616,6 +1616,42 @@ class UsersController extends AppController
             return (bool)$this->UsuarioHistoricos->save($novo);
         }
 
+        protected function getHistoryFixedMaps(): array
+        {
+            return [
+                'sexo' => $this->sexo,
+                'raca' => $this->racas,
+                'deficiencia' => $this->deficiencia,
+                'documento' => $this->documentos,
+                'ic' => [
+                    'I' => 'IC Manguinhos/Ensp',
+                    'A' => 'IC Mata atlantica',
+                    'M' => 'IC Maré',
+                    'G' => 'IC Indígena',
+                    'C' => 'IC Coleções Biológicas',
+                    'N' => 'Não me enquadro nestes editais',
+                ],
+                'yoda' => [
+                    '0' => 'Não',
+                    '1' => 'Sim',
+                ],
+                'em_curso' => [
+                    '0' => 'Não',
+                    '1' => 'Sim',
+                ],
+            ];
+        }
+
+        protected function getHistoryTableFieldMap(): array
+        {
+            return [
+                'documento_uf_emissor' => ['States', 'sigla'],
+                'escolaridade_id' => ['Escolaridades', 'nome'],
+                'vinculo_id' => ['Vinculos', 'nome'],
+                'unidade_id' => ['Unidades', 'nome'],
+            ];
+        }
+
         protected function mapHistoryDiffToLabels(array $diff): array
         {
             foreach ($diff as $field => $valores) {
@@ -1635,62 +1671,17 @@ class UsersController extends AppController
                 return null;
             }
 
-            $mapsFixos = [
-                'sexo' => $this->sexo,
-                'raca' => $this->racas,
-                'deficiencia' => $this->deficiencia,
-                'documento' => $this->documentos,
-                'ic' => [
-                    'I' => 'IC Manguinhos/Ensp',
-                    'A' => 'IC Mata atlantica',
-                    'M' => 'IC Maré',
-                    'N' => 'Não me enquadro nestes editais',
-                ],
-                'yoda' => [
-                    '0' => 'Não',
-                    '1' => 'Sim',
-                ],
-                'em_curso' => [
-                    '0' => 'Não',
-                    '1' => 'Sim',
-                ],
-            ];
-
-            if (isset($mapsFixos[$field])) {
-                $key = is_scalar($value) ? (string)$value : null;
-                if ($key !== null && array_key_exists($key, $mapsFixos[$field])) {
-                    return $mapsFixos[$field][$key];
-                }
+            $key = is_scalar($value) ? (string)$value : null;
+            $fixedMaps = $this->getHistoryFixedMaps();
+            if ($key !== null && isset($fixedMaps[$field]) && array_key_exists($key, $fixedMaps[$field])) {
+                return $fixedMaps[$field][$key];
             }
 
-            if ($field === 'documento_uf_emissor') {
-                $map = $this->getHistoryListMap('States', 'sigla');
-                $key = is_scalar($value) ? (string)$value : null;
-                if ($key !== null && array_key_exists($key, $map)) {
-                    return $map[$key];
-                }
-            }
-
-            if ($field === 'escolaridade_id') {
-                $map = $this->getHistoryListMap('Escolaridades', 'nome');
-                $key = is_scalar($value) ? (string)$value : null;
-                if ($key !== null && array_key_exists($key, $map)) {
-                    return $map[$key];
-                }
-            }
-
-            if ($field === 'vinculo_id') {
-                $map = $this->getHistoryListMap('Vinculos', 'nome');
-                $key = is_scalar($value) ? (string)$value : null;
-                if ($key !== null && array_key_exists($key, $map)) {
-                    return $map[$key];
-                }
-            }
-
-            if ($field === 'unidade_id') {
-                $map = $this->getHistoryListMap('Unidades', 'nome');
-                $key = is_scalar($value) ? (string)$value : null;
-                if ($key !== null && array_key_exists($key, $map)) {
+            $tableFieldMap = $this->getHistoryTableFieldMap();
+            if ($key !== null && isset($tableFieldMap[$field])) {
+                [$tableName, $valueField] = $tableFieldMap[$field];
+                $map = $this->getHistoryListMap($tableName, $valueField);
+                if (array_key_exists($key, $map)) {
                     return $map[$key];
                 }
             }
