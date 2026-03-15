@@ -1337,3 +1337,19 @@ CHANGE COLUMN `nome` `nome` TEXT NULL DEFAULT NULL ;
 ALTER TABLE `usuarios` 
 CHANGE COLUMN `ic` `ic` ENUM('I', 'A', 'M', 'N', 'G', 'C') NULL DEFAULT NULL COMMENT '\'I\'=>\'IC Manguinhos/Ensp\', \'A\'=>\'IC Mata atlantica\', \'M\'=>\'IC Maré\', \'N\'=>\'Não me enquadro nestes editais\' g=indigena C oleções' ;
 
+-- limpeza de instituições
+SELECT * FROM fomento2026.instituicaos;
+SELECT id, nome, sigla
+FROM instituicaos
+WHERE sigla REGEXP '^[0-9]+$';
+
+SELECT i1.id, i1.nome, i1.sigla AS sigla_atual, i2.id AS id_referencia, i2.sigla AS sigla_correta
+FROM instituicaos i1
+JOIN instituicaos i2 ON i2.id = CAST(i1.sigla AS UNSIGNED)
+WHERE i1.sigla REGEXP '^[0-9]+$';
+
+-- precisa fazer varias vezes
+UPDATE instituicaos i1
+JOIN instituicaos i2 ON i2.id = CAST(i1.sigla AS UNSIGNED)
+SET i1.sigla = i2.sigla
+WHERE i1.sigla REGEXP '^[0-9]+$' and i1.id>0;

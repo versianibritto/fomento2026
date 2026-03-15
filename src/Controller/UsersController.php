@@ -18,6 +18,38 @@ class UsersController extends AppController
     protected $UsuarioHistoricos;
     protected $UsuariosAcessos;
 
+    protected function resolverInstituicaoCurso(mixed $valor): ?int
+    {
+        $valor = trim((string)$valor);
+        if ($valor === '') {
+            return null;
+        }
+
+        $instituicoesTable = TableRegistry::getTableLocator()->get('Instituicaos');
+
+        if (ctype_digit($valor)) {
+            $instituicaoPorId = $instituicoesTable->find()
+                ->where(['Instituicaos.id' => (int)$valor])
+                ->first();
+            if ($instituicaoPorId) {
+                return (int)$instituicaoPorId->id;
+            }
+        }
+
+        $instituicao = $instituicoesTable->find()
+            ->where(['Instituicaos.sigla' => $valor])
+            ->first();
+
+        if (!$instituicao) {
+            $novaInstituicao = $instituicoesTable->newEmptyEntity();
+            $novaInstituicao->nome = 'ALTERAR NOME';
+            $novaInstituicao->sigla = $valor;
+            $instituicao = $instituicoesTable->save($novaInstituicao);
+        }
+
+        return $instituicao ? (int)$instituicao->id : null;
+    }
+
     
     public function initialize(): void
     {
@@ -670,19 +702,7 @@ class UsersController extends AppController
                 return $this->redirect(['action' => 'editar', $id]);
             }
 
-            if($dados['instituicao_curso']!='')
-            {
-                $this->Instituicao = TableRegistry::getTableLocator()->get('Instituicaos');
-                $instituicao = $this->Instituicao->find('all')->where(['sigla'=>$dados['instituicao_curso']])->first();
-                if(!$instituicao)
-                {
-                    $novaInstituicao = $this->Instituicao->newEmptyEntity();
-                    $novaInstituicao->nome = 'ALTERAR NOME';
-                    $novaInstituicao->sigla = $dados['instituicao_curso'];
-                    $instituicao = $this->Instituicao->save($novaInstituicao);
-                }
-                $dados['instituicao_curso'] = $instituicao->id;
-            }
+            $dados['instituicao_curso'] = $this->resolverInstituicaoCurso($dados['instituicao_curso'] ?? null);
             $user->email = trim($user->email);
             $user->email_alternativo = trim($dados['email_alternativo']);
 
@@ -933,6 +953,8 @@ class UsersController extends AppController
                 $this->Flash->error(implode('<br>', $errosObrigatorios), ['escape' => false]);
                 return $this->redirect($this->request->getRequestTarget());
             }
+
+            $dados['instituicao_curso'] = $this->resolverInstituicaoCurso($dados['instituicao_curso'] ?? null);
 
             $user = $this->Usuarios->patchEntity($user, $dados);
 
