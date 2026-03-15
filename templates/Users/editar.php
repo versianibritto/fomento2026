@@ -178,7 +178,7 @@ if (!empty($user->street)) {
                     </div>
                     <div class="row g-3 mt-1">
                         <div class="col-12 col-md-6" id='divIc' <?=(($user->ic==null)) ? "style='display:none'" : ""?>> 
-                                <?=$this->Form->control('ic', ['label'=>'Programa/Edital Social de interesse', 'class' => 'form-control', 'empty'=>'Selecione', 'options'=>['I'=>'IC Manguinhos/Ensp', 'A'=>'IC Mata atlantica', 'M'=>'IC Maré', 'N'=>'Não me enquadro nestes editais']]) ?>
+                                <?=$this->Form->control('ic', ['label'=>'Programa/Edital Social de interesse', 'class' => 'form-control', 'empty'=>'Selecione', 'options'=>['I'=>'IC Manguinhos/Ensp', 'A'=>'IC Mata atlantica', 'M'=>'IC Maré', 'G'=>'IC Indígena', 'C'=>'IC Coleções Biológicas', 'N'=>'Não me enquadro nestes editais']]) ?>
                         </div>
                     </div>
                     <div class="row g-3 mt-1" id='divMang' style='display:none'>              

@@ -157,15 +157,16 @@
                             </a>
                         </li>-->
                     
-                        
-                        <li class="sidebar-header">
-                            Banco de talentos
-                        </li>
-                        <li class="sidebar-item">
-                            <a href="/users/talentos/1" class="sidebar-link">
-                                * Busca de Talentos
-                            </a>
-                        </li>
+                        <?php if ((int)($usuario_logado['yoda'] ?? 0) === 1 || (int)($usuario_logado['escolaridade_id'] ?? 0) === 10) { ?>
+                            <li class="sidebar-header">
+                                Banco de talentos
+                            </li>
+                            <li class="sidebar-item">
+                                <a href="/users/talentos/1" class="sidebar-link">
+                                    * Busca de Talentos
+                                </a>
+                            </li>
+                        <?php } ?>
                     <?php } ?>
                     <!--
                     <li class="sidebar-item">

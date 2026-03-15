@@ -1229,6 +1229,15 @@ class UsersController extends AppController
 
     public function talentos($limpar=false)
     {
+        $identity = $this->request->getAttribute('identity');
+        $escolaridadeId = (int)($identity['escolaridade_id'] ?? 0);
+        $isYoda = (int)($identity['yoda'] ?? 0) === 1;
+        $ehTi = $this->ehTi();
+        if (!$isYoda && $escolaridadeId !== 10) {
+            $this->Flash->error("Acesso negado.");
+            return $this->redirect(['controller' => 'Index', 'action' => 'index']);
+        }
+
         //$this->loadComponent('Paginator');
         $w = [];
         $busca = $this->request->getSession()->read('buscaUsuarios');
@@ -1236,11 +1245,11 @@ class UsersController extends AppController
 
         if ($this->request->is(['post', 'put', 'patch'])) {
             $dados = $this->request->getData();
-            if($dados['nome']!=''){
-                array_push($w, ['Usuarios.nome'.' LIKE "%'.preg_replace('[ ]','%',($dados['nome'])).'%"']);
+            if (!empty($dados['nome'])) {
+                $w['Usuarios.nome LIKE'] = '%' . str_replace(' ', '%', trim((string)$dados['nome'])) . '%';
             }
-            if($dados['curso']!=''){
-                array_push($w, ['Usuarios.curso'.' LIKE "%'.preg_replace('[ ]','%',($dados['curso'])).'%"']);
+            if (!empty($dados['curso'])) {
+                $w['Usuarios.curso LIKE'] = '%' . str_replace(' ', '%', trim((string)$dados['curso'])) . '%';
             }
             
             /*
@@ -1255,15 +1264,15 @@ class UsersController extends AppController
             }
                 */
             
-            if($dados['programa']!=''){
-                array_push($w , ['Usuarios.ic' => ($dados['programa'])]);
+            if (!empty($dados['programa'])) {
+                $w['Usuarios.ic'] = (string)$dados['programa'];
             }
 
             $this->request->getSession()->write('buscaUsuarios',$w);
-            $this->redirect(['action'=>'talentos']);
+            return $this->redirect(['action'=>'talentos']);
     
         }else{
-            $w = $busca;
+            $w = is_array($busca) ? $busca : [];
 
         }
 
@@ -1271,11 +1280,124 @@ class UsersController extends AppController
             $this->request->getSession()->delete('buscaUsuarios');
             $busca = null;
             $w = [];
-            $this->redirect(['action'=>'talentos']);
+            return $this->redirect(['action'=>'talentos']);
         }
 
-        $usuario = $this->Usuarios->find('all')->contain(['Unidades', 'Escolaridades', 'Vinculos'])->where([$w])->where(['escolaridade_id in (6,7)'])
-        ->orderBy(['Usuarios.nome' => 'ASC']);
+        $baseQuery = $this->Usuarios->find()
+            ->where($w)
+            ->where(['Usuarios.escolaridade_id IN' => [6, 7]])
+            ->orderBy(['Usuarios.nome' => 'ASC']);
+
+        $usuario = (clone $baseQuery)
+            ->contain(['Unidades', 'Escolaridades', 'Vinculos']);
+
+        if ((string)$this->request->getQuery('export') === 'csv') {
+            if (!$ehTi) {
+                $this->Flash->error('Acesso restrito à TI.');
+                return $this->redirect(['action' => 'talentos']);
+            }
+
+            $programaMap = [
+                'I' => 'IC Manguinhos/ENSP',
+                'A' => 'IC Mata Atlântica',
+                'M' => 'IC Maré',
+                'G' => 'IC Indígena',
+                'C' => 'IC Coleções Biológicas',
+                'N' => 'Não me enquadro nestes editais',
+            ];
+            $instituicoesMap = $this->fetchTable('Instituicaos')->find('list', [
+                'keyField' => 'id',
+                'valueField' => 'sigla',
+            ])->toArray();
+
+            $usuariosExportacao = (clone $baseQuery)
+                ->contain([
+                    'Streets' => [
+                        'strategy' => 'select',
+                        'Districts' => [
+                            'strategy' => 'select',
+                            'Cities' => [
+                                'strategy' => 'select',
+                                'States' => ['strategy' => 'select'],
+                            ],
+                        ],
+                    ],
+                ])
+                ->all();
+
+            $tmp = fopen('php://temp', 'w+');
+            fwrite($tmp, "\xEF\xBB\xBF");
+            fputcsv($tmp, [
+                'Nome',
+                'Curso',
+                'Instituição de Ensino',
+                'Ano Conclusão',
+                'Gênero',
+                'Raça',
+                'Deficiência',
+                'Edital de Interesse',
+                'Lattes',
+                'Email',
+                'Email Alternativo',
+                'Email Contato',
+                'Data de Criação',
+                'Última Atualização',
+                'Cidade',
+                'Estado',
+                'Data Nascimento',
+            ], ';');
+
+            foreach ($usuariosExportacao as $item) {
+                $cidade = $item->street->district->city->nome ?? '';
+                $estado = $item->street->district->city->state->sigla ?? '';
+                $instituicaoCurso = $item->instituicao_curso;
+                if ($instituicaoCurso !== null && $instituicaoCurso !== '') {
+                    $instituicaoCursoKey = (string)$instituicaoCurso;
+                    if (array_key_exists($instituicaoCursoKey, $instituicoesMap)) {
+                        $instituicaoCurso = $instituicoesMap[$instituicaoCursoKey];
+                    }
+                }
+                $csvOuNaoInformado = function ($value): string {
+                    if ($value === null || $value === '') {
+                        return 'Não Informado';
+                    }
+
+                    return $this->normalizeCsvValue($value);
+                };
+                fputcsv($tmp, [
+                    $csvOuNaoInformado($item->nome),
+                    $csvOuNaoInformado($item->curso),
+                    $csvOuNaoInformado($instituicaoCurso),
+                    $csvOuNaoInformado($item->ano_conclusao),
+                    $csvOuNaoInformado($this->sexo[$item->sexo] ?? null),
+                    $csvOuNaoInformado($this->racas[$item->raca] ?? null),
+                    $csvOuNaoInformado($this->deficiencia[$item->deficiencia] ?? null),
+                    $csvOuNaoInformado($programaMap[$item->ic] ?? null),
+                    $csvOuNaoInformado($item->lattes),
+                    $csvOuNaoInformado($item->email),
+                    $csvOuNaoInformado($item->email_alternativo),
+                    $csvOuNaoInformado($item->email_contato),
+                    $csvOuNaoInformado($item->created ? $item->created->format('d/m/Y') : null),
+                    $item->last_data_update_date
+                        ? $this->normalizeCsvValue($item->last_data_update_date->format('d/m/Y'))
+                        : 'Não foi atualizado ou completado o cadastro',
+                    $csvOuNaoInformado($cidade),
+                    $csvOuNaoInformado($estado),
+                    $csvOuNaoInformado($item->data_nascimento ? $item->data_nascimento->format('d/m/Y') : null),
+                ], ';');
+            }
+
+            rewind($tmp);
+            $csv = stream_get_contents($tmp);
+            fclose($tmp);
+
+            return $this->response
+                ->withType('csv')
+                ->withCharset('UTF-8')
+                ->withStringBody((string)$csv)
+                ->withDownload('banco_talentos_' . date('Ymd_His') . '.csv');
+        }
+
         $this->paginate = ['limit'=>10];
         $usuarios = $this->paginate($usuario);
         
@@ -1290,11 +1412,19 @@ class UsersController extends AppController
         $unidades = $this->Usuarios->Unidades->find('list', ['limit' => 220])->orderBy(['Unidades.nome'=>'ASC']);
         $vinculos = $this->Usuarios->Vinculos->find('list', ['limit' => 30])->orderBy(['Vinculos.nome'=>'ASC']);
 
-        $this->set(compact('sexo', 'deficiencia', 'usuarios', 'escolaridades', 'racas', 'unidades', 'vinculos'));
+        $this->set(compact('sexo', 'deficiencia', 'usuarios', 'escolaridades', 'racas', 'unidades', 'vinculos', 'ehTi'));
     }
 
     public function curriculo($id)
     {
+        $identity = $this->request->getAttribute('identity');
+        $escolaridadeId = (int)($identity['escolaridade_id'] ?? 0);
+        $isYoda = (int)($identity['yoda'] ?? 0) === 1;
+        if (!$isYoda && $escolaridadeId !== 10) {
+            $this->Flash->error("Acesso negado.");
+            return $this->redirect(['controller' => 'Index', 'action' => 'index']);
+        }
+
         $usuario = $this->Usuarios->get(($id), [
             'contain' => [
             'Instituicaos', 

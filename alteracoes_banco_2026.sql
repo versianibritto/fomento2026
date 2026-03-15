@@ -1332,3 +1332,8 @@ UPDATE `anexos_tipos` SET `nome` = 'Comissão de Ética no Uso de Animais (CEUA)
 
 ALTER TABLE `manuais` 
 CHANGE COLUMN `nome` `nome` TEXT NULL DEFAULT NULL ;
+
+-- usuarios novos ICs
+ALTER TABLE `usuarios` 
+CHANGE COLUMN `ic` `ic` ENUM('I', 'A', 'M', 'N', 'G', 'C') NULL DEFAULT NULL COMMENT '\'I\'=>\'IC Manguinhos/Ensp\', \'A\'=>\'IC Mata atlantica\', \'M\'=>\'IC Maré\', \'N\'=>\'Não me enquadro nestes editais\' g=indigena C oleções' ;
+

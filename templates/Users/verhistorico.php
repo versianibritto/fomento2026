@@ -56,6 +56,9 @@ $icMap = [
     'M' => 'IC Mare',
     'A' => 'IC Mata Atlantica',
     'I' => 'IC Manguinhos/ENSP',
+    'G' => 'IC Indígena',
+    'C' => 'IC Coleções Biológicas',
+    'N' => 'Não me enquadro nestes editais',
 ];
 
 $valueMaps = [
