@@ -15,6 +15,7 @@ return function (RouteBuilder $routes): void {
       
 
         $builder->connect('/', ['controller' => 'Index', 'action' => 'home']);
+        $builder->connect('/users/gestao/{id}', ['controller' => 'Users', 'action' => 'ver'])->setPass(['id']);
         $builder->connect('/{controller}', ['action' => 'index']);
         $builder->connect('/{controller}/{action}/*', []);
         $builder->connect('/dashboard', ['controller' => 'Index', 'action' => 'dashboard']);

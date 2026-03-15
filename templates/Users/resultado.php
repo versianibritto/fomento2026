@@ -129,11 +129,6 @@
                                 ) ?>
                             <?php endif; ?>
 
-                            <?= $this->Html->link(
-                                '<i class="fa fa-info-circle"></i>',
-                                ['controller' => 'Users', 'action' => 'gestao', $u->id],
-                                ['class' => 'btn btn-sm btn-outline-secondary ms-1', 'escape' => false, 'title' => 'Detalhes']
-                            ) ?>
                         </td>
                     </tr>
                     <?php endforeach; ?>
