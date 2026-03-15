@@ -1326,3 +1326,9 @@ ALTER TABLE `erratas`
 ADD COLUMN `vitrine_id` INT NULL AFTER `arquivo`,
 CHANGE COLUMN `arquivo` `arquivo` VARCHAR(45) CHARACTER SET 'latin1' NULL DEFAULT NULL ;
 
+UPDATE `anexos_tipos` SET `nome` = 'Parecer  Comitê de Ética em Pesquisa (CEP)' WHERE (`id` = '1');
+UPDATE `anexos_tipos` SET `nome` = 'Comissão de Ética no Uso de Animais (CEUA)' WHERE (`id` = '6');
+
+
+ALTER TABLE `manuais` 
+CHANGE COLUMN `nome` `nome` TEXT NULL DEFAULT NULL ;

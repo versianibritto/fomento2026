@@ -83,6 +83,13 @@ class RestritoController extends AppController
                 'class' => 'btn-dark',
                 'icon' => 'fas fa-images',
             ],
+            [
+                'titulo' => 'Manuais',
+                'descricao' => 'Manutenção de manuais (incluir, editar e excluir)',
+                'url' => ['controller' => 'Restrito', 'action' => 'manuaisLista'],
+                'class' => 'btn-secondary',
+                'icon' => 'fas fa-book',
+            ],
         ];
 
         $this->set(compact('atalhos'));
@@ -338,6 +345,124 @@ class RestritoController extends AppController
             ->all();
 
         $this->set(compact('vitrinesAtivas', 'erratasRecentes', 'preselectedErrataVitrineId'));
+    }
+
+    public function manuais($id = null)
+    {
+        $this->viewBuilder()->setLayout('admin');
+        $tblManuais = $this->fetchTable('Manuais');
+        $isEdicao = (bool)$id;
+
+        if ($isEdicao) {
+            $manual = $tblManuais->find()
+                ->where([
+                    'Manuais.id' => (int)$id,
+                    'Manuais.deleted IS' => null,
+                ])
+                ->first();
+            if (!$manual) {
+                $this->Flash->error('Manual não localizado para edição.');
+                return $this->redirect(['action' => 'manuaisLista']);
+            }
+        } else {
+            $manual = $tblManuais->newEmptyEntity();
+        }
+
+        if ($this->request->is(['post', 'put', 'patch'])) {
+            $dados = $this->request->getData();
+            $dados = $this->handleUpload($dados, 'arquivo', 'editais');
+            $identity = $this->request->getAttribute('identity');
+            if (!empty($identity->id)) {
+                $dados['usuario_id'] = (int)$identity->id;
+            }
+            if (!$isEdicao) {
+                $dados['deleted'] = null;
+            }
+
+            $manual = $tblManuais->patchEntity($manual, $dados);
+            if ($tblManuais->save($manual)) {
+                $this->Flash->success($isEdicao ? 'Manual atualizado com sucesso.' : 'Manual cadastrado com sucesso.');
+                return $this->redirect(['action' => 'manuaisLista']);
+            }
+            $this->Flash->error('Não foi possível salvar o manual.');
+        }
+
+        $this->set(compact('manual', 'isEdicao'));
+    }
+
+    public function manuaisLista($limpar = false)
+    {
+        $this->viewBuilder()->setLayout('admin');
+        $tblManuais = $this->fetchTable('Manuais');
+        $session = $this->request->getSession();
+        $filtros = [];
+
+        if ($limpar) {
+            $session->delete('restrito_manuais_filtros');
+        }
+
+        $filtrosSalvos = (array)$session->read('restrito_manuais_filtros', []);
+        if ($this->request->is(['post', 'put', 'patch'])) {
+            $dados = $this->request->getData();
+            $acao = trim((string)($dados['acao'] ?? 'filtrar'));
+
+            if ($acao === 'deletar') {
+                $idDelete = (int)($dados['id'] ?? 0);
+                if ($idDelete <= 0) {
+                    $this->Flash->error('Registro inválido para exclusão.');
+                    return $this->redirect(['action' => 'manuaisLista']);
+                }
+
+                $registro = $tblManuais->find()
+                    ->where([
+                        'Manuais.id' => $idDelete,
+                        'Manuais.deleted IS' => null,
+                    ])
+                    ->first();
+                if (!$registro) {
+                    $this->Flash->error('Manual não encontrado para exclusão.');
+                    return $this->redirect(['action' => 'manuaisLista']);
+                }
+                $registro->deleted = date('Y-m-d H:i:s');
+                if ($tblManuais->save($registro)) {
+                    $this->Flash->success('Manual excluído com sucesso.');
+                } else {
+                    $this->Flash->error('Não foi possível excluir o manual.');
+                }
+                return $this->redirect(['action' => 'manuaisLista']);
+            }
+
+            $filtros = [
+                'nome' => trim((string)($dados['nome'] ?? '')),
+                'restrito' => (string)($dados['restrito'] ?? ''),
+                'status' => (string)($dados['status'] ?? 'A'),
+            ];
+            $session->write('restrito_manuais_filtros', $filtros);
+        } else {
+            $filtros = $filtrosSalvos;
+        }
+
+        $where = [];
+        if (!empty($filtros['nome'])) {
+            $where['Manuais.nome LIKE'] = '%' . $filtros['nome'] . '%';
+        }
+        if (($filtros['restrito'] ?? '') !== '') {
+            $where['Manuais.restrito'] = (int)$filtros['restrito'];
+        }
+        $status = (string)($filtros['status'] ?? 'A');
+        if ($status === 'A') {
+            $where['Manuais.deleted IS'] = null;
+        } elseif ($status === 'I') {
+            $where['Manuais.deleted IS NOT'] = null;
+        }
+
+        $query = $tblManuais->find()
+            ->contain(['Usuarios'])
+            ->where($where)
+            ->orderBy(['Manuais.id' => 'DESC']);
+
+        $manuais = $this->paginate($query, ['limit' => 15]);
+        $this->set(compact('manuais', 'filtros'));
     }
 
     public function replicarAnexos()
