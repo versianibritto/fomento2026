@@ -217,10 +217,18 @@ class AppController extends Controller
         ]);
     
         /*
-        if(!in_array($this->request->getParam('action'), ['login', 'loginUnico', 'manutencao'])) {
+        $identity = $this->Authentication->getIdentity();
+        $isTi = $identity && in_array((int)$identity->id, [1, 8088], true);
+
+        if (
+            !$isTi &&
+            !in_array($this->request->getParam('action'), ['login', 'loginUnico', 'manutencao'], true)
+        ) {
             return $this->redirect(['controller' => 'Index', 'action' => 'manutencao']);
         }
             */
+
+            
 
         /*
         if(!in_array($this->request->getParam('action'), ['login', 'loginUnico', 'manutencao'])) {
