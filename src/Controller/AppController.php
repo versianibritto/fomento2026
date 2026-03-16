@@ -9,6 +9,7 @@ use Cake\Event\EventInterface;
 use Cake\Http\Session;
 use Cake\I18n\FrozenTime;
 use Cake\ORM\TableRegistry;
+use Psr\Http\Message\UploadedFileInterface;
 
 
 class AppController extends Controller
@@ -208,6 +209,68 @@ class AppController extends Controller
         return $idade;
     }
 
+    protected function corrigetexto($texto): ?string
+    {
+        if ($texto === null) {
+            return null;
+        }
+
+        if (!is_string($texto)) {
+            return (string)$texto;
+        }
+
+        if ($texto === '') {
+            return '';
+        }
+
+        $caracterGrego = ['μ', '®', '©', '™', '℠', 'α', 'β', 'γ', 'Δ', 'δ', 'θ', 'π', 'λ', 'Σ', 'Φ', 'φ', 'Ω', 'ω', '≥', '≤'];
+        $substituirCaracter = ['micro', '(Marca Registrada) ', '(copyright) ', '(Trade Mark) ', '(SM) ', 'Alpha', 'Beta', 'Gamma', 'Delta', 'delta', 'Teta', 'PI', 'Lambda', '(Sigma/Somatório)', 'Phi', 'Phi', 'Ômega', 'Ômega', '> ou =', '< ou ='];
+
+        $texto = strtr($texto, array_combine($caracterGrego, $substituirCaracter));
+        $texto = htmlspecialchars($texto, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $texto = preg_replace('/\p{Mn}/u', '', $texto) ?? $texto;
+        $texto = preg_replace('/[^\x20-\x7E\xA0-\xFF\xC2-\xF4]/u', '', $texto) ?? $texto;
+
+        return $texto;
+    }
+
+    protected function sanitizeRequestTextData(mixed $data): mixed
+    {
+        if ($data instanceof UploadedFileInterface) {
+            return $data;
+        }
+
+        if (is_array($data)) {
+            foreach ($data as $key => $value) {
+                $data[$key] = $this->sanitizeRequestTextData($value);
+            }
+
+            return $data;
+        }
+
+        if (is_string($data)) {
+            return $this->corrigetexto($data);
+        }
+
+        return $data;
+    }
+
+    protected function shouldSanitizeRequestText(): bool
+    {
+        if (!$this->request->is(['post', 'put', 'patch'])) {
+            return false;
+        }
+
+        return in_array((string)$this->request->getParam('controller'), [
+            'Inscricoes',
+            'Renovacoes',
+            'Substituicoes',
+            'Padrao',
+            'Feedbacks',
+            'Supote',
+        ], true);
+    }
+
     public function beforeFilter(EventInterface $event)
     {
         parent::beforeFilter($event);
@@ -235,6 +298,12 @@ class AppController extends Controller
             return $this->redirect(['controller' => 'Index', 'action' => 'manutencao']);
         }
         */
+
+        if ($this->shouldSanitizeRequestText()) {
+            $this->request = $this->request->withParsedBody(
+                $this->sanitizeRequestTextData($this->request->getData())
+            );
+        }
 
         $this->set('usuario_logado', null);
             $subs = $canc = $atv = $atv_pdj = $subs_pdj = $canc_pdj = $feedbackCount = 0;

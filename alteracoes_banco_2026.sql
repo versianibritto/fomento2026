@@ -1357,9 +1357,6 @@ WHERE i1.sigla REGEXP '^[0-9]+$' and i1.id>0;
 
 -- alterar view
 CREATE  OR REPLACE 
-    ALGORITHM = UNDEFINED 
-    DEFINER = `root`@`localhost` 
-    SQL SECURITY DEFINER
 VIEW `dashyodacounts` AS
     SELECT 
         COUNT(`pb`.`id`) AS `qtd`,
