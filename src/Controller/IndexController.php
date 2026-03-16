@@ -251,10 +251,6 @@ class IndexController extends AppController
     public function dashyoda()
     {
         $this->viewBuilder()->setLayout('admin');
-        
-
-
-        $userId = (int)$this->Authentication->getIdentity()->id;
 
         $dashcountTable = TableRegistry::getTableLocator()->get('Dashyodacounts');
 
@@ -262,6 +258,7 @@ class IndexController extends AppController
             ->enableHydration(false)
             ->toArray();
 
+        $hoje = FrozenTime::now();
 
         
         $dashboard = [
@@ -273,22 +270,27 @@ class IndexController extends AppController
             'subst'        => 0,
             'aceito'       => 0,
             'recusado'     => 0,
+            'resultadoAprovado' => 0,
+            'resultadoReprovado' => 0,
+            'resultadoReserva' => 0,
+            'resultadoTotal' => 0,
             
         ];
 
        
         foreach ($rows as $r) {
             $qtd = (int)$r['qtd'];
+            $vigenciaNaoIniciada = !empty($r['inicio_vigencia']) && $r['inicio_vigencia'] > $hoje;
 
             if ((int)$r['vigente'] === 1) {
                 $dashboard['bolsasAtivas'] += $qtd;
             }
 
-            if ($r['bloco'] === 'I') {
+            if ($vigenciaNaoIniciada && $r['bloco'] === 'I') {
                 $dashboard['andamento'] += $qtd;
             }
 
-            if (in_array($r['bloco'], ['F', 'H', 'R'], true)) {
+            if ($vigenciaNaoIniciada && in_array($r['bloco'], ['F', 'H', 'R'], true)) {
                 $dashboard['finalizadas'] += $qtd;
             }
 
@@ -300,18 +302,34 @@ class IndexController extends AppController
                 $dashboard['subst'] += $qtd;
             }
 
-             if (in_array($r['fase_id'], [6], true)) {
+             if ($vigenciaNaoIniciada && in_array($r['fase_id'], [6], true)) {
                 $dashboard['aceito'] += $qtd;
             }
 
-             if (in_array($r['fase_id'], [7], true)) {
+             if ($vigenciaNaoIniciada && in_array($r['fase_id'], [7], true)) {
                 $dashboard['recusado'] += $qtd;
-            }
+             }
+
+             if ($vigenciaNaoIniciada && (int)$r['fase_id'] === 9) {
+                $dashboard['resultadoAprovado'] += $qtd;
+             }
+
+             if ($vigenciaNaoIniciada && (int)$r['fase_id'] === 10) {
+                $dashboard['resultadoReprovado'] += $qtd;
+             }
+
+             if ($vigenciaNaoIniciada && (int)$r['fase_id'] === 8) {
+                $dashboard['resultadoReserva'] += $qtd;
+             }
         }
 
 
         $dashboard['total'] =
             $dashboard['andamento'] + $dashboard['finalizadas'];
+        $dashboard['resultadoTotal'] =
+            $dashboard['resultadoAprovado'] +
+            $dashboard['resultadoReprovado'] +
+            $dashboard['resultadoReserva'];
 
         $this->set(compact('dashboard'));
         

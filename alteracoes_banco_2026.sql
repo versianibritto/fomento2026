@@ -1353,3 +1353,28 @@ UPDATE instituicaos i1
 JOIN instituicaos i2 ON i2.id = CAST(i1.sigla AS UNSIGNED)
 SET i1.sigla = i2.sigla
 WHERE i1.sigla REGEXP '^[0-9]+$' and i1.id>0;
+
+
+-- alterar view
+CREATE  OR REPLACE 
+    ALGORITHM = UNDEFINED 
+    DEFINER = `root`@`localhost` 
+    SQL SECURITY DEFINER
+VIEW `dashyodacounts` AS
+    SELECT 
+        COUNT(`pb`.`id`) AS `qtd`,
+        `pb`.`fase_id` AS `fase_id`,
+        `f`.`bloco` AS `bloco`,
+        `pb`.`vigente` AS `vigente`,
+        `e`.`programa_id` AS `programa_id`,
+        `pb`.`editai_id` AS `editai_id`,
+        e.inicio_vigencia as inicio_vigencia,
+        e.fim_vigencia as fim_vigencia
+    FROM
+        ((`projeto_bolsistas` `pb`
+        LEFT JOIN `fases` `f` ON ((`f`.`id` = `pb`.`fase_id`)))
+        LEFT JOIN `editais` `e` ON ((`e`.`id` = `pb`.`editai_id`)))
+    WHERE
+        ((`pb`.`deleted` IS NULL)
+            AND (`e`.`fim_vigencia` > NOW()))
+    GROUP BY `pb`.`fase_id` , `f`.`bloco` , `pb`.`vigente` , `e`.`programa_id` , `pb`.`editai_id`;

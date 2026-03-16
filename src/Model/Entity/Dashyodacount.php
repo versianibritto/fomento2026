@@ -14,8 +14,12 @@ use Cake\ORM\Entity;
  * @property int|null $vigente
  * @property int|null $programa_id
  * @property int|null $editai_id
+ * @property \Cake\I18n\FrozenTime|null $inicio_vigencia
+ * @property \Cake\I18n\FrozenTime|null $fim_vigencia
  *
  * @property \App\Model\Entity\Fase $fase
+ * @property \App\Model\Entity\Programa $programa
+ * @property \App\Model\Entity\Editai $editai
  */
 class Dashyodacount extends Entity
 {
@@ -35,6 +39,10 @@ class Dashyodacount extends Entity
         'vigente' => true,
         'programa_id' => true,
         'editai_id' => true,
+        'inicio_vigencia' => true,
+        'fim_vigencia' => true,
         'fase' => true,
+        'programa' => true,
+        'editai' => true,
     ];
 }

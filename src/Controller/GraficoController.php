@@ -3,6 +3,7 @@ namespace App\Controller;
 
 use App\Controller\AppController;
 use Cake\Event\EventInterface;
+use Cake\I18n\FrozenTime;
 use Cake\ORM\TableRegistry;
 
 class GraficoController extends AppController
@@ -36,6 +37,7 @@ class GraficoController extends AppController
         }
 
         $dashcountTable = TableRegistry::getTableLocator()->get('Dashyodacounts');
+        $hoje = FrozenTime::now();
         $qtdQuery = $dashcountTable->find()
             ->select([
                 'Dashyodacounts.qtd',
@@ -50,6 +52,7 @@ class GraficoController extends AppController
             ->contain(['Editais', 'Fases', 'Programas'])
             ->enableHydration(false);
         $qtdQuery->where(['Dashyodacounts.bloco IN' => ['I', 'F', 'H', 'R']]);
+        $qtdQuery->where(['Dashyodacounts.inicio_vigencia >' => $hoje]);
         if (!empty($programaId)) {
             $qtdQuery->where(['Dashyodacounts.programa_id IN' => $programaId]);
         }
@@ -142,6 +145,7 @@ class GraficoController extends AppController
             ->contain(['Programas'])
             ->where(['Dashyodacounts.programa_id IS NOT' => null])
             ->where(['Dashyodacounts.bloco IN' => ['I', 'F', 'H', 'R']])
+            ->where(['Dashyodacounts.inicio_vigencia >' => $hoje])
             ->groupBy(['Dashyodacounts.programa_id', 'Programas.sigla'])
             ->orderBy(['Programas.sigla' => 'ASC'])
             ->enableHydration(false)
@@ -164,6 +168,7 @@ class GraficoController extends AppController
             ->contain(['Fases'])
             ->where(['Dashyodacounts.fase_id IS NOT' => null])
             ->where(['Dashyodacounts.bloco IN' => ['I', 'F', 'H', 'R']])
+            ->where(['Dashyodacounts.inicio_vigencia >' => $hoje])
             ->groupBy(['Dashyodacounts.fase_id', 'Fases.nome'])
             ->orderBy(['Fases.nome' => 'ASC'])
             ->enableHydration(false)

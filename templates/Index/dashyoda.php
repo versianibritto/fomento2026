@@ -283,6 +283,51 @@ document.addEventListener('DOMContentLoaded', function () {
                 </div>
             </div>
 
+        </div>
+
+        <div class="row g-4 mt-1">
+            <div class="col-md-12">
+                <div class="border rounded p-4 h-100 bg-white">
+
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="fw-semibold text-muted mb-0">
+                            Resultados
+                        </h6>
+                    </div>
+
+                    <div class="d-flex justify-content-around text-center flex-wrap gap-3">
+                        <div>
+                            <h3 class="fw-bold text-primary mb-1">
+                                <?= $dashboard['resultadoTotal'] ?? 0 ?>
+                            </h3>
+                            <small class="text-muted">Total</small>
+                        </div>
+
+                        <div>
+                            <h3 class="fw-bold text-success mb-1">
+                                <?= $dashboard['resultadoAprovado'] ?? 0 ?>
+                            </h3>
+                            <small class="text-muted">Aprovados</small>
+                        </div>
+
+                        <div>
+                            <h3 class="fw-bold text-danger mb-1">
+                                <?= $dashboard['resultadoReprovado'] ?? 0 ?>
+                            </h3>
+                            <small class="text-muted">Reprovados</small>
+                        </div>
+
+                        <div>
+                            <h3 class="fw-bold text-secondary mb-1">
+                                <?= $dashboard['resultadoReserva'] ?? 0 ?>
+                            </h3>
+                            <small class="text-muted">Reserva</small>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
 
         </div>
     </div>

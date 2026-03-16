@@ -23,7 +23,7 @@
             Inscrições dos Editais em Andamento 
         </h4>
         <div class="text-muted fw-semibold">
-            Apenas editais com fim de vigência maior que hoje são plotados.
+            Apenas editais que não iniciaram a vigência são plotados. As inscrições ativadas não serão contabilizadas.
         </div>
     </div>
     <?= $this->Html->link(

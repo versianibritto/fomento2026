@@ -12,6 +12,8 @@ use Cake\Validation\Validator;
  * Dashyodacounts Model
  *
  * @property \App\Model\Table\FasesTable&\Cake\ORM\Association\BelongsTo $Fases
+ * @property \App\Model\Table\ProgramasTable&\Cake\ORM\Association\BelongsTo $Programas
+ * @property \App\Model\Table\EditaisTable&\Cake\ORM\Association\BelongsTo $Editais
  *
  * @method \App\Model\Entity\Dashyodacount newEmptyEntity()
  * @method \App\Model\Entity\Dashyodacount newEntity(array $data, array $options = [])
@@ -81,6 +83,14 @@ class DashyodacountsTable extends Table
 
         $validator
             ->allowEmptyString('editai_id');
+
+        $validator
+            ->dateTime('inicio_vigencia')
+            ->allowEmptyDateTime('inicio_vigencia');
+
+        $validator
+            ->dateTime('fim_vigencia')
+            ->allowEmptyDateTime('fim_vigencia');
 
         return $validator;
     }
