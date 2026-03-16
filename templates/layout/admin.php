@@ -206,11 +206,13 @@
                         </a>
                     </li>
                     
+                    
                     <li class="sidebar-item">
                         <a href="/listas/limpar/buscaMensal/listamensal" class="sidebar-link">
                            * Lista Egressos/Ativados
                         </a>
                     </li>
+                    <!--
                     <li class="sidebar-item">
                         <a href="/listas/limpar/buscaRaics/raics" class="sidebar-link">
                            * Lista RAICS (Agendamento)
@@ -230,6 +232,7 @@
 
                         </a>
                     </li>
+                            -->
                     
                     
                     
@@ -276,11 +279,13 @@
                         <li class="sidebar-header">
                             Restrito à Gestão
                         </li>
+                        <!--
                         <li class="sidebar-item">
                             <a href="/grafico/inscricoes-em-andamento" class="sidebar-link">
                                 * Painel / Gráficos
                             </a>
                         </li>
+                            -->
                         <li class="sidebar-item">
                             <a href="<?= $this->Url->build(['controller' => 'Gestao', 'action' => 'listarconfirmacoes', 'S']) ?>" class="sidebar-link">
                                 * Substituições
@@ -318,7 +323,12 @@
                             </a>
                         </li>
                         -->
-
+                        <li class="sidebar-item">
+                            <a href="/gestao/lancarresultados" class="sidebar-link <?=(($this->request->getParam('controller') == 'Gestao' && $this->request->getParam('action') == 'lancarresultados') ? 'active' : '')?>">
+                            * Lançar resultados
+                            </a>
+                        </li>
+                        <!--
                         <li class="sidebar-item">
                             <a href="/projetos/listasemresultado" class="sidebar-link">
                                 Cadastrar resultado - ICs
@@ -331,6 +341,7 @@
                             <span class="badge badge-info right"></span>
                             </a>
                         </li>
+                            -->
                         <li class="sidebar-item">
                             <a href="/projetos/encerrarbolsas" class="sidebar-link">
                                 Encerrar Bolsas

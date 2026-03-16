@@ -305,6 +305,86 @@ class GestaoController extends AppController
         $this->set(compact('inscricao', 'anexosLista'));
     }
 
+    public function lancarresultados()
+    {
+        $resultadoMap = [
+            'A' => 9,
+            'R' => 10,
+            'B' => 8,
+        ];
+        $resultadoLabels = $this->resultado ?? [];
+        $origemLabels = $this->origem ?? [];
+        $faseLabels = $this->fetchTable('Fases')->find('list', [
+            'keyField' => 'id',
+            'valueField' => 'nome',
+        ])->toArray();
+        $resultadoSelecionado = strtoupper(trim((string)$this->request->getData('resultado')));
+        $idsRaw = (string)$this->request->getData('inscricoes');
+        $modo = strtolower(trim((string)$this->request->getData('modo')));
+        $preview = null;
+
+        if ($this->request->is(['post', 'put', 'patch'])) {
+            if (!isset($resultadoMap[$resultadoSelecionado])) {
+                $this->Flash->error('Selecione um resultado válido.');
+            } else {
+                $ids = $this->parseInscricaoIdsLote($idsRaw);
+                if (empty($ids)) {
+                    $this->Flash->error('Informe ao menos uma inscrição válida.');
+                } else {
+                    $preview = $this->avaliarLoteResultados($ids, $resultadoSelecionado, $resultadoMap);
+
+                    if ($modo === 'confirmar') {
+                        if (empty($preview['aptas'])) {
+                            $this->Flash->error('Nenhuma inscrição apta para atualização.');
+                        } else {
+                            $tblProjetoBolsistas = $this->fetchTable('ProjetoBolsistas');
+                            $faseDestino = $resultadoMap[$resultadoSelecionado];
+                            $atualizadas = 0;
+
+                            try {
+                                $resultadoHistorico = $resultadoLabels[$resultadoSelecionado] ?? $resultadoSelecionado;
+                                $tblProjetoBolsistas->getConnection()->transactional(function () use (
+                                    $tblProjetoBolsistas,
+                                    $preview,
+                                    $resultadoHistorico,
+                                    $faseDestino,
+                                    &$atualizadas
+                                ) {
+                                    foreach ($preview['aptas'] as $item) {
+                                        $inscricao = $tblProjetoBolsistas->get((int)$item['id']);
+                                        $faseOriginal = (int)$inscricao->fase_id;
+                                        $inscricao->resultado = $resultadoSelecionado;
+                                        $inscricao->fase_id = $faseDestino;
+                                        $tblProjetoBolsistas->saveOrFail($inscricao);
+                                        $this->historico(
+                                            (int)$inscricao->id,
+                                            $faseOriginal,
+                                            $faseDestino,
+                                            'Lançamento massivo de resultado: ' . $resultadoHistorico,
+                                            true
+                                        );
+                                        $atualizadas++;
+                                    }
+                                });
+
+                                $this->Flash->success($atualizadas . ' inscrição(ões) atualizada(s) com sucesso.');
+                                return $this->redirect(['controller' => 'Gestao', 'action' => 'lancarresultados']);
+                            } catch (\Throwable $e) {
+                                $this->flashFriendlyException(
+                                    $e,
+                                    'Erro no Sistema - lançamento massivo de resultados',
+                                    'Não foi possível concluir o lançamento massivo de resultados.'
+                                );
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        $this->set(compact('resultadoMap', 'resultadoLabels', 'origemLabels', 'faseLabels', 'resultadoSelecionado', 'idsRaw', 'preview'));
+    }
+
     public function listarconfirmacoes(string $tipo)
     {
         $tipo = strtoupper(trim($tipo));
@@ -1372,5 +1452,80 @@ class GestaoController extends AppController
         }
 
         $this->set(compact('bolsista', 'modo'));
+    }
+
+    private function parseInscricaoIdsLote(string $raw): array
+    {
+        $partes = preg_split('/[\s,;]+/', trim($raw)) ?: [];
+        $ids = [];
+        foreach ($partes as $parte) {
+            $parte = trim($parte);
+            if ($parte === '' || !ctype_digit($parte)) {
+                continue;
+            }
+            $id = (int)$parte;
+            if ($id > 0) {
+                $ids[$id] = $id;
+            }
+        }
+
+        return array_values($ids);
+    }
+
+    private function avaliarLoteResultados(array $ids, string $resultado, array $resultadoMap): array
+    {
+        $tblProjetoBolsistas = $this->fetchTable('ProjetoBolsistas');
+        $rows = $tblProjetoBolsistas->find()
+            ->select(['id', 'fase_id', 'resultado', 'origem', 'deleted'])
+            ->where(['ProjetoBolsistas.id IN' => $ids])
+            ->all();
+
+        $porId = [];
+        foreach ($rows as $row) {
+            $porId[(int)$row->id] = $row;
+        }
+
+        $aptas = [];
+        $recusadas = [];
+        foreach ($ids as $id) {
+            $item = $porId[(int)$id] ?? null;
+            if (!$item) {
+                $recusadas[] = ['id' => $id, 'motivo' => 'Inscrição não localizada.'];
+                continue;
+            }
+
+            if ($item->deleted !== null) {
+                $recusadas[] = ['id' => $id, 'motivo' => 'Inscrição deletada/inativa.'];
+                continue;
+            }
+
+            if ($item->resultado !== null && $item->resultado !== '') {
+                $recusadas[] = ['id' => $id, 'motivo' => 'Inscrição já possui resultado lançado.'];
+                continue;
+            }
+
+            if ((int)$item->fase_id !== 6) {
+                $recusadas[] = ['id' => $id, 'motivo' => 'Inscrição não homologada.'];
+                continue;
+            }
+
+            if (!in_array((string)$item->origem, ['N', 'R'], true)) {
+                $recusadas[] = ['id' => $id, 'motivo' => 'Origem inválida para lançamento de resultado.'];
+                continue;
+            }
+
+            $aptas[] = [
+                'id' => (int)$item->id,
+                'fase_atual' => (int)$item->fase_id,
+                'fase_destino' => (int)$resultadoMap[$resultado],
+                'origem' => (string)$item->origem,
+            ];
+        }
+
+        return [
+            'ids_informados' => $ids,
+            'aptas' => $aptas,
+            'recusadas' => $recusadas,
+        ];
     }
 }
