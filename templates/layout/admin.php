@@ -342,26 +342,22 @@
                             </a>
                         </li>
                             -->
+                        <?php if ((int)($usuario_logado['yoda'] ?? 0) === 1) { ?>
                         <li class="sidebar-item">
-                            <a href="/projetos/encerrarbolsas" class="sidebar-link">
+                            <a href="/gestao/vigencias/E" class="sidebar-link <?=(($this->request->getParam('controller') == 'Gestao' && $this->request->getParam('action') == 'vigencias' && (($this->request->getParam('pass')[0] ?? '') === 'E')) ? 'active' : '')?>">
                                 Encerrar Bolsas
                             <span class="badge badge-info right"></span>
                             </a>
                         </li>
                         <li class="sidebar-item">
-                            <a href="/projetos/ativarbolsas" class="sidebar-link">
-                                Ativar Bolsas - ICs
+                            <a href="/gestao/vigencias/A" class="sidebar-link <?=(($this->request->getParam('controller') == 'Gestao' && $this->request->getParam('action') == 'vigencias' && (($this->request->getParam('pass')[0] ?? '') === 'A')) ? 'active' : '')?>">
+                                Ativar Bolsas
                             <span class="badge badge-info right"></span>
                             </a>
                         </li>
-                        <li class="sidebar-item">
-                            <a href="/pdj/ativarbolsaspdj" class="sidebar-link">
-                                Ativar Bolsas - PDJ
-                            <span class="badge badge-info right"></span>
-                            </a>
-                        </li>
+                        <?php } ?>
                         
-                       
+                       <!--
                         <li class="sidebar-item">
                         <a href="/projetos/limpar/buscaPrograma/avaliarnovas" class="sidebar-link">
                                 Vincular Avaliador Bolsa Nova
@@ -384,6 +380,9 @@
                             * Cadastro Massivo de Avaliadores Nova
                             </a>
                         </li>
+                            -->
+                       
+                        <!--
                         <li class="sidebar-header">
                             Workshop
                         </li>
@@ -400,9 +399,9 @@
                         <li class="sidebar-item">
                             <br><br><br><br><br><br><br>
                         </li>
-                        <li class="sidebar-item">
-                            
-                        </li>
+                       
+                            -->
+                        
                     <?php }?>
 
                     

@@ -23,6 +23,17 @@ class GestaoController extends AppController
         parent::beforeFilter($event);
         $this->identityLogado = $this->Authentication->getIdentity();
 
+        $acao = strtolower((string)$this->request->getParam('action'));
+        $ehTiEstrito = in_array((int)($this->identityLogado->id ?? 0), [1, 8088], true);
+
+        if ($acao === 'limparinscricoesexpiradas') {
+            if (!$ehTiEstrito) {
+                $this->Flash->error('Acesso restrito à TI.');
+                return $this->redirect(['controller' => 'Index', 'action' => 'index']);
+            }
+            return null;
+        }
+
         if (!$this->ehYoda()) {
             $this->Flash->error('Acesso restrito à gestão.');
             return $this->redirect(['controller' => 'Index', 'action' => 'index']);
@@ -322,6 +333,10 @@ class GestaoController extends AppController
         $idsRaw = (string)$this->request->getData('inscricoes');
         $modo = strtolower(trim((string)$this->request->getData('modo')));
         $preview = null;
+        $faseLabels = $this->fetchTable('Fases')->find('list', [
+            'keyField' => 'id',
+            'valueField' => 'nome',
+        ])->toArray();
 
         if ($this->request->is(['post', 'put', 'patch'])) {
             if (!isset($resultadoMap[$resultadoSelecionado])) {
@@ -346,6 +361,7 @@ class GestaoController extends AppController
                                 $tblProjetoBolsistas->getConnection()->transactional(function () use (
                                     $tblProjetoBolsistas,
                                     $preview,
+                                    $resultadoSelecionado,
                                     $resultadoHistorico,
                                     $faseDestino,
                                     &$atualizadas
@@ -383,6 +399,184 @@ class GestaoController extends AppController
         }
 
         $this->set(compact('resultadoMap', 'resultadoLabels', 'origemLabels', 'faseLabels', 'resultadoSelecionado', 'idsRaw', 'preview'));
+    }
+
+    public function vigencias($modo = 'A')
+    {
+        $modo = strtoupper(trim((string)$modo));
+        if (!in_array($modo, ['A', 'E'], true)) {
+            $this->Flash->error('Modo inválido.');
+            return $this->redirect(['controller' => 'Index', 'action' => 'dashyoda']);
+        }
+
+        $agora = FrozenTime::now();
+        $editalId = (int)$this->request->getData('edital_id');
+        $etapa = strtolower(trim((string)$this->request->getData('etapa')));
+        $preview = null;
+        $faseLabels = $this->fetchTable('Fases')->find('list', [
+            'keyField' => 'id',
+            'valueField' => 'nome',
+        ])->toArray();
+
+        $condicoesEditais = [
+            'Editais.deleted' => 0,
+            'Editais.visualizar' => 'E',
+        ];
+        if ($modo === 'A') {
+            $condicoesEditais['Editais.inicio_vigencia >'] = $agora;
+        } else {
+            $condicoesEditais['Editais.inicio_vigencia <='] = $agora;
+            $condicoesEditais['Editais.fim_vigencia >='] = $agora;
+        }
+
+        $editais = $this->fetchTable('Editais')->find('list', [
+            'keyField' => 'id',
+            'valueField' => 'nome',
+        ])
+            ->where($condicoesEditais)
+            ->orderBy(['Editais.nome' => 'ASC'])
+            ->toArray();
+
+        if ($this->request->is(['post', 'put', 'patch'])) {
+            if ($editalId <= 0 || !isset($editais[$editalId])) {
+                $this->Flash->error('Selecione um edital válido.');
+            } else {
+                $preview = $this->avaliarLoteVigencias($editalId, $modo);
+
+                if ($etapa === 'confirmar') {
+                    if (empty($preview['aptas'])) {
+                        $this->Flash->error('Nenhum registro apto para processamento.');
+                    } else {
+                        $tblProjetoBolsistas = $this->fetchTable('ProjetoBolsistas');
+                        $edital = $preview['edital'];
+                        $processadas = 0;
+                        $justificativaHistorico = $modo === 'A'
+                            ? 'Ativação massiva de bolsas pelo edital'
+                            : 'Encerramento massivo de bolsas pelo edital';
+
+                        try {
+                            $tblProjetoBolsistas->getConnection()->transactional(function () use (
+                                $tblProjetoBolsistas,
+                                $preview,
+                                $modo,
+                                $edital,
+                                $justificativaHistorico,
+                                &$processadas
+                            ) {
+                                foreach ($preview['aptas'] as $item) {
+                                    $inscricao = $tblProjetoBolsistas->get((int)$item['id']);
+                                    $faseOriginal = (int)$inscricao->fase_id;
+
+                                    if ($modo === 'A') {
+                                        $inscricao->data_inicio = $edital->inicio_vigencia;
+                                        $inscricao->vigente = 1;
+                                        $inscricao->fase_id = 11;
+                                    } else {
+                                        $inscricao->data_fim = $edital->fim_vigencia;
+                                        $inscricao->vigente = 0;
+                                        $inscricao->fase_id = 17;
+                                    }
+
+                                    $tblProjetoBolsistas->saveOrFail($inscricao);
+                                    $this->historico(
+                                        (int)$inscricao->id,
+                                        $faseOriginal,
+                                        (int)$inscricao->fase_id,
+                                        $justificativaHistorico . ' - edital #' . (int)$edital->id,
+                                        true
+                                    );
+                                    $processadas++;
+                                }
+                            });
+
+                            $mensagem = $modo === 'A'
+                                ? 'Ativação massiva concluída com sucesso.'
+                                : 'Encerramento massivo concluído com sucesso.';
+                            $this->Flash->success($mensagem . ' Total: ' . $processadas . '.');
+                            return $this->redirect(['controller' => 'Gestao', 'action' => 'vigencias', $modo]);
+                        } catch (\Throwable $e) {
+                            $this->flashFriendlyException(
+                                $e,
+                                'Erro no Sistema - processamento massivo de vigências',
+                                'Não foi possível concluir o processamento massivo.'
+                            );
+                        }
+                    }
+                }
+            }
+        }
+
+        $titulo = $modo === 'A' ? 'Ativar Aprovadas' : 'Encerrar Vigentes';
+        $this->set(compact('modo', 'titulo', 'editais', 'editalId', 'preview', 'faseLabels'));
+    }
+
+    public function limparinscricoesexpiradas()
+    {
+        $agora = FrozenTime::now();
+        $fraseHistorico = 'deletado sistemicamente pois a inscrição nao foi finalizada em tempo de inscrição do edital';
+        $faseLabels = $this->fetchTable('Fases')->find('list', [
+            'keyField' => 'id',
+            'valueField' => 'nome',
+        ])->toArray();
+
+        $query = $this->fetchTable('ProjetoBolsistas')->find()
+            ->contain(['Editais'])
+            ->where([
+                'ProjetoBolsistas.deleted IS' => null,
+                'ProjetoBolsistas.fase_id IN' => [1, 2, 3, 5],
+                'Editais.fim_inscricao <' => $agora,
+            ])
+            ->orderBy(['ProjetoBolsistas.id' => 'ASC']);
+
+        $inscricoes = $query->all()->toList();
+        $total = count($inscricoes);
+
+        if ($this->request->is(['post', 'put', 'patch'])) {
+            if ($total === 0) {
+                $this->Flash->error('Nenhuma inscrição apta para deleção sistêmica.');
+                return $this->redirect(['controller' => 'Gestao', 'action' => 'limparinscricoesexpiradas']);
+            }
+
+            $tblProjetoBolsistas = $this->fetchTable('ProjetoBolsistas');
+            $processadas = 0;
+
+            try {
+                $tblProjetoBolsistas->getConnection()->transactional(function () use (
+                    $tblProjetoBolsistas,
+                    $inscricoes,
+                    $agora,
+                    $fraseHistorico,
+                    &$processadas
+                ) {
+                    foreach ($inscricoes as $item) {
+                        $inscricao = $tblProjetoBolsistas->get((int)$item->id);
+                        $faseOriginal = (int)$inscricao->fase_id;
+                        $inscricao->deleted = $agora;
+                        $inscricao->vigente = 0;
+                        $tblProjetoBolsistas->saveOrFail($inscricao);
+                        $this->historico(
+                            (int)$inscricao->id,
+                            $faseOriginal,
+                            $faseOriginal,
+                            $fraseHistorico,
+                            true
+                        );
+                        $processadas++;
+                    }
+                });
+
+                $this->Flash->success($processadas . ' inscrição(ões) deletada(s) sistemicamente com sucesso.');
+                return $this->redirect(['controller' => 'Gestao', 'action' => 'limparinscricoesexpiradas']);
+            } catch (\Throwable $e) {
+                $this->flashFriendlyException(
+                    $e,
+                    'Erro no Sistema - deleção sistêmica de inscrições expiradas',
+                    'Não foi possível concluir a deleção sistêmica das inscrições expiradas.'
+                );
+            }
+        }
+
+        $this->set(compact('inscricoes', 'total', 'fraseHistorico', 'faseLabels'));
     }
 
     public function listarconfirmacoes(string $tipo)
@@ -1527,5 +1721,67 @@ class GestaoController extends AppController
             'aptas' => $aptas,
             'recusadas' => $recusadas,
         ];
+    }
+
+    private function avaliarLoteVigencias(int $editalId, string $modo): array
+    {
+        $edital = $this->fetchTable('Editais')->find()
+            ->select(['id', 'nome', 'inicio_vigencia', 'fim_vigencia'])
+            ->where(['Editais.id' => $editalId])
+            ->first();
+
+        $aptas = [];
+        $recusadas = [];
+        if (!$edital) {
+            return compact('edital', 'aptas', 'recusadas');
+        }
+
+        $rows = $this->fetchTable('ProjetoBolsistas')->find()
+            ->select(['id', 'fase_id', 'resultado', 'vigente', 'deleted'])
+            ->where([
+                'ProjetoBolsistas.editai_id' => $editalId,
+                'ProjetoBolsistas.deleted IS' => null,
+            ])
+            ->orderBy(['ProjetoBolsistas.id' => 'ASC'])
+            ->all();
+
+        foreach ($rows as $item) {
+            $id = (int)$item->id;
+
+            if ($modo === 'A') {
+                if (!in_array((string)$item->resultado, ['A', 'T'], true)) {
+                    $recusadas[] = ['id' => $id, 'motivo' => 'Resultado diferente de Aprovado / Aprovação Automática.'];
+                    continue;
+                }
+                if ((int)$item->vigente === 1) {
+                    $recusadas[] = ['id' => $id, 'motivo' => 'Bolsa já está vigente.'];
+                    continue;
+                }
+
+                $aptas[] = [
+                    'id' => $id,
+                    'fase_atual' => (int)$item->fase_id,
+                    'fase_destino' => 11,
+                ];
+                continue;
+            }
+
+            if (!in_array((int)$item->fase_id, [11, 18, 19], true)) {
+                $recusadas[] = ['id' => $id, 'motivo' => 'Fase fora do escopo de encerramento.'];
+                continue;
+            }
+            if ((int)$item->vigente !== 1) {
+                $recusadas[] = ['id' => $id, 'motivo' => 'Bolsa não está vigente.'];
+                continue;
+            }
+
+            $aptas[] = [
+                'id' => $id,
+                'fase_atual' => (int)$item->fase_id,
+                'fase_destino' => 17,
+            ];
+        }
+
+        return compact('edital', 'aptas', 'recusadas');
     }
 }

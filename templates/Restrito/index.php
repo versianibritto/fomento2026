@@ -124,6 +124,24 @@
                             </div>
                         </div>
                     </div>
+
+                    <hr class="my-4">
+
+                    <div class="card border">
+                        <div class="card-body">
+                            <h5 class="card-title mb-2">Deleção Sistêmica de Inscrições Expiradas</h5>
+                            <p class="text-muted mb-3">
+                                Deleta logicamente inscrições não finalizadas em tempo de inscrição do edital, garantindo vigente = 0 e gravando histórico.
+                            </p>
+                            <div class="d-flex flex-wrap gap-2">
+                                <?= $this->Html->link(
+                                    'Abrir rotina',
+                                    ['controller' => 'Gestao', 'action' => 'limparinscricoesexpiradas'],
+                                    ['class' => 'btn btn-outline-danger']
+                                ) ?>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

@@ -170,7 +170,7 @@ if (!$temDataInicio && !$temDataFim) {
         $faseAtual = (int)($inscricao->fase_id ?? 0);
         $controllerFluxo = (string)($controllerFluxo ?? ($isRenovacao ? 'Renovacoes' : 'Inscricoes'));
         $identityTela = $this->request->getAttribute('identity');
-        $ehTIVisualizacao = !empty($identityTela->yoda) || !empty($identityTela->jedi);
+        $ehTIVisualizacao = in_array((int)($identityTela->id ?? 0), [1, 8088], true);
         $origemTela = strtoupper((string)($inscricao->origem ?? ''));
         $ehOrientadorTela = !empty($identityTela->id) && (int)$identityTela->id === (int)($inscricao->orientador ?? 0);
         $podeDesistirProcesso = !$isRenovacao
@@ -219,14 +219,6 @@ if (!$temDataInicio && !$temDataFim) {
             <?= $this->Html->link('Substituir', [
                 'controller' => 'Substituicoes',
                 'action' => 'iniciar',
-                (int)$inscricao->id,
-            ], ['class' => 'btn btn-sm btn-outline-secondary']) ?>
-        <?php endif; ?>
-
-        <?php if ($ehTIVisualizacao && in_array($faseAtual, [14], true)): ?>
-            <?= $this->Html->link('Reativar', [
-                'controller' => 'Padrao',
-                'action' => 'reativar',
                 (int)$inscricao->id,
             ], ['class' => 'btn btn-sm btn-outline-secondary']) ?>
         <?php endif; ?>
@@ -948,15 +940,31 @@ if (!$temDataInicio && !$temDataFim) {
             </div>
         </div>
     </div>
-    <?php if ($ehTIVisualizacao && in_array($faseAtual, [1, 3], true)): ?>
-        <div class="d-flex justify-content-end mt-3">
-            <?= $this->Html->link('Deletar inscrição', [
-                'controller' => 'Padrao',
-                'action' => 'deletar',
-                (int)$inscricao->id,
-            ], [
-                'class' => 'btn btn-link btn-sm text-danger p-0',
-            ]) ?>
+    <?php if ($ehTIVisualizacao && (in_array($faseAtual, [14], true) || in_array($faseAtual, [1, 3], true))): ?>
+        <div class="d-flex justify-content-end mt-4">
+            <div class="text-end">
+                <div class="small text-muted mb-2">Ações técnicas</div>
+                <div class="d-flex justify-content-end gap-3">
+                    <?php if (in_array($faseAtual, [14], true)): ?>
+                        <?= $this->Html->link('Reativar', [
+                            'controller' => 'Padrao',
+                            'action' => 'reativar',
+                            (int)$inscricao->id,
+                        ], [
+                            'class' => 'btn btn-link btn-sm text-secondary p-0 text-decoration-none',
+                        ]) ?>
+                    <?php endif; ?>
+                    <?php if (in_array($faseAtual, [1, 3], true)): ?>
+                        <?= $this->Html->link('Deletar inscrição', [
+                            'controller' => 'Padrao',
+                            'action' => 'deletar',
+                            (int)$inscricao->id,
+                        ], [
+                            'class' => 'btn btn-link btn-sm text-danger p-0 text-decoration-none',
+                        ]) ?>
+                    <?php endif; ?>
+                </div>
+            </div>
         </div>
     <?php endif; ?>
 </div>
