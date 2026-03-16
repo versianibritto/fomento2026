@@ -226,8 +226,8 @@ body.sidebar-collapse .user-id-bar {
                 <div class="row">
                     <div class="col-md-6">
                         <strong>Escolaridade:</strong>
-                        <?= !empty($usuario->escolaridade)
-                            ? h($usuario->escolaridade->nome)
+                        <?= !empty($escolaridadeNome)
+                            ? h($escolaridadeNome)
                             : '<span class="badge bg-danger">Não Informado</span>' ?>
                     </div>
                     <div class="col-md-6">
@@ -247,8 +247,8 @@ body.sidebar-collapse .user-id-bar {
                     </div>
                     <div class="col-md-6">
                         <strong>Vínculo:</strong>
-                        <?= !empty($usuario->vinculo)
-                            ? h($usuario->vinculo->nome)
+                        <?= !empty($vinculoNome)
+                            ? h($vinculoNome)
                             : '<span class="badge bg-danger">Não Informado</span>' ?>
                     </div>
                 </div>
@@ -289,8 +289,8 @@ body.sidebar-collapse .user-id-bar {
                 <div class="row">
                     <div class="col-md-6">
                         <strong>CEP:</strong>
-                        <?= !empty($usuario->street?->cep)
-                            ? h($usuario->street->cep)
+                        <?= !empty($cep)
+                            ? h($cep)
                             : '<span class="badge bg-danger">Não Informado</span>' ?>
                     </div>
                     <div class="col-md-6">
@@ -304,14 +304,6 @@ body.sidebar-collapse .user-id-bar {
                 <div class="row mt-2">
                     <div class="col-md-6">
                         <strong>Endereço:</strong>
-                        <?php
-                        $enderecoCompleto = implode(', ', array_filter([
-                            $usuario->street?->nome ?? null,
-                            $usuario->street?->district?->nome ?? null,
-                            $usuario->street?->district?->city?->nome ?? null,
-                            $usuario->street?->district?->city?->state?->sigla ?? null,
-                        ]));
-                        ?>
                         <?= $enderecoCompleto !== ''
                             ? h($enderecoCompleto)
                             : '<span class="badge bg-danger">Não Informado</span>' ?>
@@ -339,7 +331,7 @@ body.sidebar-collapse .user-id-bar {
 
                     <div class="col-md-4">
                         <strong>Coordenação de Unidade:</strong>
-                        <?= !empty($usuario->jedi)
+                        <?= $temJediPerfil
                             ? '<span class="badge bg-success">Sim</span>'
                             : '<span class="badge bg-danger">Não</span>' ?>
 
@@ -354,7 +346,7 @@ body.sidebar-collapse .user-id-bar {
 
                     <div class="col-md-4">
                         <strong>Coordenação de Programa:</strong>
-                        <?= !empty($programas)
+                        <?= $temPadauanPerfil
                             ? '<span class="badge bg-success">Sim</span>'
                             : '<span class="badge bg-danger">Não</span>' ?>
 

@@ -6,6 +6,7 @@ use App\Controller\AppController;
 use Cake\Event\EventInterface;
 use Cake\ORM\TableRegistry;
 use Cake\Http\Exception\BadRequestException;
+use Cake\Datasource\Exception\RecordNotFoundException;
 
 
 class UsersController extends AppController
@@ -381,6 +382,7 @@ class UsersController extends AppController
 
     public function ver($id)
     {
+        $id = (int)$id;
         $identity = $this->request->getAttribute('identity');
         $identityObj = $this->Authentication->getIdentity();
 
@@ -416,51 +418,100 @@ class UsersController extends AppController
 
 
 
-        $usuario = $this->Usuarios->find()
-        ->contain([
+        try {
+            $usuario = $this->Usuarios->get($id);
+        } catch (RecordNotFoundException $e) {
+            $this->Flash->error('Usuário não localizado.');
+            return $this->redirect(['controller' => 'Index', 'action' => 'index']);
+        }
+
+        $usuario = $this->Usuarios->loadInto($usuario, [
             'Unidades',
             'Escolaridades',
             'Vinculos',
             'Instituicaos',
             'Streets' => ['Districts' => ['Cities' => ['States']]],
-        ])
-        ->where(['Usuarios.id' => $id])->first();       
+        ]);
+        $racas = $this->racas;
+        $sexo = $this->sexo;
+        $deficiencia = $this->deficiencia;
+        $documentos = $this->documentos;
 
+        $escolaridadeNome = $usuario->escolaridade->nome ?? null;
+        if ($escolaridadeNome === null && !empty($usuario->escolaridade_id)) {
+            $escolaridadeNome = $this->fetchTable('Escolaridades')->find()
+                ->select(['nome'])
+                ->where(['Escolaridades.id' => (int)$usuario->escolaridade_id])
+                ->disableHydration()
+                ->first()['nome'] ?? null;
+        }
 
-            $racas = $this->racas;
-            $sexo = $this->sexo;
-            $deficiencia = $this->deficiencia;
-            $documentos = $this->documentos;
+        $vinculoNome = $usuario->vinculo->nome ?? null;
+        if ($vinculoNome === null && !empty($usuario->vinculo_id)) {
+            $vinculoNome = $this->fetchTable('Vinculos')->find()
+                ->select(['nome'])
+                ->where(['Vinculos.id' => (int)$usuario->vinculo_id])
+                ->disableHydration()
+                ->first()['nome'] ?? null;
+        }
 
-            $unidades = TableRegistry::getTableLocator()
+        $street = $usuario->street ?? null;
+        if ($street === null && !empty($usuario->street_id)) {
+            $street = $this->fetchTable('Streets')->find()
+                ->contain(['Districts' => ['Cities' => ['States']]])
+                ->where(['Streets.id' => (int)$usuario->street_id])
+                ->first();
+        }
+
+        $cep = $street->cep ?? null;
+        $enderecoCompleto = implode(', ', array_filter([
+            $street->nome ?? null,
+            $street->district->nome ?? null,
+            $street->district->city->nome ?? null,
+            $street->district->city->state->sigla ?? null,
+        ]));
+
+        $temJediPerfil = $usuario->jedi !== null && $usuario->jedi !== '';
+        $temPadauanPerfil = $usuario->padauan !== null && $usuario->padauan !== '';
+
+        $unidades = $temJediPerfil
+            ? TableRegistry::getTableLocator()
                 ->get('Unidades')
                 ->find()
-                ->where(['id IN' => explode(',', $usuario->jedi ?? '')]);
+                ->where(['id IN' => explode(',', $usuario->jedi)])
+                ->all()
+            : [];
 
-            $programas = TableRegistry::getTableLocator()
+        $programas = $temPadauanPerfil
+            ? TableRegistry::getTableLocator()
                 ->get('Programas')
                 ->find()
-                ->where(['id IN' => explode(',', $usuario->padauan ?? '')]);
+                ->where(['id IN' => explode(',', $usuario->padauan)])
+                ->all()
+            : [];
 
+        $dashboardService = new \App\Service\DashboardUserService();
+        $bolsas = $dashboardService
+            ->detalhes(null, $id, $identityObj)
+            ->orderBy(['vigente' => 'DESC', 'id' => 'DESC'])
+            ->all();
 
-            $dashboardService = new \App\Service\DashboardUserService();
-            $bolsas = $dashboardService
-                ->detalhes(null, (int)$id, $identityObj)
-                ->orderBy(['vigente' => 'DESC', 'id' => 'DESC']);
-
-
-            
-
-            $this->set(compact(
-                'unidades',
-                'documentos',
-                'racas',
-                'sexo',
-                'deficiencia',
-                'programas',      
-                'usuario',
-                'bolsas'
-            ));
+        $this->set(compact(
+            'unidades',
+            'documentos',
+            'racas',
+            'sexo',
+            'deficiencia',
+            'programas',
+            'usuario',
+            'bolsas',
+            'escolaridadeNome',
+            'vinculoNome',
+            'cep',
+            'enderecoCompleto',
+            'temJediPerfil',
+            'temPadauanPerfil'
+        ));
 
     }
 
@@ -709,7 +760,7 @@ class UsersController extends AppController
         $this->set(compact('deficiencia', 'user', 'vinculos', 'racas', 'sexo', 'documentos','escolaridades', 'unidades', 'ufs', 'vinculoPesquisador40hId'));
     }
 
-    public function cadastrarUsuario($cpf = null, $papel = null, $inscricaoId = null, $editalId = null)
+    public function cadastrarUsuario($cpf = null, $papel = null, $inscricaoId = null, $editalId = null, $fluxo = null)
     {
         $identity = $this->Authentication->getIdentity();
         if (!$identity) {
@@ -723,7 +774,8 @@ class UsersController extends AppController
         }
 
         $isTi = in_array((int)$identity->id, [1, 8088], true);
-        $papel = strtoupper(trim((string)$papel)); 
+        $papel = strtoupper(trim((string)$papel));
+        $fluxo = strtoupper(trim((string)$fluxo));
         $vinculoPesquisador40hId = $this->fetchTable('Vinculos')->find()
             ->select(['id'])
             ->where([
@@ -881,6 +933,9 @@ class UsersController extends AppController
                     $this->Flash->error($mensagemNaoVinculado);
                     if (!empty($inscricaoId) && !empty($editalId)) {
                         $acaoRetorno = ($papel === 'C') ? 'coorientador' : 'dadosBolsista';
+                        if ($fluxo === 'S') {
+                            return $this->redirect(['controller' => 'Substituicoes', 'action' => $acaoRetorno, $inscricaoId]);
+                        }
                         return $this->redirect(['controller' => 'Inscricoes', 'action' => $acaoRetorno, $editalId, $inscricaoId]);
                     }
                     return $this->redirect(['action' => 'ver', $user->id]);
@@ -889,6 +944,9 @@ class UsersController extends AppController
                 $this->Flash->success('Usuário cadastrado com sucesso.');
                 if (!empty($inscricaoId) && !empty($editalId)) {
                     $acaoRetorno = ($papel === 'C') ? 'coorientador' : 'dadosBolsista';
+                    if ($fluxo === 'S') {
+                        return $this->redirect(['controller' => 'Substituicoes', 'action' => $acaoRetorno, $inscricaoId]);
+                    }
                     return $this->redirect(['controller' => 'Inscricoes', 'action' => $acaoRetorno, $editalId, $inscricaoId]);
                 }
                 return $this->redirect(['action' => 'ver', $user->id]);

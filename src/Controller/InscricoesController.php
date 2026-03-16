@@ -34,84 +34,14 @@ class InscricoesController extends AppController
         switch ($tipo) {
             case 'E':
                 return $this->redirect(['controller' => 'Inscricoes', 'action' => 'dadosBolsista', (int)$editalId, (int)$inscricaoId]);
-            case 'V':
-                $programaId = (int)($this->fetchTable('Editais')->find()
-                    ->select(['programa_id'])
-                    ->where(['Editais.id' => (int)$editalId])
-                    ->first()
-                    ->programa_id ?? 0);
-                return $this->redirect(['controller' => 'Padrao', 'action' => 'visualizar', (int)$inscricaoId]);
             case 'T':
                 return $this->redirect(['controller' => 'Inscricoes', 'action' => 'gerarTermo', (int)$editalId, (int)$inscricaoId]);
             case 'F':
                 return $this->redirect(['controller' => 'Inscricoes', 'action' => 'finalizar', (int)$editalId, (int)$inscricaoId]);
-            case 'C':
-                return $this->redirect(['controller' => 'Padrao', 'action' => 'cancelar', (int)$inscricaoId]);
-            case 'S':
-                return $this->redirect(['controller' => 'Padrao', 'action' => 'substituir', (int)$inscricaoId]);
-            case 'D':
-                return $this->redirect(['controller' => 'Padrao', 'action' => 'deletar', (int)$inscricaoId]);
             default:
                 $this->Flash->error('Ação de direcionamento inválida.');
                 return $this->redirect(['controller' => 'Index', 'action' => 'dashdetalhes', 'A']);
         }
-    }
-
-    public function deletar($editalId = null, $inscricaoId = null)
-    {
-        $this->request->allowMethod(['post']);
-        $context = $this->loadContext($editalId);
-        if (isset($context['redirect'])) {
-            return $context['redirect'];
-        }
-        $edital = $context['edital'];
-        $identity = $context['identity'];
-
-        if (empty($inscricaoId)) {
-            $this->Flash->error('Inscrição não informada para exclusão.');
-            return $this->redirect(['controller' => 'Index', 'action' => 'dashdetalhes', 'A']);
-        }
-
-        $ehTI = $this->ehTi();
-        $conditions = [
-            'ProjetoBolsistas.id' => (int)$inscricaoId,
-            'ProjetoBolsistas.editai_id' => (int)$edital->id,
-            'ProjetoBolsistas.deleted IS' => null,
-        ];
-        if (!$ehTI) {
-            $conditions['ProjetoBolsistas.orientador'] = (int)$identity->id;
-        }
-
-        $tblProjetoBolsistas = $this->fetchTable('ProjetoBolsistas');
-        $inscricao = $tblProjetoBolsistas->find()
-            ->where($conditions)
-            ->first();
-        if (!$inscricao) {
-            $this->Flash->error('Inscrição não localizada para exclusão.');
-            return $this->redirect(['controller' => 'Index', 'action' => 'dashdetalhes', 'A']);
-        }
-
-        if (!in_array((int)$inscricao->fase_id, [1, 3], true)) {
-            $this->Flash->error('A inscrição só pode ser excluída nas fases 1 ou 3.');
-            return $this->redirect(['controller' => 'Padrao', 'action' => 'visualizar', (int)$inscricao->id]);
-        }
-
-        try {
-            $faseAtual = (int)$inscricao->fase_id;
-            $inscricaoPatch = $tblProjetoBolsistas->patchEntity($inscricao, ['deleted' => date('Y-m-d H:i:s')]);
-            $tblProjetoBolsistas->saveOrFail($inscricaoPatch);
-            $this->historico((int)$inscricao->id, $faseAtual, $faseAtual, 'Exclusão da inscrição pelo orientador', true);
-        } catch (\Throwable $e) {
-            $this->flashFriendlyException(
-                $e,
-                'Erro no Sistema - exclusão de inscrição',
-                'Não foi possível excluir a inscrição.'
-            );
-            return $this->redirect(['controller' => 'Padrao', 'action' => 'visualizar', (int)$inscricao->id]);
-        }
-
-        $this->Flash->success('Inscrição excluída com sucesso.');
-        return $this->redirect(['controller' => 'Index', 'action' => 'dashdetalhes', 'A']);
     }
 
     public function desistir($editalId = null, $inscricaoId = null)

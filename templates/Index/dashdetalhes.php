@@ -220,8 +220,8 @@
                                             <?php if (in_array($i['fase_id'], [11, 22, 16])): ?>
                                                 <!-- Substituir -->
                                                 <a href="<?= $this->Url->build([
-                                                    'controller' => 'Padrao',
-                                                    'action' => 'substituir',
+                                                    'controller' => 'Substituicoes',
+                                                    'action' => 'iniciar',
                                                     $i['id'],
                                                 ]) ?>"
                                                 class="btn btn-sm btn-outline-success mb-1">

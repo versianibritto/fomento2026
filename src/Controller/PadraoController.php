@@ -505,59 +505,6 @@ class PadraoController extends AppController
         $this->set(compact('inscricao', 'motivos', 'origemAtual'));
     }
 
-    public function substituir($inscricaoId = null)
-    {
-        $identity = $this->identityLogado;
-        if (empty($inscricaoId)) {
-            $this->Flash->error('Inscricao não informada para substituicao.');
-            return $this->redirect(['controller' => 'Index', 'action' => 'dashdetalhes', 'V']);
-        }
-
-        $conditions = [
-            'ProjetoBolsistas.id' => (int)$inscricaoId,
-            'ProjetoBolsistas.deleted IS' => null,
-        ];
-        if (!$this->ehTi()) {
-            $conditions['ProjetoBolsistas.orientador'] = (int)$identity->id;
-        }
-
-        $inscricao = $this->fetchTable('ProjetoBolsistas')->find()
-            ->select(['id', 'editai_id'])
-            ->where($conditions)
-            ->first();
-        if (!$inscricao) {
-            $this->Flash->error('Inscricao não localizada oi deletada para substituicao.');
-            return $this->redirect(['controller' => 'Index', 'action' => 'dashdetalhes', 'V']);
-        }
-
-        if (!$this->ehTi()) {
-            $edital = $this->fetchTable('Editais')->find()
-                ->select(['id', 'inicio_inscricao', 'fim_inscricao', 'inicio_avaliar', 'fim_avaliar'])
-                ->where(['Editais.id' => (int)$inscricao->editai_id])
-                ->first();
-            if (!$edital) {
-                $this->Flash->error('Edital não localizado para substituicao.');
-                return $this->redirect(['action' => 'visualizar', (int)$inscricao->id]);
-            }
-            $wkSubstituicaoId = 4;
-            $wkSubstituicao = $this->fetchTable('EditaisWks')->find()
-                ->select(['int'])
-                ->where(['EditaisWks.nome LIKE' => 'Substitui%'])
-                ->first();
-            if ($wkSubstituicao && !empty($wkSubstituicao->int)) {
-                $wkSubstituicaoId = (int)$wkSubstituicao->int;
-            }
-
-            if (!$this->loadPeriodo($edital, $identity, $wkSubstituicaoId, [], [(int)$inscricao->id])) {
-                $this->Flash->error('Substituicao fora do periodo permitido para este edital.');
-                return $this->redirect(['action' => 'visualizar', (int)$inscricao->id]);
-            }
-        }
-
-        $this->Flash->info('Fluxo de substituicao ainda não foi disponibilizado.');
-        return $this->redirect(['action' => 'visualizar', (int)$inscricao->id]);
-    }
-
     public function deletar($inscricaoId = null)
     {
         $identity = $this->identityLogado;

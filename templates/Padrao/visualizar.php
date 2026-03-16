@@ -217,8 +217,8 @@ if (!$temDataInicio && !$temDataFim) {
 
         <?php if (in_array($faseAtual, [11, 22, 16], true)): ?>
             <?= $this->Html->link('Substituir', [
-                'controller' => 'Padrao',
-                'action' => 'substituir',
+                'controller' => 'Substituicoes',
+                'action' => 'iniciar',
                 (int)$inscricao->id,
             ], ['class' => 'btn btn-sm btn-outline-secondary']) ?>
         <?php endif; ?>
