@@ -27,6 +27,14 @@ if ($tipo === 'V') {
         $faseLabel = $faseSelecionada && isset($situacao[$faseSelecionada])
             ? $situacao[$faseSelecionada]
             : 'Todas';
+        $origemSelecionada = (string)($this->request->getQuery('origem') ?? '');
+        $origemLabel = $origemSelecionada !== '' && isset($origem[$origemSelecionada])
+            ? $origem[$origemSelecionada]
+            : 'Todas';
+        $cotaSelecionada = (string)($this->request->getQuery('cota') ?? '');
+        $cotaLabel = $cotaSelecionada !== '' && isset($cotas[$cotaSelecionada])
+            ? $cotas[$cotaSelecionada]
+            : 'Todas';
     ?>
 
     <div class="card mb-3 shadow-sm">
@@ -36,7 +44,11 @@ if ($tipo === 'V') {
                 <strong>Programa</strong>
                 <?= h($programaLabel) ?>,
                 <strong>Fase</strong>
-                <?= h($faseLabel) ?>
+                <?= h($faseLabel) ?>,
+                <strong>Origem</strong>
+                <?= h($origemLabel) ?>,
+                <strong>Cota</strong>
+                <?= h($cotaLabel) ?>
             </div>
             <a class="btn btn-outline-success"
                href="<?= $this->Url->build([
@@ -46,6 +58,8 @@ if ($tipo === 'V') {
                    '?' => [
                        'programa' => $this->request->getQuery('programa') ?: null,
                        'fase_id' => $this->request->getQuery('fase_id') ?: null,
+                       'origem' => $this->request->getQuery('origem') ?: null,
+                       'cota' => $this->request->getQuery('cota') ?: null,
                        'acao' => 'excel',
                    ],
                ]) ?>">
@@ -66,6 +80,7 @@ if ($tipo === 'V') {
                         <th><?= $this->Paginator->sort('data_inicio', 'Data início') ?></th>
                         <th><?= $this->Paginator->sort('fase_nome', 'Fase') ?></th>
                         <th><?= $this->Paginator->sort('origem', 'Origem') ?></th>
+                        <th><?= $this->Paginator->sort('cota', 'Cota') ?></th>
                         <th><?= $this->Paginator->sort('programa_nome', 'Programa') ?></th>
                         <th><?= $this->Paginator->sort('editai_nome', 'Edital') ?></th>
                         <th class="text-end">Ações</th>
@@ -92,6 +107,7 @@ if ($tipo === 'V') {
                                 <td><?= h($b->data_inicio ?? '-') ?></td>
                                 <td><?= h($b->fase_nome ?? ($b->fase_id ?? '-')) ?></td>
                                 <td><?= h(($origem[(string)($b->origem ?? '')] ?? ($b->origem ?? '-'))) ?></td>
+                                <td><?= h(($cotas[(string)($b->cota ?? '')] ?? ($b->cota ?? '-'))) ?></td>
                                 <td><?= h($b->programa_nome ?? '-') ?></td>
                                 <td><?= h($b->editai_nome ?? '-') ?></td>
                                 <td class="text-end">
@@ -123,7 +139,7 @@ if ($tipo === 'V') {
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="9" class="text-center text-muted fw-bold">Nenhum registro encontrado.</td>
+                            <td colspan="10" class="text-center text-muted fw-bold">Nenhum registro encontrado.</td>
                         </tr>
                     <?php endif; ?>
                 </tbody>

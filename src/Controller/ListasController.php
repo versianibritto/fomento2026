@@ -47,7 +47,8 @@ class ListasController extends AppController
         ])->order(['Fases.nome' => 'ASC'])->toArray();
         $programa = [];
         $origem = $this->origem ?? [];
-        $this->set(compact('situacao', 'programa', 'origem', 'tipo', 'prog'));
+        $cotas = $this->cota ?? [];
+        $this->set(compact('situacao', 'programa', 'origem', 'cotas', 'tipo', 'prog'));
     }
 
     public function resultado($tipo = null)
@@ -97,6 +98,14 @@ class ListasController extends AppController
 
         if (!empty($dados['fase_id'])) {
             $w[] = ['Geral.fase_id' => (int)$dados['fase_id']];
+        }
+
+        if (!empty($dados['origem'])) {
+            $w[] = ['Geral.origem' => (string)$dados['origem']];
+        }
+
+        if (!empty($dados['cota'])) {
+            $w[] = ['Geral.cota' => (string)$dados['cota']];
         }
 
         $conditions = [];
@@ -219,8 +228,9 @@ class ListasController extends AppController
         ])->order(['Fases.nome' => 'ASC'])->toArray();
         $programa = [];
         $origem = $this->origem ?? [];
+        $cotas = $this->cota ?? [];
 
-        $this->set(compact('listas','situacao', 'programa', 'origem', 'tipo', 'prog'));
+        $this->set(compact('listas','situacao', 'programa', 'origem', 'cotas', 'tipo', 'prog'));
     }
 
     private function getProgramasPermitidos($identity): array
