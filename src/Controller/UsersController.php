@@ -353,7 +353,19 @@ class UsersController extends AppController
                         }
                         */
                         $this->Authentication->setIdentity($usuario);
-                        return $this->redirect(['controller' => 'dashboard']);
+                        // regra de negócio
+                        if ((int)$usuario->yoda === 1) {
+                            return $this->redirect([
+                                'controller' => 'Index',
+                                'action' => 'dashyoda'
+                            ]);
+                        }
+
+                        // padrão
+                        return $this->redirect([
+                            'controller' => 'Index',
+                            'action' => 'dashboard'
+                        ]);
                     } else {
                         $this->Flash->error('Não foi possível autenticar você pelo Login Único. Por favor, entre em contato com o SAC da Fiocruz. (CPF não retornado)');
                         return $this->redirect(['action'=>'index']);
@@ -364,7 +376,7 @@ class UsersController extends AppController
                 }
             } catch (\Exception $th) {
                 $this->Flash->error('Houve um erro processando a autenticação. Por favor tente novamente. Detalhes: ' . $th->getMessage());
-                return $this->redirect(['controller' => 'Index', 'action'=>'index']);
+                return $this->redirect(['controller' => 'Index', 'action'=>'home']);
             }     
     }   
 
@@ -374,7 +386,7 @@ class UsersController extends AppController
         // regardless of POST or GET, redirect if user is logged in
         if ($result && $result->isValid()) {
             $this->Authentication->logout();
-            return $this->redirect(['controller' => 'Index', 'action' => 'index']);
+            return $this->redirect(['controller' => 'Index', 'action' => 'home']);
         }
     }
 

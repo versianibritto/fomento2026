@@ -200,7 +200,6 @@
                                 <thead class="table-light">
                                     <tr>
                                         <th>Súmula</th>
-                                        <th>Parâmetro</th>
                                         <th style="width: 140px;">Quantidade</th>
                                     </tr>
                                 </thead>
@@ -209,7 +208,6 @@
                                         <?php $qtdSalva = $quantidadesSalvas[(int)$sumula->id] ?? null; ?>
                                         <tr>
                                             <td class="sumula-col-texto"><?= h($sumula->sumula) ?></td>
-                                            <td class="sumula-col-texto"><?= h($sumula->parametro) ?></td>
                                             <td>
                                                 <input type="hidden" name="sumula[<?= (int)$idx ?>][editais_sumula_id]" value="<?= (int)$sumula->id ?>">
                                                 <input
