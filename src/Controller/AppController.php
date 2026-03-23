@@ -227,7 +227,6 @@ class AppController extends Controller
         $substituirCaracter = ['micro', '(Marca Registrada) ', '(copyright) ', '(Trade Mark) ', '(SM) ', 'Alpha', 'Beta', 'Gamma', 'Delta', 'delta', 'Teta', 'PI', 'Lambda', '(Sigma/Somatório)', 'Phi', 'Phi', 'Ômega', 'Ômega', '> ou =', '< ou ='];
 
         $texto = strtr($texto, array_combine($caracterGrego, $substituirCaracter));
-        $texto = htmlspecialchars($texto, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         $texto = preg_replace('/\p{Mn}/u', '', $texto) ?? $texto;
         $texto = preg_replace('/[^\x20-\x7E\xA0-\xFF\xC2-\xF4]/u', '', $texto) ?? $texto;
 
