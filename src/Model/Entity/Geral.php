@@ -85,6 +85,7 @@ use Cake\ORM\Entity;
  * @property string|null $resultado
  * @property string|null $created
  * @property string|null $data_inicio
+ * @property string|null $primeira_bolsa
  * @property int|null $vigente
  * @property string|null $tipo_bolsa
  * @property string|null $justificativa_cancelamento
@@ -181,6 +182,7 @@ class Geral extends Entity
         'resultado' => true,
         'created' => true,
         'data_inicio' => true,
+        'primeira_bolsa' => true,
         'vigente' => true,
         'tipo_bolsa' => true,
         'justificativa_cancelamento' => true,

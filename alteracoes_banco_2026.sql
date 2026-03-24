@@ -1375,3 +1375,131 @@ VIEW `dashyodacounts` AS
         ((`pb`.`deleted` IS NULL)
             AND (`e`.`fim_vigencia` > NOW()))
     GROUP BY `pb`.`fase_id` , `f`.`bloco` , `pb`.`vigente` , `e`.`programa_id` , `pb`.`editai_id`;
+
+
+-- pos prod 23/04
+CREATE or replace
+VIEW `geral` AS
+    SELECT 
+        `p`.`id` AS `id`,
+        `p`.`bolsista` AS `bolsista`,
+        UPPER(`u`.`nome`) AS `nome_bolsista`,
+        UPPER(`u`.`nome_social`) AS `social_bolsista`,
+        `u`.`sexo` AS `sexo`,
+        `u`.`cpf` AS `cpf_bolsista`,
+        `u`.`documento` AS `documento`,
+        `u`.`documento_numero` AS `documento_numero`,
+        `u`.`documento_emissor` AS `documento_emissor`,
+        DATE_FORMAT(`u`.`data_nascimento`, '%d/%m/%Y') AS `nascimento`,
+        `u`.`telefone` AS `telefone`,
+        `u`.`telefone_contato` AS `telefone_contato`,
+        `u`.`celular` AS `celular`,
+        `u`.`whatsapp` AS `whatsapp`,
+        `s`.`cep` AS `cep`,
+        UPPER(`s`.`nome`) AS `rua`,
+        `u`.`complemento` AS `complemento`,
+        UPPER(`d`.`nome`) AS `bairro`,
+        UPPER(`c`.`nome`) AS `cidade`,
+        `st`.`sigla` AS `estado`,
+        `u`.`email` AS `email_bolsista`,
+        `u`.`email_alternativo` AS `email_alternativo_bolsista`,
+        `u`.`email_contato` AS `email_contato_bolsista`,
+        `u`.`curso` AS `curso`,
+        `p`.`orientador` AS `orientador`,
+        UPPER(`z`.`nome`) AS `nome_orientador`,
+        UPPER(`z`.`nome_social`) AS `social_orientador`,
+        `z`.`telefone` AS `telefone_orientador`,
+        `z`.`telefone_contato` AS `telefone_contato_orientador`,
+        `z`.`celular` AS `celular_orientador`,
+        `z`.`whatsapp` AS `whatsapp_orientador`,
+        `z`.`email` AS `email_orientador`,
+        `z`.`email_alternativo` AS `email_alternativo_orientador`,
+        `z`.`email_contato` AS `email_contato_orientador`,
+        `z`.`unidade_id` AS `unidade_id`,
+        `sg`.`sigla` AS `unidade_orientador`,
+        `z`.`vinculo_id` AS `vinculo_orientador_id`,
+        `v`.`nome` AS `vinculo_orientador`,
+        `p`.`coorientador` AS `coorientador`,
+        UPPER(`coo`.`nome`) AS `nome_coorientador`,
+        UPPER(`coo`.`nome_social`) AS `social_coorientador`,
+        `coo`.`telefone` AS `telefone_coorientador`,
+        `coo`.`telefone_contato` AS `telefone_contato_coorientador`,
+        `coo`.`celular` AS `celular_coorientador`,
+        `coo`.`whatsapp` AS `whatsapp_coorientador`,
+        `coo`.`email` AS `email_coorientador`,
+        `coo`.`email_alternativo` AS `email_alternativo_coorientador`,
+        `coo`.`email_contato` AS `email_contato_coorientador`,
+        `coo`.`unidade_id` AS `unidade_id_coorientador`,
+        `sgc`.`sigla` AS `unidade_coorientador`,
+        `coo`.`vinculo_id` AS `vinculo_coorientador_id`,
+        `vc`.`nome` AS `vinculo_coorientador`,
+        `p`.`projeto_id` AS `projeto_id`,
+        `t`.`titulo` AS `projeto_orientador`,
+        `g`.`nome` AS `grande_area`,
+        `a`.`nome` AS `area`,
+        `af`.`nome` AS `area_fiocruz`,
+        `l`.`nome` AS `linha`,
+        `p`.`sp_titulo` AS `titulo_subprojeto`,
+        `p`.`programa_id` AS `programa_id`,
+        `prog`.`sigla` AS `programa_nome`,
+        `p`.`editai_id` AS `editai_id`,
+        `ed`.`nome` AS `editai_nome`,
+        `ed`.`inicio_vigencia` AS `inicio_vigencia`,
+        `ed`.`fim_vigencia` AS `fim_vigencia`,
+        `ed`.`controller` AS `ed_controller`,
+        `p`.`cota` AS `cota`,
+        `p`.`fase_id` AS `fase_id`,
+        `fs`.`nome` AS `fase_nome`,
+        `p`.`filhos_menor` AS `filhos_menor`,
+        `p`.`origem` AS `origem`,
+        `p`.`prorrogacao` AS `prorrogacao`,
+        `p`.`autorizacao` AS `autorizacao`,
+        `p`.`primeiro_periodo` AS `primeiro_periodo`,
+        `p`.`resultado` AS `resultado`,
+        DATE_FORMAT((`p`.`created` + INTERVAL 3 HOUR),
+                '%d/%m/%Y') AS `created`,
+        DATE_FORMAT((`p`.`data_inicio` + INTERVAL 3 HOUR),
+                '%d/%m/%Y') AS `data_inicio`,
+        DATE_FORMAT((`entrada`.`data_inicio` + INTERVAL 3 HOUR),
+                '%d/%m/%Y') AS `primeira_bolsa`,
+        `p`.`vigente` AS `vigente`,
+        `p`.`tipo_bolsa` AS `tipo_bolsa`,
+        `p`.`justificativa_cancelamento` AS `justificativa_cancelamento`,
+        DATE_FORMAT((`p`.`deleted` + INTERVAL 3 HOUR),
+                '%d/%m/%Y') AS `deleted`,
+        `p`.`area_pdj` AS `area_pdj`,
+        `apdj`.`nome` AS `area_pdj_nome`,
+        `p`.`bolsista_anterior` AS `bolsista_anterior`,
+        `p`.`referencia_inscricao_anterior` AS `referencia_inscricao_anterior`,
+        `p`.`troca_projeto` AS `troca_projeto`,
+        `p`.`heranca` AS `heranca`
+    FROM
+        (((((((((((((((((((((`projeto_bolsistas` `p`
+        LEFT JOIN `editais` `ed` ON ((`ed`.`id` = `p`.`editai_id`)))
+        LEFT JOIN `usuarios` `u` ON ((`u`.`id` = `p`.`bolsista`)))
+        LEFT JOIN `streets` `s` ON ((`u`.`street_id` = `s`.`id`)))
+        LEFT JOIN `districts` `d` ON ((`d`.`id` = `s`.`district_id`)))
+        LEFT JOIN `cities` `c` ON ((`c`.`id` = `d`.`city_id`)))
+        LEFT JOIN `states` `st` ON ((`st`.`id` = `c`.`state_id`)))
+        LEFT JOIN `usuarios` `z` ON ((`z`.`id` = `p`.`orientador`)))
+        LEFT JOIN `unidades` `sg` ON ((`sg`.`id` = `z`.`unidade_id`)))
+        LEFT JOIN `vinculos` `v` ON ((`v`.`id` = `z`.`vinculo_id`)))
+        LEFT JOIN `usuarios` `coo` ON ((`coo`.`id` = `p`.`coorientador`)))
+        LEFT JOIN `unidades` `sgc` ON ((`sgc`.`id` = `coo`.`unidade_id`)))
+        LEFT JOIN `vinculos` `vc` ON ((`vc`.`id` = `coo`.`vinculo_id`)))
+        LEFT JOIN `projetos` `t` ON ((`t`.`id` = `p`.`projeto_id`)))
+        LEFT JOIN `areas` `a` ON ((`a`.`id` = `t`.`area_id`)))
+        LEFT JOIN `grandes_areas` `g` ON ((`g`.`id` = `a`.`grandes_area_id`)))
+        LEFT JOIN `areas` `apdj` ON ((`apdj`.`id` = `p`.`area_pdj`)))
+        LEFT JOIN `linhas` `l` ON ((`l`.`id` = `t`.`linha_id`)))
+        LEFT JOIN `areas_fiocruz` `af` ON ((`af`.`id` = `l`.`areas_fiocruz_id`)))
+        LEFT JOIN `fases` `fs` ON ((`fs`.`id` = `p`.`fase_id`)))
+        LEFT JOIN `programas` `prog` ON ((`prog`.`id` = `p`.`programa_id`)))
+        LEFT JOIN (SELECT 
+            `projeto_bolsistas`.`bolsista` AS `bolsista`,
+                `projeto_bolsistas`.`projeto_id` AS `projeto_id`,
+                MIN(`projeto_bolsistas`.`data_inicio`) AS `data_inicio`
+        FROM
+            `projeto_bolsistas`
+        GROUP BY `projeto_bolsistas`.`bolsista` , `projeto_bolsistas`.`projeto_id`) `entrada` ON (((`entrada`.`bolsista` = `u`.`id`)
+            AND (`entrada`.`projeto_id` = `p`.`projeto_id`))));

@@ -129,6 +129,30 @@ class AppController extends Controller
         return $text;
     }
 
+    protected function downloadCsvResponse(string $filename, array $header, iterable $rows, string $delimiter = ';')
+    {
+        $fh = fopen('php://temp', 'r+');
+        fwrite($fh, "\xEF\xBB\xBF");
+
+        foreach ([$header, ...is_array($rows) ? $rows : iterator_to_array($rows, false)] as $row) {
+            $escaped = array_map(function ($value): string {
+                $text = $this->normalizeCsvValue($value);
+                return '"' . str_replace('"', '""', $text) . '"';
+            }, $row);
+            fwrite($fh, implode($delimiter, $escaped) . "\r\n");
+        }
+
+        rewind($fh);
+        $csv = (string)stream_get_contents($fh);
+        fclose($fh);
+
+        return $this->response
+            ->withType('csv')
+            ->withCharset('UTF-8')
+            ->withStringBody($csv)
+            ->withDownload($filename);
+    }
+
     protected function ajustarDataBancoParaTela($value, int $offsetHoras = -3): ?FrozenTime
     {
         if ($value === null || $value === '') {

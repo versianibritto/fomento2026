@@ -381,6 +381,10 @@ class GeralTable extends Table
             ->allowEmptyString('data_inicio');
 
         $validator
+            ->scalar('primeira_bolsa')
+            ->allowEmptyString('primeira_bolsa');
+
+        $validator
             ->allowEmptyString('vigente');
 
         $validator

@@ -811,46 +811,36 @@ class GestaoController extends AppController
                 'justificativa_ultima_nao_homologacao',
             ];
 
-            $fh = fopen('php://temp', 'r+');
-            fputcsv($fh, $header, ';');
-
+            $exportRows = [];
             foreach ($rows as $item) {
                 $faseAtualId = (int)($item->fase_id ?? 0);
-                $row = [
-                    $this->normalizeCsvValue($item->id ?? ''),
-                    $this->normalizeCsvValue($item->editai->nome ?? ''),
-                    $this->normalizeCsvValue($item->editai->programa->sigla ?? ($item->editai->programa_id ?? '')),
-                    $this->normalizeCsvValue($item->fase->nome ?? ''),
-                    $this->normalizeCsvValue($item->bolsista_usuario->nome ?? ''),
-                    $this->normalizeCsvValue($item->orientadore->nome ?? ''),
-                    $this->normalizeCsvValue($item->orientadore->unidade->sigla ?? ''),
-                    $this->normalizeCsvValue($item->created ? $item->created->format('d/m/Y H:i:s') : ''),
-                    $this->normalizeCsvValue($item->orientadore->telefone ?? ''),
-                    $this->normalizeCsvValue($item->orientadore->telefone_contato ?? ''),
-                    $this->normalizeCsvValue($item->orientadore->celular ?? ''),
-                    $this->normalizeCsvValue($item->orientadore->whatsapp ?? ''),
-                    $this->normalizeCsvValue($item->orientadore->email ?? ''),
-                    $this->normalizeCsvValue($item->orientadore->email_alternativo ?? ''),
-                    $this->normalizeCsvValue($item->orientadore->email_contato ?? ''),
-                    $this->normalizeCsvValue(
-                        $faseAtualId === 7
-                            ? ($justificativaNaoHomologacaoMap[(int)($item->id ?? 0)] ?? '')
-                            : ''
-                    ),
+                $exportRows[] = [
+                    $item->id ?? '',
+                    $item->editai->nome ?? '',
+                    $item->editai->programa->sigla ?? ($item->editai->programa_id ?? ''),
+                    $item->fase->nome ?? '',
+                    $item->bolsista_usuario->nome ?? '',
+                    $item->orientadore->nome ?? '',
+                    $item->orientadore->unidade->sigla ?? '',
+                    $item->created ? $item->created->format('d/m/Y H:i:s') : '',
+                    $item->orientadore->telefone ?? '',
+                    $item->orientadore->telefone_contato ?? '',
+                    $item->orientadore->celular ?? '',
+                    $item->orientadore->whatsapp ?? '',
+                    $item->orientadore->email ?? '',
+                    $item->orientadore->email_alternativo ?? '',
+                    $item->orientadore->email_contato ?? '',
+                    $faseAtualId === 7
+                        ? ($justificativaNaoHomologacaoMap[(int)($item->id ?? 0)] ?? '')
+                        : '',
                 ];
-                fputcsv($fh, $row, ';');
             }
 
-            rewind($fh);
-            $csv = stream_get_contents($fh);
-            fclose($fh);
-
-            $filename = 'lista_homologacao_' . date('Ymd_His') . '.csv';
-            $this->response = $this->response
-                ->withType('csv')
-                ->withDownload($filename);
-            $this->response->getBody()->write($csv);
-            return $this->response;
+            return $this->downloadCsvResponse(
+                'lista_homologacao_' . date('Ymd_His') . '.csv',
+                $header,
+                $exportRows
+            );
         }
 
         $inscricoes = $this->paginate($query, ['limit' => 20]);

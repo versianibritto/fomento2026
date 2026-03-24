@@ -1,13 +1,32 @@
 <?php
 declare(strict_types=1);
 namespace App\Controller;
-use Cake\I18n\FrozenDate;
-
 use Cake\ORM\TableRegistry;
 
 class ListasController extends AppController 
 {
     protected $Geral;
+    private const PADRAO_INSCRICAO_EXCLUIR = [
+        'bolsista',
+        'orientador',
+        'unidade_id',
+        'vinculo_orientador_id',
+        'coorientador',
+        'unidade_id_coorientador',
+        'vinculo_coorientador_id',
+        'programa_id',
+        'editai_id',
+        'ed_controller',
+        'fase_id',
+        'area_pdj',
+        'inicio_vigencia',
+        'fim_vigencia',
+        'deleted',
+    ];
+    private const PADRAO_INSCRICAO_LABELS = [
+        'data_inicio' => 'data_inicio',
+        'primeira_bolsa' => 'data de inicio da primeira bolsa',
+    ];
 
     public function beforeFilter(\Cake\Event\EventInterface $event)
     {
@@ -29,22 +48,18 @@ class ListasController extends AppController
         if ($tipo === '') {
             $tipo = 'T';
         }
-        if((!$this->request->getAttribute('identity')['yoda']) && 
-        ($this->request->getAttribute('identity')['jedi']==null) &&
-        ($this->request->getAttribute('identity')['padauan']==null)
-        ){
-            $this->Flash->error('Restrito a administradores');
-            return $this->redirect(['controller'=>'Index', 'action'=>'dashboard']);
+        $acessoNegado = $this->validarAcessoListas();
+        if ($acessoNegado !== null) {
+            return $acessoNegado;
         }
 
         $identity = $this->request->getAttribute('identity');
-        $identityData = $this->identityToArray($identity);
-        [$prog, $permitidasIds] = $this->getProgramasPermitidos($identity);
+        [$prog, ] = $this->getProgramasPermitidos($identity);
 
         $situacao = $this->fetchTable('Fases')->find('list', [
             'keyField' => 'id',
             'valueField' => 'nome',
-        ])->order(['Fases.nome' => 'ASC'])->toArray();
+        ])->orderBy(['Fases.nome' => 'ASC'])->toArray();
         $programa = [];
         $origem = $this->origem ?? [];
         $cotas = $this->cota ?? [];
@@ -57,116 +72,41 @@ class ListasController extends AppController
         if ($tipo === '') {
             $tipo = 'V';
         }
-        if((!$this->request->getAttribute('identity')['yoda']) && 
-        ($this->request->getAttribute('identity')['jedi']==null) &&
-        ($this->request->getAttribute('identity')['padauan']==null)
-        ){
-            $this->Flash->error('Restrito a administradores');
-            return $this->redirect(['controller'=>'Index', 'action'=>'dashboard']);
+        $acessoNegado = $this->validarAcessoListas();
+        if ($acessoNegado !== null) {
+            return $acessoNegado;
         }
 
         $identity = $this->request->getAttribute('identity');
-        $identityData = $this->identityToArray($identity);
-        $ehYoda = !empty($identityData['yoda']);
-        $jediRaw = (string)($identityData['jedi'] ?? '');
-        $padauanRaw = (string)($identityData['padauan'] ?? '');
-
         [$prog, $permitidasIds] = $this->getProgramasPermitidos($identity);
-
-        $dados = $this->request->getQueryParams();
-        $w = [];
-        $w[] = ['Geral.deleted IS' => null];
-
-        if (!empty($dados['programa'])) {
-            $programaId = (int)$dados['programa'];
-            if ($padauanRaw !== '' && !in_array($programaId, $permitidasIds, true)) {
-                $this->Flash->error('Você não tem permissão neste programa');
-                return $this->redirect(['action' => 'busca', $tipo]);
-            }
-            $w[] = ['Geral.programa_id' => $programaId];
-        } elseif ($padauanRaw !== '') {
-            if (!empty($permitidasIds)) {
-                $w[] = ['Geral.programa_id IN' => array_values(array_unique($permitidasIds))];
-            } else {
-                $w[] = ['Geral.programa_id' => -1];
-            }
-        }
-
-        if (!$ehYoda && $padauanRaw === '' && $jediRaw !== '') {
-            $w[] = ['Geral.unidade_id IN (' . $jediRaw . ')'];
-        }
-
-        if (!empty($dados['fase_id'])) {
-            $w[] = ['Geral.fase_id' => (int)$dados['fase_id']];
-        }
-
-        if (!empty($dados['origem'])) {
-            $w[] = ['Geral.origem' => (string)$dados['origem']];
-        }
-
-        if (!empty($dados['cota'])) {
-            $w[] = ['Geral.cota' => (string)$dados['cota']];
-        }
-
-        $conditions = [];
-        if ($tipo === 'V') {
-            $conditions[] = ['Geral.vigente' => 1];
-        } elseif ($tipo === 'A') {
-            $conditions[] = ['Geral.inicio_vigencia > DATE_ADD(NOW(), INTERVAL 1 DAY)'];
-        } elseif ($tipo === 'T') {
-            $conditions[] = ['Geral.fim_vigencia > DATE_ADD(NOW(), INTERVAL 1 DAY)'];
-        }
-        if (!empty($conditions)) {
-            $w = array_merge($w, $conditions);
+        $conditions = $this->buildResultadoConditions($tipo, $permitidasIds);
+        if ($conditions === null) {
+            return $this->redirect(['action' => 'busca', $tipo]);
         }
 
         $lista = $this->Geral->find('all')
-            ->where([$w])
+            ->where([$conditions])
             ->order(['nome_orientador' => 'ASC']);
         $listas = $this->paginate($lista, ['limit'=>10]);
 
         if ($this->request->getQuery('acao') === 'excel') {
             $excelQuery = $this->Geral->find('all')
-                ->where([$w])
+                ->where([$conditions])
                 ->order(['nome_orientador' => 'ASC']);
             $excelQuery->limit(null);
             $rows = $excelQuery->all();
 
-            $columns = $this->Geral->getSchema()->columns();
-            if (empty($columns)) {
-                $first = $rows->first();
-                $columns = $first ? array_keys($first->toArray()) : [];
-            }
-            $excluir = [
-                'bolsista',
-                'orientador',
-                'unidade_id',
-                'vinculo_orientador_id',
-                'coorientador',
-                'unidade_id_coorientador',
-                'vinculo_coorientador_id',
-                'programa_id',
-                'editai_id',
-                'ed_controller',
-                'fase_id',
-                'area_pdj',
-                'inicio_vigencia',
-                'fim_vigencia',
-                'deleted',
-            ];
-            $columns = array_values(array_filter($columns, static function ($col) use ($excluir) {
-                return !in_array($col, $excluir, true);
-            }));
-
-            $fh = fopen('php://temp', 'r+');
-            fputcsv($fh, $columns, ';');
-
+            $columns = $this->getPadraoInscricaoColumns($rows);
+            $header = array_map(static function ($column) {
+                return self::PADRAO_INSCRICAO_LABELS[$column] ?? $column;
+            }, $columns);
             $origemMap = $this->origem ?? [];
             $tipoBolsaMap = $this->fonte ?? [];
             $resultadoMap = $this->resultado ?? [];
             $cotaMap = $this->cota ?? [];
             $sexoMap = $this->sexo ?? [];
             $documentoMap = $this->documentos ?? [];
+            $exportRows = [];
 
             foreach ($rows as $item) {
                 $data = $item->toArray();
@@ -192,45 +132,36 @@ class ListasController extends AppController
                         $key = strtoupper((string)$val);
                         $val = $cotaMap[$key] ?? $val;
                     } elseif (in_array($col, ['heranca', 'troca_projeto', 'vigente', 'autorizacao', 'prorrogacao'], true)) {
-                        if ($val === '' || $val === null) {
-                            $val = '';
-                        } else {
-                            $val = ((int)$val === 1) ? 'Sim' : 'Não';
-                        }
+                        $val = ($val === '' || $val === null) ? '' : (((int)$val === 1) ? 'Sim' : 'Não');
                     } elseif ($col === 'primeiro_periodo') {
-                        if ($val === '' || $val === null) {
-                            $val = 'Não informado';
-                        } else {
-                            $val = ((int)$val === 1) ? 'Sim' : 'Não';
-                        }
+                        $val = ($val === '' || $val === null) ? 'Não informado' : (((int)$val === 1) ? 'Sim' : 'Não');
                     }
-                    $val = $this->normalizeCsvValue($val);
                     $row[] = $val;
                 }
-                fputcsv($fh, $row, ';');
+                $exportRows[] = $row;
             }
 
-            rewind($fh);
-            $csv = stream_get_contents($fh);
-            fclose($fh);
-
-            $filename = 'lista_' . $tipo . '_' . date('Ymd_His') . '.csv';
-            $this->response = $this->response
-                ->withType('csv')
-                ->withDownload($filename);
-            $this->response->getBody()->write($csv);
-            return $this->response;
+            return $this->downloadCsvResponse(
+                'lista_' . $tipo . '_' . date('Ymd_His') . '.csv',
+                $header,
+                $exportRows
+            );
         }
 
         $situacao = $this->fetchTable('Fases')->find('list', [
             'keyField' => 'id',
             'valueField' => 'nome',
-        ])->order(['Fases.nome' => 'ASC'])->toArray();
-        $programa = [];
-        $origem = $this->origem ?? [];
-        $cotas = $this->cota ?? [];
+        ])->orderBy(['Fases.nome' => 'ASC'])->toArray();
 
-        $this->set(compact('listas','situacao', 'programa', 'origem', 'cotas', 'tipo', 'prog'));
+        $this->set([
+            'listas' => $listas,
+            'situacao' => $situacao,
+            'programa' => [],
+            'origem' => $this->origem ?? [],
+            'cotas' => $this->cota ?? [],
+            'tipo' => $tipo,
+            'prog' => $prog,
+        ]);
     }
 
     private function getProgramasPermitidos($identity): array
@@ -243,7 +174,7 @@ class ListasController extends AppController
         $programasRows = $programasTable->find()
             ->select(['id', 'sigla', 'letra'])
             ->where(['deleted' => 0])
-            ->order(['sigla' => 'ASC'])
+            ->orderBY(['sigla' => 'ASC'])
             ->all();
 
         $prog = [];
@@ -303,16 +234,88 @@ class ListasController extends AppController
         return [];
     }
 
-    public function limpar($secao, $action )
+    private function getPadraoInscricaoColumns($rows): array
     {
+        $columns = $this->Geral->getSchema()->columns();
+        if (empty($columns)) {
+            $first = $rows->first();
+            $columns = $first ? array_keys($first->toArray()) : [];
+        }
 
-        $this->request->getSession()->delete($secao);
-        $busca = null;
-       // $w = [];
-        return $this->redirect(['action'=>$action]);
+        return array_values(array_filter($columns, static function ($col) {
+            return !in_array($col, self::PADRAO_INSCRICAO_EXCLUIR, true);
+        }));
     }
 
-    
-    
-    
+    private function validarAcessoListas()
+    {
+        $identity = $this->request->getAttribute('identity');
+        if (
+            !$identity['yoda'] &&
+            $identity['jedi'] == null &&
+            $identity['padauan'] == null
+        ) {
+            $this->Flash->error('Restrito a administradores');
+            return $this->redirect(['controller' => 'Index', 'action' => 'index']);
+        }
+
+        return null;
+    }
+
+    private function buildResultadoConditions(string $tipo, array $permitidasIds): ?array
+    {
+        $identityData = $this->identityToArray($this->request->getAttribute('identity'));
+        $ehYoda = !empty($identityData['yoda']);
+        $jediRaw = (string)($identityData['jedi'] ?? '');
+        $padauanRaw = (string)($identityData['padauan'] ?? '');
+        $dados = $this->request->getQueryParams();
+        $conditions = [['Geral.deleted IS' => null]];
+
+        if (!empty($dados['programa'])) {
+            $programaId = (int)$dados['programa'];
+            if ($padauanRaw !== '' && !in_array($programaId, $permitidasIds, true)) {
+                $this->Flash->error('Você não tem permissão neste programa');
+                return null;
+            }
+            $conditions[] = ['Geral.programa_id' => $programaId];
+        } elseif ($padauanRaw !== '') {
+            if (!empty($permitidasIds)) {
+                $conditions[] = ['Geral.programa_id IN' => array_values(array_unique($permitidasIds))];
+            } else {
+                $conditions[] = ['Geral.programa_id' => -1];
+            }
+        }
+
+        if (!$ehYoda && $padauanRaw === '' && $jediRaw !== '') {
+            $conditions[] = ['Geral.unidade_id IN (' . $jediRaw . ')'];
+        }
+
+        if (!empty($dados['fase_id'])) {
+            $conditions[] = ['Geral.fase_id' => (int)$dados['fase_id']];
+        }
+
+        if (!empty($dados['origem'])) {
+            $conditions[] = ['Geral.origem' => (string)$dados['origem']];
+        }
+
+        if (!empty($dados['cota'])) {
+            $conditions[] = ['Geral.cota' => (string)$dados['cota']];
+        }
+
+        if ($tipo === 'V') {
+            $conditions[] = ['Geral.vigente' => 1];
+        } elseif ($tipo === 'A') {
+            $conditions[] = ['Geral.inicio_vigencia > DATE_ADD(NOW(), INTERVAL 1 DAY)'];
+        } elseif ($tipo === 'T') {
+            $conditions[] = ['Geral.fim_vigencia > DATE_ADD(NOW(), INTERVAL 1 DAY)'];
+        }
+
+        return $conditions;
+    }
+
+    public function limpar($secao, $action )
+    {
+        $this->request->getSession()->delete($secao);
+        return $this->redirect(['action'=>$action]);
+    }
 }
