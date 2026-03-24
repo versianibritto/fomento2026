@@ -53,7 +53,10 @@ class IndexController extends AppController
 
     //ok
     public function home()
-    {}
+    {
+        $mensagensPopup = $this->buscarMensagensAtivas('E');
+        $this->set(compact('mensagensPopup'));
+    }
 
     //ok
     public function unidades()
@@ -160,7 +163,9 @@ class IndexController extends AppController
         $dashboardService = new DashboardUserService();
         $dashboard = $dashboardService->contador($userId);
 
-        $this->set(compact('dashboard', 'editais'));
+        $mensagensPopup = $this->buscarMensagensAtivas('I');
+
+        $this->set(compact('dashboard', 'editais', 'mensagensPopup'));
         
 
 

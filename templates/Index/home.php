@@ -55,36 +55,8 @@
            
         </div>
     </div>
-    <!--
-    <div class="modal fade" id="meuPopup" tabindex="-1" aria-labelledby="meuPopupLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content" style="width: auto; height: auto; max-width: 90Wv;">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="meuPopupLabel">Aviso Importante</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
-                </div>
-                <div class="modal-body text-center">
-
-                    <p>Bem-vindo ao sistema! Aqui está uma mensagem importante para você.</p>
-                    <p><h3>Bem-vindo ao sistema! Aqui está uma mensagem importante para você. 2</h3></p>
-
-
-                    <br><br>
-                    <img src="/img/bt_ics.svg" alt="Aviso" class="img-fluid mb-3">
-
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
-                </div>
-            </div>
-        </div>
-    </div>
-    -->
+    <?= $this->element('mensagens_popup', [
+        'mensagensPopup' => $mensagensPopup ?? [],
+        'popupId' => 'modalMensagensExternas',
+    ]) ?>
 </section>
-
-<script>
-  document.addEventListener("DOMContentLoaded", function() {
-    var myModal = new bootstrap.Modal(document.getElementById('meuPopup'));
-    myModal.show();
-  });
-</script>

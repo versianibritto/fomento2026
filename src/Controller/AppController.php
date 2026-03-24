@@ -563,6 +563,40 @@ class AppController extends Controller
             return $this->formatarDataBancoParaTela($value, $formato, $fallback, $offsetHoras);
         });
     }
+
+    protected function buscarMensagensAtivas(string $tipo): array
+    {
+        $tipo = strtoupper(trim($tipo));
+        if (!in_array($tipo, ['I', 'E'], true)) {
+            return [];
+        }
+
+        $agora = FrozenTime::now();
+
+        return $this->fetchTable('Mensagens')->find()
+            ->where([
+                'Mensagens.deleted IS' => null,
+                'Mensagens.tipo' => $tipo,
+            ])
+            ->andWhere([
+                'OR' => [
+                    ['Mensagens.inicio IS' => null],
+                    ['Mensagens.inicio <=' => $agora],
+                ],
+            ])
+            ->andWhere([
+                'OR' => [
+                    ['Mensagens.fim IS' => null],
+                    ['Mensagens.fim >=' => $agora],
+                ],
+            ])
+            ->orderBy([
+                'Mensagens.inicio' => 'DESC',
+                'Mensagens.id' => 'DESC',
+            ])
+            ->all()
+            ->toList();
+    }
     
 
     

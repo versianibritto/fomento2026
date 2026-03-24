@@ -90,6 +90,13 @@ class RestritoController extends AppController
                 'class' => 'btn-secondary',
                 'icon' => 'fas fa-book',
             ],
+            [
+                'titulo' => 'Mensagens',
+                'descricao' => 'Cadastro de mensagens com popup para home e área interna',
+                'url' => ['controller' => 'Restrito', 'action' => 'mensagensLista'],
+                'class' => 'btn-info',
+                'icon' => 'fas fa-comment-dots',
+            ],
         ];
 
         $this->set(compact('atalhos'));
@@ -463,6 +470,165 @@ class RestritoController extends AppController
 
         $manuais = $this->paginate($query, ['limit' => 15]);
         $this->set(compact('manuais', 'filtros'));
+    }
+
+    public function mensagens($id = null)
+    {
+        $this->viewBuilder()->setLayout('admin');
+        $tblMensagens = $this->fetchTable('Mensagens');
+        $isEdicao = (bool)$id;
+
+        if ($isEdicao) {
+            $mensagem = $tblMensagens->find()
+                ->where([
+                    'Mensagens.id' => (int)$id,
+                    'Mensagens.deleted IS' => null,
+                ])
+                ->first();
+            if (!$mensagem) {
+                $this->Flash->error('Mensagem não localizada para edição.');
+                return $this->redirect(['action' => 'mensagensLista']);
+            }
+        } else {
+            $mensagem = $tblMensagens->newEmptyEntity();
+        }
+
+        if ($this->request->is(['post', 'put', 'patch'])) {
+            $dados = $this->request->getData();
+            $arquivoImagem = $dados['imagem'] ?? null;
+            unset($dados['imagem']);
+
+            if (array_key_exists('inicio', $dados) && trim((string)$dados['inicio']) === '') {
+                $dados['inicio'] = null;
+            }
+            if (array_key_exists('fim', $dados) && trim((string)$dados['fim']) === '') {
+                $dados['fim'] = null;
+            }
+
+            $uploadImagem = $this->uploadImagemMensagem($arquivoImagem);
+            if ($uploadImagem['erro']) {
+                $this->Flash->error($uploadImagem['mensagem']);
+            } elseif (!empty($uploadImagem['arquivo'])) {
+                if (!empty($mensagem->imagem)) {
+                    $this->removerImagemMensagemArquivo((string)$mensagem->imagem);
+                }
+                $dados['imagem'] = $uploadImagem['arquivo'];
+            } else {
+                $removerImagem = (string)($dados['remover_imagem'] ?? '0') === '1';
+                if ($removerImagem) {
+                    if (!empty($mensagem->imagem)) {
+                        $this->removerImagemMensagemArquivo((string)$mensagem->imagem);
+                    }
+                    $dados['imagem'] = null;
+                } else {
+                    unset($dados['imagem']);
+                }
+            }
+
+            unset($dados['remover_imagem']);
+
+            if (!$isEdicao) {
+                $dados['deleted'] = null;
+            }
+
+            $mensagem = $tblMensagens->patchEntity($mensagem, $dados);
+            if (!$mensagem->getErrors() && $tblMensagens->save($mensagem)) {
+                $this->Flash->success($isEdicao ? 'Mensagem atualizada com sucesso.' : 'Mensagem cadastrada com sucesso.');
+                return $this->redirect(['action' => 'mensagensLista']);
+            }
+
+            if (!$uploadImagem['erro']) {
+                $this->Flash->error('Não foi possível salvar a mensagem.');
+            }
+        }
+
+        $tipos = [
+            'E' => 'Externa',
+            'I' => 'Interna',
+        ];
+
+        $this->set(compact('mensagem', 'isEdicao', 'tipos'));
+    }
+
+    public function mensagensLista($limpar = false)
+    {
+        $this->viewBuilder()->setLayout('admin');
+        $tblMensagens = $this->fetchTable('Mensagens');
+        $session = $this->request->getSession();
+        $filtros = [];
+
+        if ($limpar) {
+            $session->delete('restrito_mensagens_filtros');
+        }
+
+        $filtrosSalvos = (array)$session->read('restrito_mensagens_filtros', []);
+        if ($this->request->is(['post', 'put', 'patch'])) {
+            $dados = $this->request->getData();
+            $acao = trim((string)($dados['acao'] ?? 'filtrar'));
+
+            if ($acao === 'deletar') {
+                $idDelete = (int)($dados['id'] ?? 0);
+                if ($idDelete <= 0) {
+                    $this->Flash->error('Registro inválido para exclusão.');
+                    return $this->redirect(['action' => 'mensagensLista']);
+                }
+
+                $registro = $tblMensagens->find()
+                    ->where([
+                        'Mensagens.id' => $idDelete,
+                        'Mensagens.deleted IS' => null,
+                    ])
+                    ->first();
+                if (!$registro) {
+                    $this->Flash->error('Mensagem não encontrada para exclusão.');
+                    return $this->redirect(['action' => 'mensagensLista']);
+                }
+
+                $registro->deleted = date('Y-m-d H:i:s');
+                if ($tblMensagens->save($registro)) {
+                    $this->Flash->success('Mensagem excluída com sucesso.');
+                } else {
+                    $this->Flash->error('Não foi possível excluir a mensagem.');
+                }
+                return $this->redirect(['action' => 'mensagensLista']);
+            }
+
+            $filtros = [
+                'titulo' => trim((string)($dados['titulo'] ?? '')),
+                'tipo' => (string)($dados['tipo'] ?? ''),
+                'status' => (string)($dados['status'] ?? 'A'),
+            ];
+            $session->write('restrito_mensagens_filtros', $filtros);
+        } else {
+            $filtros = $filtrosSalvos;
+        }
+
+        $where = [];
+        if (!empty($filtros['titulo'])) {
+            $where['Mensagens.titulo LIKE'] = '%' . $filtros['titulo'] . '%';
+        }
+        if (($filtros['tipo'] ?? '') !== '') {
+            $where['Mensagens.tipo'] = $filtros['tipo'];
+        }
+
+        $status = (string)($filtros['status'] ?? 'A');
+        if ($status === 'A') {
+            $where['Mensagens.deleted IS'] = null;
+        } elseif ($status === 'I') {
+            $where['Mensagens.deleted IS NOT'] = null;
+        }
+
+        $query = $tblMensagens->find()
+            ->where($where)
+            ->orderBy(['Mensagens.id' => 'DESC']);
+
+        $mensagens = $this->paginate($query, ['limit' => 15]);
+        $tipos = [
+            'E' => 'Externa',
+            'I' => 'Interna',
+        ];
+
+        $this->set(compact('mensagens', 'filtros', 'tipos'));
     }
 
     public function replicarAnexos()
@@ -1294,5 +1460,59 @@ class RestritoController extends AppController
         }
 
         $this->set(compact('pastasUpload'));
+    }
+
+    protected function uploadImagemMensagem($file): array
+    {
+        if (!is_object($file) || !$file->getClientFilename()) {
+            return ['erro' => false, 'arquivo' => null, 'mensagem' => null];
+        }
+
+        if (method_exists($file, 'getError') && (int)$file->getError() !== UPLOAD_ERR_OK) {
+            return ['erro' => true, 'arquivo' => null, 'mensagem' => 'Falha no upload da imagem.'];
+        }
+
+        $extensao = strtolower((string)pathinfo((string)$file->getClientFilename(), PATHINFO_EXTENSION));
+        $extensoesPermitidas = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'];
+        if (!in_array($extensao, $extensoesPermitidas, true)) {
+            return ['erro' => true, 'arquivo' => null, 'mensagem' => 'Formato de imagem inválido. Envie JPG, PNG, GIF, WEBP ou SVG.'];
+        }
+
+        if ((int)$file->getSize() > 2097152) {
+            return ['erro' => true, 'arquivo' => null, 'mensagem' => 'A imagem deve ter no máximo 2MB.'];
+        }
+
+        $diretorio = WWW_ROOT . 'uploads' . DS . 'editais' . DS;
+        if (!is_dir($diretorio) && !mkdir($diretorio, 0775, true) && !is_dir($diretorio)) {
+            return ['erro' => true, 'arquivo' => null, 'mensagem' => 'Diretório webroot/uploads/editais não está disponível para gravação.'];
+        }
+
+        if (!is_writable($diretorio)) {
+            return ['erro' => true, 'arquivo' => null, 'mensagem' => 'Diretório webroot/uploads/editais sem permissão de escrita.'];
+        }
+
+        $nomeArquivo = 'mensagem_' . date('Ymd_His') . '_' . uniqid() . '.' . $extensao;
+        $caminho = $diretorio . $nomeArquivo;
+
+        try {
+            $file->moveTo($caminho);
+        } catch (\Throwable $e) {
+            return ['erro' => true, 'arquivo' => null, 'mensagem' => 'Não foi possível gravar a imagem em webroot/uploads/editais. ' . $e->getMessage()];
+        }
+
+        return ['erro' => false, 'arquivo' => $nomeArquivo, 'mensagem' => null];
+    }
+
+    protected function removerImagemMensagemArquivo(string $arquivo): void
+    {
+        $arquivo = trim($arquivo);
+        if ($arquivo === '') {
+            return;
+        }
+
+        $caminho = WWW_ROOT . 'uploads' . DS . 'editais' . DS . $arquivo;
+        if (is_file($caminho)) {
+            @unlink($caminho);
+        }
     }
 }

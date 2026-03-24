@@ -166,3 +166,23 @@ $textoBotao = $isEdicao ? 'Salvar alterações' : 'Cadastrar vitrine';
         </div>
     </div>
 </section>
+<script src="https://cdn.jsdelivr.net/npm/tinymce@7/tinymce.min.js" referrerpolicy="origin"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    if (!window.tinymce) {
+        return;
+    }
+
+    tinymce.init({
+        selector: '#nome, #obs',
+        height: 280,
+        menubar: false,
+        branding: false,
+        plugins: 'lists link table code image autoresize',
+        toolbar: 'undo redo | blocks | bold italic underline | alignleft aligncenter alignright | bullist numlist | link table | code',
+        convert_urls: false,
+        relative_urls: false,
+        remove_script_host: false,
+    });
+});
+</script>

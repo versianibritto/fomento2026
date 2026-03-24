@@ -74,15 +74,30 @@
 
 <body class="bg-light p-4">
 
+<?= $this->element('mensagens_popup', [
+    'mensagensPopup' => $mensagensPopup ?? [],
+    'popupId' => 'modalMensagensInternas',
+]) ?>
+
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    var temModalMensagens = !!document.getElementById('modalMensagensInternas');
+
+    if (temModalMensagens) {
+        return;
+    }
+
     setTimeout(function () {
+        var modalInicial = document.getElementById('modalAvisoInicial');
+        if (!modalInicial) {
+            return;
+        }
         if (window.jQuery && jQuery.fn && jQuery.fn.modal) {
-            jQuery('#modalAvisoInicial').modal('show');
+            jQuery(modalInicial).modal('show');
             return;
         }
         if (window.bootstrap && bootstrap.Modal) {
-            bootstrap.Modal.getOrCreateInstance(document.getElementById('modalAvisoInicial')).show();
+            bootstrap.Modal.getOrCreateInstance(modalInicial).show();
         }
     }, 400);
 
@@ -114,7 +129,7 @@ document.addEventListener('DOMContentLoaded', function () {
 </script>
 
 <!-- ===================== MODAL AUTOMÁTICO INICIAL ===================== -->
-<?php if(($dashboard['andamento'] ?? 0)){?>
+<?php if (($dashboard['andamento'] ?? 0) && empty($mensagensPopup)) {?>
   <div class="modal fade" id="modalAvisoInicial">
     <div class="modal-dialog modal-md">
         <div class="modal-content">

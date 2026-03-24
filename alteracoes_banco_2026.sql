@@ -1503,3 +1503,22 @@ VIEW `geral` AS
             `projeto_bolsistas`
         GROUP BY `projeto_bolsistas`.`bolsista` , `projeto_bolsistas`.`projeto_id`) `entrada` ON (((`entrada`.`bolsista` = `u`.`id`)
             AND (`entrada`.`projeto_id` = `p`.`projeto_id`))));
+
+-- 24/03 mensagens popup home/area interna
+ALTER TABLE `fomento2026`.`mensagens`
+ADD COLUMN `inicio` TIMESTAMP NULL AFTER `modified`,
+ADD COLUMN `fim` TIMESTAMP NULL AFTER `inicio`;
+ALTER TABLE `fomento2026`.`mensagens` 
+CHANGE COLUMN `titulo` `titulo` TEXT NULL DEFAULT NULL ;
+
+ALTER TABLE `fomento2026`.`mensagens` 
+CHANGE COLUMN `titulo` `titulo` TEXT NULL DEFAULT NULL ;
+
+ALTER TABLE `fomento2026`.`mensagens` 
+ADD COLUMN `inicio` TIMESTAMP NULL AFTER `modified`,
+ADD COLUMN `fim` TIMESTAMP NULL AFTER `inicio`;
+
+
+ALTER TABLE `fomento2026`.`suporte_chamados` 
+ADD COLUMN `demandante` INT NULL AFTER `finalizado`,
+CHANGE COLUMN `destinatario_id` `beneficiado` INT UNSIGNED NULL DEFAULT NULL ;
