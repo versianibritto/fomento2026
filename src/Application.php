@@ -65,13 +65,19 @@ class Application extends BaseApplication implements AuthenticationServiceProvid
         ]);
 
         // Redirecionamento padrão caso não autenticado
-        $service->setConfig([
+        /*$service->setConfig([
             'unauthenticatedRedirect' => [
                 'controller' => 'Users',
                 'action' => 'login',
             ],
             'queryParam' => 'redirect',
         ]);
+        */
+        $service = new AuthenticationService([
+            'unauthenticatedRedirect' => Router::url('/login'),
+            'queryParam' => 'redirect',
+        ]);
+
 
         
         $service->loadIdentifier('Authentication.Password', [
