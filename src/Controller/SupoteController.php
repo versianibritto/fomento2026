@@ -55,9 +55,7 @@ class SupoteController extends AppController
                 'tempo_solucao',
             ];
 
-            $fh = fopen('php://temp', 'r+');
-            fputcsv($fh, $header, ';');
-
+            $exportRows = [];
             foreach ($rows as $item) {
                 $criadoEm = $item->created;
                 $finalizadoEm = $item->finalizado ?? null;
@@ -72,30 +70,24 @@ class SupoteController extends AppController
                     }
                 }
 
-                $row = [
+                $exportRows[] = [
                     $item->id,
                     $this->formatarDataBancoParaTela($criadoEm, 'dd/MM/yyyy HH:mm:ss', ''),
                     $item->usuario->nome ?? '',
                     $item->suporte_categoria->nome ?? '',
-                    $this->normalizeCsvValue($item->texto ?? ''),
+                    $item->texto ?? '',
                     $item->suporte_status->nome ?? '',
                     (int)($item->reaberto ?? 0) === 1 ? 'Sim' : 'Nao',
                     $this->formatarDataBancoParaTela($finalizadoEm, 'dd/MM/yyyy HH:mm:ss', ''),
                     $tempoSolucao,
                 ];
-                fputcsv($fh, $row, ';');
             }
 
-            rewind($fh);
-            $csv = stream_get_contents($fh);
-            fclose($fh);
-
-            $filename = 'suporte_chamados_' . date('Ymd_His') . '.csv';
-            $this->response = $this->response
-                ->withType('csv')
-                ->withDownload($filename);
-            $this->response->getBody()->write($csv);
-            return $this->response;
+            return $this->downloadCsvResponse(
+                'suporte_chamados_' . date('Ymd_His') . '.csv',
+                $header,
+                $exportRows
+            );
         }
 
         $chamados = $this->paginate($query, ['limit' => 10]);

@@ -1292,9 +1292,7 @@ class UsersController extends AppController
                 ])
                 ->all();
 
-            $tmp = fopen('php://temp', 'w+');
-            fwrite($tmp, "\xEF\xBB\xBF");
-            fputcsv($tmp, [
+            $header = [
                 'Nome',
                 'Curso',
                 'Instituição de Ensino',
@@ -1312,7 +1310,8 @@ class UsersController extends AppController
                 'Cidade',
                 'Estado',
                 'Data Nascimento',
-            ], ';');
+            ];
+            $exportRows = [];
 
             foreach ($usuariosExportacao as $item) {
                 $cidade = $item->street->district->city->nome ?? '';
@@ -1329,9 +1328,9 @@ class UsersController extends AppController
                         return 'Não Informado';
                     }
 
-                    return $this->normalizeCsvValue($value);
+                    return (string)$value;
                 };
-                fputcsv($tmp, [
+                $exportRows[] = [
                     $csvOuNaoInformado($item->nome),
                     $csvOuNaoInformado($item->curso),
                     $csvOuNaoInformado($instituicaoCurso),
@@ -1346,23 +1345,19 @@ class UsersController extends AppController
                     $csvOuNaoInformado($item->email_contato),
                     $csvOuNaoInformado($item->created ? $item->created->format('d/m/Y') : null),
                     $item->last_data_update_date
-                        ? $this->normalizeCsvValue($item->last_data_update_date->format('d/m/Y'))
+                        ? $item->last_data_update_date->format('d/m/Y')
                         : 'Não foi atualizado ou completado o cadastro',
                     $csvOuNaoInformado($cidade),
                     $csvOuNaoInformado($estado),
                     $csvOuNaoInformado($item->data_nascimento ? $item->data_nascimento->format('d/m/Y') : null),
-                ], ';');
+                ];
             }
 
-            rewind($tmp);
-            $csv = stream_get_contents($tmp);
-            fclose($tmp);
-
-            return $this->response
-                ->withType('csv')
-                ->withCharset('UTF-8')
-                ->withStringBody((string)$csv)
-                ->withDownload('banco_talentos_' . date('Ymd_His') . '.csv');
+            return $this->downloadCsvResponse(
+                'banco_talentos_' . date('Ymd_His') . '.csv',
+                $header,
+                $exportRows
+            );
         }
 
         $this->paginate = ['limit'=>10];
@@ -1864,9 +1859,7 @@ class UsersController extends AppController
                     'diff_json',
                 ];
 
-                $fh = fopen('php://temp', 'r+');
-                fputcsv($fh, $header, ';');
-
+                $exportRows = [];
                 foreach ($rows as $historico) {
                     $diff = $historico->diff_json;
                     if (is_array($diff)) {
@@ -1874,7 +1867,7 @@ class UsersController extends AppController
                     }
                     $contextoLabel = $contextoMap[$historico->contexto] ?? ($historico->contexto ?? '');
                     $origemLabel = $origemAcessoMap[$historico->origem_acesso] ?? ($historico->origem_acesso ?? '');
-                    $row = [
+                    $exportRows[] = [
                         $usuario->id ?? '',
                         $usuario->nome ?? '',
                         $usuario->cpf ?? '',
@@ -1885,19 +1878,13 @@ class UsersController extends AppController
                         $origemLabel,
                         $diff ?? '',
                     ];
-                    fputcsv($fh, $row, ';');
                 }
 
-                rewind($fh);
-                $csv = stream_get_contents($fh);
-                fclose($fh);
-
-                $filename = 'usuario_historicos_' . ($usuario->id ?? 'user') . '_' . date('Ymd_His') . '.csv';
-                $this->response = $this->response
-                    ->withType('csv')
-                    ->withDownload($filename);
-                $this->response->getBody()->write($csv);
-                return $this->response;
+                return $this->downloadCsvResponse(
+                    'usuario_historicos_' . ($usuario->id ?? 'user') . '_' . date('Ymd_His') . '.csv',
+                    $header,
+                    $exportRows
+                );
             }
 
             $historicos = $this->paginate($historicos, ['limit' => 30]);

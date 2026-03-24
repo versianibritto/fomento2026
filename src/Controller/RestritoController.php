@@ -1010,9 +1010,7 @@ class RestritoController extends AppController
                 'respondido_em',
             ];
 
-            $fh = fopen('php://temp', 'r+');
-            fputcsv($fh, $header, ';');
-
+            $exportRows = [];
             foreach ($rows as $erro) {
                 $tipo = $erro->ti_tipo;
                 $statusLabel = ($erro->status ?? 'N') === 'R' ? 'Respondido' : 'Nova';
@@ -1042,7 +1040,7 @@ class RestritoController extends AppController
                     }
                 }
 
-                $row = [
+                $exportRows[] = [
                     $erro->id,
                     $erro->created ? $erro->created->format('d/m/Y H:i:s') : '',
                     $statusLabel,
@@ -1065,19 +1063,13 @@ class RestritoController extends AppController
                     $erro->respondido_por ?? '',
                     $erro->respondido_em ? $erro->respondido_em->format('d/m/Y H:i:s') : '',
                 ];
-                fputcsv($fh, $row, ';');
             }
 
-            rewind($fh);
-            $csv = stream_get_contents($fh);
-            fclose($fh);
-
-            $filename = 'ti_exceptions_' . date('Ymd_His') . '.csv';
-            $this->response = $this->response
-                ->withType('csv')
-                ->withDownload($filename);
-            $this->response->getBody()->write($csv);
-            return $this->response;
+            return $this->downloadCsvResponse(
+                'ti_exceptions_' . date('Ymd_His') . '.csv',
+                $header,
+                $exportRows
+            );
         }
 
         $erros = $this->paginate($query, ['limit' => 15]);
