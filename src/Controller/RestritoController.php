@@ -104,9 +104,127 @@ class RestritoController extends AppController
                 'class' => 'btn-warning',
                 'icon' => 'fas fa-calendar-alt',
             ],
+            [
+                'titulo' => 'Extrair Avaliadores',
+                'descricao' => 'Baixar a tabela de avaliadores em formato Excel',
+                'url' => ['controller' => 'Restrito', 'action' => 'exportarAvaliadors'],
+                'class' => 'btn-success',
+                'icon' => 'fas fa-file-excel',
+            ],
         ];
 
         $this->set(compact('atalhos'));
+    }
+
+    public function exportarAvaliadors()
+    {
+        $query = $this->fetchTable('Avaliadors')->find();
+        $query
+            ->select([
+                'id' => 'Avaliadors.id',
+                'usuario_nome' => 'Usuarios.nome',
+                'usuario_email' => 'Usuarios.email',
+                'usuario_email_alternativo' => 'Usuarios.email_alternativo',
+                'usuario_email_contato' => 'Usuarios.email_contato',
+                'usuario_lattes' => 'Usuarios.lattes',
+                'usuario_telefone' => 'Usuarios.telefone',
+                'usuario_telefone_contato' => 'Usuarios.telefone_contato',
+                'usuario_celular' => 'Usuarios.celular',
+                'usuario_whatsapp' => 'Usuarios.whatsapp',
+                'usuario_vinculo' => 'Vinculos.nome',
+                'usuario_unidade' => 'UnidadeAvaliador.nome',
+                'unidade_avaliacao' => 'UnidadeAvaliacao.nome',
+                'edital_nome' => 'Editais.nome',
+                'grande_area' => 'GrandesAreas.nome',
+                'area' => 'Areas.nome',
+                'ano_aceite' => 'Avaliadors.ano_aceite',
+            ])
+            ->leftJoin(['Usuarios' => 'usuarios'], ['Usuarios.id = Avaliadors.usuario_id'])
+            ->leftJoin(['Vinculos' => 'vinculos'], ['Vinculos.id = Usuarios.vinculo_id'])
+            ->leftJoin(['UnidadeAvaliador' => 'unidades'], ['UnidadeAvaliador.id = Usuarios.unidade_id'])
+            ->leftJoin(['UnidadeAvaliacao' => 'unidades'], ['UnidadeAvaliacao.id = Avaliadors.unidade_id'])
+            ->leftJoin(['Editais' => 'editais'], ['Editais.id = Avaliadors.editai_id'])
+            ->leftJoin(['GrandesAreas' => 'grandes_areas'], ['GrandesAreas.id = Avaliadors.grandes_area_id'])
+            ->leftJoin(['Areas' => 'areas'], ['Areas.id = Avaliadors.area_id'])
+            ->where([
+                'Avaliadors.deleted' => 0,
+                'Avaliadors.ano_aceite IS NOT' => null,
+                'Avaliadors.ano_aceite <>' => '',
+            ])
+            ->enableHydration(false)
+            ->orderBy(['Avaliadors.id' => 'DESC']);
+
+        $header = [
+            'id',
+            'nome_avaliador',
+            'email',
+            'email_alternativo',
+            'email_contato',
+            'lattes',
+            'vinculo',
+            'unidade_avaliador',
+            'telefone',
+            'telefone_contato',
+            'celular',
+            'whatsapp',
+            'unidade_avaliacao',
+            'edital',
+            'grande_area',
+            'area',
+            'ano_aceite',
+        ];
+
+        $tmpFile = tempnam(sys_get_temp_dir(), 'avaliadors_csv_');
+        if ($tmpFile === false) {
+            throw new \RuntimeException('Não foi possível criar arquivo temporário para a exportação.');
+        }
+
+        $fh = fopen($tmpFile, 'w');
+        if ($fh === false) {
+            throw new \RuntimeException('Não foi possível abrir o arquivo temporário para a exportação.');
+        }
+
+        fwrite($fh, "\xEF\xBB\xBF");
+        fputcsv($fh, $header, ';');
+
+        $ouNaoInformado = static function ($valor): string {
+            $texto = trim((string)($valor ?? ''));
+            return $texto !== '' ? $texto : 'não informado';
+        };
+
+        foreach ($query as $avaliador) {
+            fputcsv($fh, [
+                $avaliador['id'] ?? '',
+                $ouNaoInformado($avaliador['usuario_nome'] ?? null),
+                $ouNaoInformado($avaliador['usuario_email'] ?? null),
+                $ouNaoInformado($avaliador['usuario_email_alternativo'] ?? null),
+                $ouNaoInformado($avaliador['usuario_email_contato'] ?? null),
+                $ouNaoInformado($avaliador['usuario_lattes'] ?? null),
+                $ouNaoInformado($avaliador['usuario_vinculo'] ?? null),
+                $ouNaoInformado($avaliador['usuario_unidade'] ?? null),
+                $ouNaoInformado($avaliador['usuario_telefone'] ?? null),
+                $ouNaoInformado($avaliador['usuario_telefone_contato'] ?? null),
+                $ouNaoInformado($avaliador['usuario_celular'] ?? null),
+                $ouNaoInformado($avaliador['usuario_whatsapp'] ?? null),
+                $ouNaoInformado($avaliador['unidade_avaliacao'] ?? null),
+                $ouNaoInformado($avaliador['edital_nome'] ?? null),
+                $ouNaoInformado($avaliador['grande_area'] ?? null),
+                $ouNaoInformado($avaliador['area'] ?? null),
+                $ouNaoInformado($avaliador['ano_aceite'] ?? null),
+            ], ';');
+        }
+
+        fclose($fh);
+        register_shutdown_function(static function ($path): void {
+            if (is_string($path) && is_file($path)) {
+                @unlink($path);
+            }
+        }, $tmpFile);
+
+        return $this->response->withFile($tmpFile, [
+            'download' => true,
+            'name' => 'avaliadors_' . date('Ymd_His') . '.csv',
+        ]);
     }
 
     public function vitrines($id = null)
