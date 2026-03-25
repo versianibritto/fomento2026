@@ -273,6 +273,23 @@ class PadraoController extends AppController
             return ((int)($a['tipo_id'] ?? 0)) <=> ((int)($b['tipo_id'] ?? 0));
         });
 
+        $relatorioFinalAtual = null;
+        foreach ((array)$inscricao->anexos as $anexo) {
+            if ((int)($anexo->anexos_tipo_id ?? 0) === 14) {
+                $relatorioFinalAtual = $anexo;
+                break;
+            }
+        }
+
+        $podeGerenciarRelatorioFinal = empty($inscricao->deleted)
+            && !empty($inscricao->data_fim)
+            && in_array((int)($inscricao->fase_id ?? 0), [13, 14], true)
+            && (
+                (int)($identity->id ?? 0) === (int)($inscricao->orientador ?? 0)
+                || !empty($identity->yoda)
+            );
+        $podeEnviarNovoRelatorioFinal = $podeGerenciarRelatorioFinal && $relatorioFinalAtual === null;
+
         $historicos = $this->fetchTable('SituacaoHistoricos')->find()
             ->contain(['Usuarios', 'FaseOriginal', 'FaseAtual'])
             ->where(['SituacaoHistoricos.projeto_bolsista_id' => (int)$inscricao->id])
@@ -343,6 +360,9 @@ class PadraoController extends AppController
             'anexosPorBloco',
             'anexosProjetoTipos924',
             'anexosSubprojetoTela',
+            'relatorioFinalAtual',
+            'podeGerenciarRelatorioFinal',
+            'podeEnviarNovoRelatorioFinal',
             'historicos',
             'avaliacoes',
             'sumulasEdital',
@@ -355,6 +375,73 @@ class PadraoController extends AppController
             'controllerFluxo',
             'origemAtual'
         ));
+    }
+
+    public function uploadRelatorioFinal($inscricaoId = null)
+    {
+        $this->request->allowMethod(['post', 'put', 'patch']);
+
+        $identity = $this->identityLogado;
+        if (empty($inscricaoId)) {
+            $this->Flash->error('Inscrição não informada.');
+            return $this->redirect(['controller' => 'Index', 'action' => 'dashdetalhes', 'T']);
+        }
+
+        $inscricao = $this->fetchTable('ProjetoBolsistas')->find()
+            ->where(['ProjetoBolsistas.id' => (int)$inscricaoId])
+            ->first();
+
+        if (!$inscricao) {
+            $this->Flash->error('Inscrição não localizada.');
+            return $this->redirect(['controller' => 'Index', 'action' => 'dashdetalhes', 'T']);
+        }
+
+        $podeGerenciarRelatorioFinal = empty($inscricao->deleted)
+            && !empty($inscricao->data_fim)
+            && in_array((int)($inscricao->fase_id ?? 0), [13, 14], true)
+            && (
+                (int)($identity->id ?? 0) === (int)($inscricao->orientador ?? 0)
+                || !empty($identity->yoda)
+            );
+
+        if (!$podeGerenciarRelatorioFinal) {
+            $this->Flash->error('Você não possui permissão para enviar o relatório final desta bolsa.');
+            return $this->redirect(['action' => 'visualizar', (int)$inscricao->id]);
+        }
+
+        $relatorioFinalAtual = $this->fetchTable('Anexos')->find()
+            ->where([
+                'Anexos.projeto_bolsista_id' => (int)$inscricao->id,
+                'Anexos.anexos_tipo_id' => 14,
+                'Anexos.deleted IS' => null,
+            ])
+            ->first();
+        if ($relatorioFinalAtual) {
+            $this->Flash->error('Já existe um relatório final anexado para esta bolsa.');
+            return $this->redirect(['action' => 'visualizar', (int)$inscricao->id, '#' => 'bloco-relatorio-final']);
+        }
+
+        $arquivoRelatorio = $this->request->getData('relatorio_final');
+        if (!is_object($arquivoRelatorio) || $arquivoRelatorio->getClientFilename() === '') {
+            $this->Flash->error('Selecione um arquivo para o relatório final.');
+            return $this->redirect(['action' => 'visualizar', (int)$inscricao->id, '#' => 'bloco-relatorio-final']);
+        }
+
+        $okAnexo = $this->anexarInscricao(
+            [14 => $arquivoRelatorio],
+            !empty($inscricao->projeto_id) ? (int)$inscricao->projeto_id : null,
+            (int)$inscricao->id,
+            null,
+            false
+        );
+
+        if ($okAnexo) {
+            $this->Flash->success('Relatório final enviado com sucesso.');
+        } else {
+            $this->Flash->error('Não foi possível enviar o relatório final.');
+        }
+
+        return $this->redirect(['action' => 'visualizar', (int)$inscricao->id, '#' => 'bloco-relatorio-final']);
     }
     public function cancelar($inscricaoId = null)
     {

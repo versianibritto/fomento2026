@@ -720,6 +720,52 @@ if (!$temDataInicio && !$temDataFim) {
                                     <?php endforeach; ?>
                                 </ul>
                             <?php endif; ?>
+
+                            <?php if (!empty($podeGerenciarRelatorioFinal)): ?>
+                                <hr>
+                                <div id="bloco-relatorio-final" class="card border">
+                                    <div class="card-body">
+                                        <h6 class="mb-3">Relatório Final</h6>
+                                        <?php if (!empty($relatorioFinalAtual) && !empty($relatorioFinalAtual->anexo)): ?>
+                                            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+                                                <div>
+                                                    <div class="fw-semibold">Arquivo atual</div>
+                                                    <div class="small text-muted"><?= h((string)$relatorioFinalAtual->anexo) ?></div>
+                                                </div>
+                                                <a href="/uploads/anexos/<?= h((string)$relatorioFinalAtual->anexo) ?>" target="_blank" class="btn btn-outline-secondary btn-sm">
+                                                    Download
+                                                </a>
+                                            </div>
+                                        <?php else: ?>
+                                            <p class="text-muted">Nenhum relatório final anexado até o momento.</p>
+                                        <?php endif; ?>
+
+                                        <?php if (!empty($podeEnviarNovoRelatorioFinal)): ?>
+                                            <?= $this->Form->create(null, [
+                                                'type' => 'file',
+                                                'url' => ['controller' => 'Padrao', 'action' => 'uploadRelatorioFinal', (int)$inscricao->id],
+                                                'class' => 'row g-3 align-items-end',
+                                            ]) ?>
+                                                <div class="col-md-8">
+                                                    <?= $this->Form->control('relatorio_final', [
+                                                        'label' => 'Arquivo do relatório final',
+                                                        'type' => 'file',
+                                                        'class' => 'form-control',
+                                                        'required' => true,
+                                                    ]) ?>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <?= $this->Form->button('Enviar relatório final', ['class' => 'btn btn-success w-100']) ?>
+                                                </div>
+                                            <?= $this->Form->end() ?>
+                                        <?php elseif (!empty($relatorioFinalAtual)): ?>
+                                            <div class="alert alert-secondary mb-0">
+                                                O relatório final já foi incluído e não pode ser substituído por esta tela.
+                                            </div>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>
