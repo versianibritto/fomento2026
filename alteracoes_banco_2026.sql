@@ -1522,3 +1522,36 @@ ADD COLUMN `fim` TIMESTAMP NULL AFTER `inicio`;
 ALTER TABLE `fomento2026`.`suporte_chamados` 
 ADD COLUMN `demandante` INT NULL AFTER `finalizado`,
 CHANGE COLUMN `destinatario_id` `beneficiado` INT UNSIGNED NULL DEFAULT NULL ;
+
+CREATE TABLE `fomento2026`.`calendarios` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `tipo` VARCHAR(45) NULL COMMENT 'Feriados, Ausencia(atestado, pessoal), Ponto facultativo, O=Indisponibilidade técnica (servidor caiu etc)',
+  `descricao` VARCHAR(100) NULL,
+  `created` TIMESTAMP NULL,
+  `modified` TIMESTAMP NULL,
+  `deleted` TIMESTAMP NULL,
+  `dia` DATE NULL,
+  PRIMARY KEY (`id`));
+
+ALTER TABLE `fomento2026`.`calendarios`
+CHANGE COLUMN `tipo` `tipo` ENUM('F', 'A', 'P', 'O') NULL DEFAULT NULL COMMENT 'Feriados, Ausencia(atestado, pessoal), Ponto facultativo, O=Indisponibilidade técnica (servidor caiu etc)' ;
+
+
+INSERT INTO `fomento2026`.`calendarios`
+(`tipo`, `descricao`, `created`, `modified`, `deleted`, `dia`)
+VALUES
+('F', 'Tiradentes', NOW(), NOW(), NULL, '2026-04-21'),
+('F', 'Dia do Trabalho', NOW(), NOW(), NULL, '2026-05-01'),
+('F', 'Independência do Brasil', NOW(), NOW(), NULL, '2026-09-07'),
+('F', 'Nossa Senhora Aparecida', NOW(), NOW(), NULL, '2026-10-12'),
+('F', 'Finados', NOW(), NOW(), NULL, '2026-11-02'),
+('F', 'Proclamação da República', NOW(), NOW(), NULL, '2026-11-15'),
+('F', 'Dia Nacional de Zumbi e da Consciência Negra', NOW(), NOW(), NULL, '2026-11-20'),
+('F', 'Natal', NOW(), NOW(), NULL, '2026-12-25');
+
+INSERT INTO `fomento2026`.`calendarios`
+(`tipo`, `descricao`, `created`, `modified`, `deleted`, `dia`)
+VALUES
+('F', 'Sexta-feira Santa', NOW(), NOW(), NULL, '2026-04-03'),
+('F', 'Corpus Christi', NOW(), NOW(), NULL, '2026-06-04');
+

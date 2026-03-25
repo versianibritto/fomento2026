@@ -21,7 +21,7 @@ class SupoteController extends AppController
 
         $chamadosTable = $this->fetchTable('SuporteChamados');
         $query = $chamadosTable->find()
-            ->contain(['Usuarios', 'SuporteCategorias', 'SuporteStatus'])
+            ->contain(['Usuarios', 'Beneficiados', 'Demandantes', 'SuporteCategorias', 'SuporteStatus'])
             ->where(['SuporteChamados.parent_id IS' => null])
             ->orderBy(['SuporteChamados.modified' => 'DESC']);
 
@@ -43,43 +43,60 @@ class SupoteController extends AppController
 
         if ($isTi && (string)($filtros['export'] ?? '') === '1') {
             $rows = $query->all();
+            $calendarioMap = $this->obterCalendarioIndisponibilidades();
             $header = [
                 'id',
                 'data_criacao',
                 'usuario',
+                'demandante',
+                'beneficiado',
+                'demanda_interna',
                 'categoria',
                 'texto',
                 'status',
                 'reaberto',
                 'data_finalizacao',
-                'tempo_solucao',
+                'tempo_total_decorrido',
+                'detalhe_abertura',
+                'aberto_no_expediente',
+                'dias_ausencia_periodo',
+                'tempo_execucao_util',
             ];
 
             $exportRows = [];
             foreach ($rows as $item) {
                 $criadoEm = $item->created;
                 $finalizadoEm = $item->finalizado ?? null;
-                $tempoSolucao = '';
+                $tempoTotalDecorrido = '';
+                $tempoExecucaoUtil = '';
                 if ($criadoEm && $finalizadoEm) {
                     $diffSec = $finalizadoEm->getTimestamp() - $criadoEm->getTimestamp();
                     if ($diffSec >= 0) {
                         $dias = (int)floor($diffSec / 86400);
                         $horas = (int)floor(($diffSec % 86400) / 3600);
                         $minutos = (int)floor(($diffSec % 3600) / 60);
-                        $tempoSolucao = sprintf('%dd %02dh %02dm', $dias, $horas, $minutos);
+                        $tempoTotalDecorrido = sprintf('%dd %02dh %02dm', $dias, $horas, $minutos);
                     }
+                    $tempoExecucaoUtil = $this->formatarDuracaoHorasUteis($criadoEm, $finalizadoEm, $calendarioMap);
                 }
 
                 $exportRows[] = [
                     $item->id,
                     $this->formatarDataBancoParaTela($criadoEm, 'dd/MM/yyyy HH:mm:ss', ''),
                     $item->usuario->nome ?? '',
+                    $item->usuario_demandante->nome ?? '',
+                    $item->usuario_beneficiado->nome ?? '',
+                    $this->chamadoEhDemandaInterna((int)$item->usuario_id) ? 'Sim' : 'Nao',
                     $item->suporte_categoria->nome ?? '',
                     $item->texto ?? '',
                     $item->suporte_status->nome ?? '',
                     (int)($item->reaberto ?? 0) === 1 ? 'Sim' : 'Nao',
                     $this->formatarDataBancoParaTela($finalizadoEm, 'dd/MM/yyyy HH:mm:ss', ''),
-                    $tempoSolucao,
+                    $tempoTotalDecorrido,
+                    $this->getDetalheAbertura($criadoEm, $calendarioMap),
+                    $this->abertoNoExpediente($criadoEm, $calendarioMap) ? 'Sim' : 'Nao',
+                    $this->getDiasAusenciaPeriodo($criadoEm, $finalizadoEm, $calendarioMap),
+                    $tempoExecucaoUtil,
                 ];
             }
 
@@ -108,7 +125,7 @@ class SupoteController extends AppController
     public function add()
     {
         $identity = $this->request->getAttribute('identity');
-        $isYoda = (bool)($identity['yoda'] ?? false);
+        $isTi = in_array((int)($identity['id'] ?? 0), [1, 8088], true);
 
         $chamadosTable = $this->fetchTable('SuporteChamados');
         $chamado = $chamadosTable->newEmptyEntity();
@@ -117,12 +134,17 @@ class SupoteController extends AppController
             ->where(['ativo' => 1])
             ->orderBy(['nome' => 'ASC']);
 
-        $usuarios = $this->fetchTable('Usuarios')->find('list')
-            ->orderBy(['nome' => 'ASC']);
-
         if ($this->request->is('post')) {
             $dados = $this->request->getData();
             $statusId = $this->getStatusId('N');
+
+            $errosValidacao = [];
+            if (empty($dados['categoria_id'])) {
+                $errosValidacao[] = 'Informe a classificação.';
+            }
+            if (trim((string)($dados['texto'] ?? '')) === '') {
+                $errosValidacao[] = 'Informe a descrição.';
+            }
 
             $dados['usuario_id'] = (int)($identity['id'] ?? 0);
             $dados['status_id'] = $statusId;
@@ -130,10 +152,27 @@ class SupoteController extends AppController
             $dados['reaberto'] = 0;
             $dados['finalizado'] = null;
             $dados['para_outro'] = 0;
-            $dados['destinatario_id'] = null;
+            if ($isTi) {
+                $dados['demandante'] = !empty($dados['demandante']) ? (int)$dados['demandante'] : null;
+                $dados['beneficiado'] = !empty($dados['beneficiado']) ? (int)$dados['beneficiado'] : null;
+                if ($dados['demandante'] === null) {
+                    $errosValidacao[] = 'Informe o demandante.';
+                }
+                if ($dados['beneficiado'] === null) {
+                    $errosValidacao[] = 'Informe o beneficiado.';
+                }
+            } else {
+                $dados['demandante'] = null;
+                $dados['beneficiado'] = null;
+            }
 
-            if ($isYoda) {
-                $dados['categoria_id'] = null;
+            if (!empty($errosValidacao)) {
+                foreach (array_unique($errosValidacao) as $erro) {
+                    $this->Flash->error($erro);
+                }
+                $chamado = $chamadosTable->patchEntity($chamado, $dados);
+                $this->set(compact('chamado', 'categorias', 'isTi'));
+                return;
             }
 
             $dados = $this->handleUpload($dados, 'anexo_1', 'anexos');
@@ -158,7 +197,60 @@ class SupoteController extends AppController
             }
         }
 
-        $this->set(compact('chamado', 'categorias', 'usuarios', 'isYoda'));
+        $this->set(compact('chamado', 'categorias', 'isTi'));
+    }
+
+    public function buscaUsuarios()
+    {
+        $this->request->allowMethod(['get']);
+
+        $identity = $this->request->getAttribute('identity');
+        $isTi = in_array((int)($identity['id'] ?? 0), [1, 8088], true);
+        if (!$isTi) {
+            return $this->response
+                ->withType('application/json')
+                ->withStringBody(json_encode([]));
+        }
+
+        $termo = trim((string)$this->request->getQuery('q', ''));
+        if (mb_strlen($termo) < 2 && !ctype_digit($termo)) {
+            return $this->response
+                ->withType('application/json')
+                ->withStringBody(json_encode([]));
+        }
+
+        $usuariosTable = $this->fetchTable('Usuarios');
+        $cpf = preg_replace('/\D+/', '', $termo);
+
+        $query = $usuariosTable->find()
+            ->select(['id', 'nome', 'cpf'])
+            ->limit(15)
+            ->orderBy(['Usuarios.nome' => 'ASC']);
+
+        $query->where(function ($exp) use ($termo, $cpf) {
+            $or = $exp->or(['Usuarios.nome LIKE' => '%' . $termo . '%']);
+            if ($cpf !== '') {
+                $or->add(['Usuarios.cpf LIKE' => '%' . $cpf . '%']);
+            }
+            if (ctype_digit($termo)) {
+                $or->add(['Usuarios.id' => (int)$termo]);
+            }
+            return $or;
+        });
+
+        $dados = [];
+        foreach ($query->all() as $usuario) {
+            $dados[] = [
+                'id' => (int)$usuario->id,
+                'nome' => (string)($usuario->nome ?? ''),
+                'cpf' => (string)($usuario->cpf ?? ''),
+                'label' => '#' . (int)$usuario->id . ' - ' . (string)($usuario->nome ?? '') . ' - CPF ' . (string)($usuario->cpf ?? ''),
+            ];
+        }
+
+        return $this->response
+            ->withType('application/json')
+            ->withStringBody((string)json_encode($dados, JSON_UNESCAPED_UNICODE));
     }
 
     public function view($id = null)
@@ -245,7 +337,8 @@ class SupoteController extends AppController
             $dados = $this->request->getData();
             $dados['usuario_id'] = (int)($identity['id'] ?? 0);
             $dados['parent_id'] = (int)$pai->id;
-            $dados['destinatario_id'] = null;
+            $dados['beneficiado'] = null;
+            $dados['demandante'] = null;
             $dados['categoria_id'] = $pai->categoria_id;
             $dados['status_id'] = $pai->status_id;
             $novoStatus = $pai->status_id;
@@ -341,7 +434,8 @@ class SupoteController extends AppController
                         $replyData = [
                             'usuario_id' => (int)($identity['id'] ?? 0),
                             'parent_id' => $parentId,
-                            'destinatario_id' => null,
+                            'beneficiado' => null,
+                            'demandante' => null,
                             'categoria_id' => $chamado->categoria_id,
                             'status_id' => $novoStatus,
                             'classificacao_final_id' => $chamado->classificacao_final_id,
@@ -413,7 +507,8 @@ class SupoteController extends AppController
         $replyData = [
             'usuario_id' => (int)($identity['id'] ?? 0),
             'parent_id' => $parentId,
-            'destinatario_id' => null,
+            'beneficiado' => null,
+            'demandante' => null,
             'categoria_id' => $chamado->categoria_id,
             'status_id' => $statusEmAnalise,
             'classificacao_final_id' => $chamado->classificacao_final_id,
@@ -464,6 +559,180 @@ class SupoteController extends AppController
             'status_novo_id' => $statusNovo,
         ]);
         $historicoTable->save($registro);
+    }
+
+    private function chamadoEhDemandaInterna(int $usuarioId): bool
+    {
+        return in_array($usuarioId, [1, 8088], true);
+    }
+
+    private function formatarDuracaoHorasUteis($inicio, $fim, array $calendarioMap = []): string
+    {
+        if (!$inicio || !$fim) {
+            return '';
+        }
+
+        $inicioDt = $inicio instanceof \DateTimeInterface ? \DateTimeImmutable::createFromInterface($inicio) : new \DateTimeImmutable((string)$inicio);
+        $fimDt = $fim instanceof \DateTimeInterface ? \DateTimeImmutable::createFromInterface($fim) : new \DateTimeImmutable((string)$fim);
+
+        if ($fimDt <= $inicioDt) {
+            return '0h 00m';
+        }
+
+        $segundos = $this->calcularSegundosUteis($inicioDt, $fimDt, $calendarioMap);
+        $horas = (int)floor($segundos / 3600);
+        $minutos = (int)floor(($segundos % 3600) / 60);
+
+        return sprintf('%dh %02dm', $horas, $minutos);
+    }
+
+    private function calcularSegundosUteis(\DateTimeImmutable $inicio, \DateTimeImmutable $fim, array $calendarioMap = []): int
+    {
+        if ($fim <= $inicio) {
+            return 0;
+        }
+
+        $total = 0;
+        $diaAtual = $inicio->setTime(0, 0);
+        $ultimoDia = $fim->setTime(0, 0);
+
+        while ($diaAtual <= $ultimoDia) {
+            $dataRef = $diaAtual->format('Y-m-d');
+            if ($this->ehDiaUtil($diaAtual, $calendarioMap)) {
+                $inicioExpediente = $diaAtual->setTime(8, 0, 0);
+                $fimExpediente = $diaAtual->setTime(17, 0, 0);
+
+                $inicioJanela = $inicio > $inicioExpediente ? $inicio : $inicioExpediente;
+                $fimJanela = $fim < $fimExpediente ? $fim : $fimExpediente;
+
+                if ($fimJanela > $inicioJanela) {
+                    $total += $fimJanela->getTimestamp() - $inicioJanela->getTimestamp();
+                }
+            }
+
+            $diaAtual = $diaAtual->modify('+1 day');
+        }
+
+        return $total;
+    }
+
+    private function obterCalendarioIndisponibilidades(): array
+    {
+        $map = [];
+        $rows = $this->fetchTable('Calendarios')->find()
+            ->where(['Calendarios.deleted IS' => null, 'Calendarios.dia IS NOT' => null])
+            ->orderBy(['Calendarios.dia' => 'ASC', 'Calendarios.id' => 'ASC'])
+            ->all();
+
+        foreach ($rows as $row) {
+            if (empty($row->dia)) {
+                continue;
+            }
+            $dia = $row->dia->format('Y-m-d');
+            $descricao = trim((string)($row->descricao ?? ''));
+            $tipo = (string)($row->tipo ?? '');
+            $rotuloTipo = $this->getCalendarioTipoRotulo($tipo);
+            $rotulo = $descricao !== '' ? $descricao : $rotuloTipo;
+            if (!isset($map[$dia])) {
+                $map[$dia] = [];
+            }
+            $map[$dia][] = $rotulo;
+        }
+
+        return $map;
+    }
+
+    private function ehDiaUtil(\DateTimeImmutable $dia, array $calendarioMap = []): bool
+    {
+        $diaSemana = (int)$dia->format('N');
+        if ($diaSemana >= 6) {
+            return false;
+        }
+
+        return !isset($calendarioMap[$dia->format('Y-m-d')]);
+    }
+
+    private function getDetalheAbertura($abertura, array $calendarioMap = []): string
+    {
+        if (!$abertura) {
+            return '';
+        }
+
+        $dt = $abertura instanceof \DateTimeInterface ? \DateTimeImmutable::createFromInterface($abertura) : new \DateTimeImmutable((string)$abertura);
+        $dataRef = $dt->format('Y-m-d');
+        $diaSemana = (int)$dt->format('N');
+
+        if (isset($calendarioMap[$dataRef])) {
+            return 'Feriado/Exceções';
+        }
+        if ($diaSemana === 6 || $diaSemana === 7) {
+            return 'Fim de semana';
+        }
+
+        return 'Dia normal';
+    }
+
+    private function abertoNoExpediente($abertura, array $calendarioMap = []): bool
+    {
+        if (!$abertura) {
+            return false;
+        }
+
+        $dt = $abertura instanceof \DateTimeInterface ? \DateTimeImmutable::createFromInterface($abertura) : new \DateTimeImmutable((string)$abertura);
+        if (!$this->ehDiaUtil($dt->setTime(0, 0), $calendarioMap)) {
+            return false;
+        }
+
+        $horaMinuto = $dt->format('H:i:s');
+        return $horaMinuto >= '08:00:00' && $horaMinuto <= '17:00:00';
+    }
+
+    private function getDiasAusenciaPeriodo($inicio, $fim, array $calendarioMap = []): string
+    {
+        if (!$inicio || !$fim) {
+            return '';
+        }
+
+        $inicioDt = $inicio instanceof \DateTimeInterface ? \DateTimeImmutable::createFromInterface($inicio) : new \DateTimeImmutable((string)$inicio);
+        $fimDt = $fim instanceof \DateTimeInterface ? \DateTimeImmutable::createFromInterface($fim) : new \DateTimeImmutable((string)$fim);
+        if ($fimDt <= $inicioDt) {
+            return '';
+        }
+
+        $ausencias = [];
+        $diaAtual = $inicioDt->setTime(0, 0)->modify('+1 day');
+        $ultimoDia = $fimDt->setTime(0, 0);
+
+        while ($diaAtual <= $ultimoDia) {
+            $dataRef = $diaAtual->format('Y-m-d');
+            $diaSemana = (int)$diaAtual->format('N');
+
+            if (isset($calendarioMap[$dataRef])) {
+                foreach ($calendarioMap[$dataRef] as $rotulo) {
+                    $ausencias[] = $rotulo;
+                }
+            } elseif ($diaSemana === 6) {
+                $ausencias[] = 'Sabado';
+            } elseif ($diaSemana === 7) {
+                $ausencias[] = 'Domingo';
+            }
+
+            $diaAtual = $diaAtual->modify('+1 day');
+        }
+
+        $ausencias = array_values(array_unique($ausencias));
+        return implode(', ', $ausencias);
+    }
+
+    private function getCalendarioTipoRotulo(string $tipo): string
+    {
+        return match ($tipo) {
+            'F' => 'Feriado',
+            'A' => 'Ausência',
+            'P' => 'Ponto facultativo',
+            'O' => 'Indisponibilidade técnica',
+            default => 'Exceção',
+        };
     }
 
 }

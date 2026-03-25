@@ -97,6 +97,13 @@ class RestritoController extends AppController
                 'class' => 'btn-info',
                 'icon' => 'fas fa-comment-dots',
             ],
+            [
+                'titulo' => 'Calendários',
+                'descricao' => 'Gerenciar feriados, ausências e indisponibilidades',
+                'url' => ['controller' => 'Restrito', 'action' => 'calendariosLista'],
+                'class' => 'btn-warning',
+                'icon' => 'fas fa-calendar-alt',
+            ],
         ];
 
         $this->set(compact('atalhos'));
@@ -629,6 +636,165 @@ class RestritoController extends AppController
         ];
 
         $this->set(compact('mensagens', 'filtros', 'tipos'));
+    }
+
+    public function calendarios($id = null)
+    {
+        $this->viewBuilder()->setLayout('admin');
+        $tblCalendarios = $this->fetchTable('Calendarios');
+        $isEdicao = (bool)$id;
+
+        if ($isEdicao) {
+            $calendario = $tblCalendarios->find()
+                ->where([
+                    'Calendarios.id' => (int)$id,
+                    'Calendarios.deleted IS' => null,
+                ])
+                ->first();
+            if (!$calendario) {
+                $this->Flash->error('Registro não localizado para edição.');
+                return $this->redirect(['action' => 'calendariosLista']);
+            }
+        } else {
+            $calendario = $tblCalendarios->newEmptyEntity();
+        }
+
+        if ($this->request->is(['post', 'put', 'patch'])) {
+            $dados = $this->request->getData();
+            if ($isEdicao) {
+                if (array_key_exists('dia', $dados) && trim((string)$dados['dia']) === '') {
+                    $dados['dia'] = null;
+                }
+
+                $calendario = $tblCalendarios->patchEntity($calendario, $dados);
+                if ($tblCalendarios->save($calendario)) {
+                    $this->Flash->success('Registro atualizado com sucesso.');
+                    return $this->redirect(['action' => 'calendariosLista']);
+                }
+            } else {
+                $linhas = array_values((array)($dados['calendarios'] ?? []));
+                $linhasPreparadas = [];
+                foreach ($linhas as $linha) {
+                    $dia = trim((string)($linha['dia'] ?? ''));
+                    $tipo = trim((string)($linha['tipo'] ?? ''));
+                    $descricao = trim((string)($linha['descricao'] ?? ''));
+                    if ($dia === '' && $tipo === '' && $descricao === '') {
+                        continue;
+                    }
+                    $linhasPreparadas[] = [
+                        'dia' => $dia !== '' ? $dia : null,
+                        'tipo' => $tipo !== '' ? $tipo : null,
+                        'descricao' => $descricao !== '' ? $descricao : null,
+                        'deleted' => null,
+                    ];
+                }
+
+                if (empty($linhasPreparadas)) {
+                    $this->Flash->error('Informe ao menos uma linha para cadastro.');
+                } else {
+                    $entidades = $tblCalendarios->newEntities($linhasPreparadas);
+                    $temErro = false;
+                    foreach ($entidades as $entidade) {
+                        if ($entidade->getErrors()) {
+                            $temErro = true;
+                            break;
+                        }
+                    }
+
+                    if (!$temErro && $tblCalendarios->saveMany($entidades)) {
+                        $this->Flash->success(count($entidades) . ' registro(s) cadastrados com sucesso.');
+                        return $this->redirect(['action' => 'calendariosLista']);
+                    }
+
+                    $this->Flash->error('Não foi possível salvar os registros informados.');
+                    $calendario = $tblCalendarios->newEntity($linhasPreparadas[0] ?? []);
+                }
+            }
+
+            if ($isEdicao) {
+                $this->Flash->error('Não foi possível salvar o registro.');
+            }
+        }
+
+        $tipos = $this->getCalendarioTipos();
+        $this->set(compact('calendario', 'isEdicao', 'tipos'));
+    }
+
+    public function calendariosLista($limpar = false)
+    {
+        $this->viewBuilder()->setLayout('admin');
+        $tblCalendarios = $this->fetchTable('Calendarios');
+        $session = $this->request->getSession();
+        $filtros = [];
+
+        if ($limpar) {
+            $session->delete('restrito_calendarios_filtros');
+        }
+
+        $filtrosSalvos = (array)$session->read('restrito_calendarios_filtros', []);
+        if ($this->request->is(['post', 'put', 'patch'])) {
+            $dados = $this->request->getData();
+            $acao = trim((string)($dados['acao'] ?? 'filtrar'));
+
+            if ($acao === 'deletar') {
+                $idDelete = (int)($dados['id'] ?? 0);
+                if ($idDelete <= 0) {
+                    $this->Flash->error('Registro inválido para exclusão.');
+                    return $this->redirect(['action' => 'calendariosLista']);
+                }
+
+                $registro = $tblCalendarios->find()
+                    ->where([
+                        'Calendarios.id' => $idDelete,
+                        'Calendarios.deleted IS' => null,
+                    ])
+                    ->first();
+                if (!$registro) {
+                    $this->Flash->error('Registro não encontrado para exclusão.');
+                    return $this->redirect(['action' => 'calendariosLista']);
+                }
+
+                $registro->deleted = date('Y-m-d H:i:s');
+                if ($tblCalendarios->save($registro)) {
+                    $this->Flash->success('Registro excluído com sucesso.');
+                } else {
+                    $this->Flash->error('Não foi possível excluir o registro.');
+                }
+                return $this->redirect(['action' => 'calendariosLista']);
+            }
+
+            $filtros = [
+                'dia' => trim((string)($dados['dia'] ?? '')),
+                'tipo' => trim((string)($dados['tipo'] ?? '')),
+                'descricao' => trim((string)($dados['descricao'] ?? '')),
+            ];
+            $session->write('restrito_calendarios_filtros', $filtros);
+        } else {
+            $filtros = $filtrosSalvos;
+        }
+
+        $where = [];
+        if (!empty($filtros['dia'])) {
+            $where['Calendarios.dia'] = $filtros['dia'];
+        }
+        if (!empty($filtros['tipo'])) {
+            $where['Calendarios.tipo'] = $filtros['tipo'];
+        }
+        if (!empty($filtros['descricao'])) {
+            $where['Calendarios.descricao LIKE'] = '%' . $filtros['descricao'] . '%';
+        }
+        $where['Calendarios.deleted IS'] = null;
+
+        $query = $tblCalendarios->find()
+            ->where($where)
+            ->orderBy([
+                'Calendarios.dia' => 'DESC',
+                'Calendarios.id' => 'DESC',
+            ]);
+
+        $calendarios = $this->paginate($query, ['limit' => 15]);
+        $tipos = $this->getCalendarioTipos();
+        $this->set(compact('calendarios', 'filtros', 'tipos'));
     }
 
     public function replicarAnexos()
@@ -1514,5 +1680,15 @@ class RestritoController extends AppController
         if (is_file($caminho)) {
             @unlink($caminho);
         }
+    }
+
+    protected function getCalendarioTipos(): array
+    {
+        return [
+            'F' => 'Feriado',
+            'A' => 'Ausência',
+            'P' => 'Ponto facultativo',
+            'O' => 'Indisponibilidade técnica',
+        ];
     }
 }

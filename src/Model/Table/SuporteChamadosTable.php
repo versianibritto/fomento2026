@@ -22,9 +22,15 @@ class SuporteChamadosTable extends Table
         $this->belongsTo('Usuarios', [
             'foreignKey' => 'usuario_id',
         ]);
-        $this->belongsTo('Destinatarios', [
+        $this->belongsTo('Beneficiados', [
             'className' => 'Usuarios',
-            'foreignKey' => 'destinatario_id',
+            'foreignKey' => 'beneficiado',
+            'propertyName' => 'usuario_beneficiado',
+        ]);
+        $this->belongsTo('Demandantes', [
+            'className' => 'Usuarios',
+            'foreignKey' => 'demandante',
+            'propertyName' => 'usuario_demandante',
         ]);
         $this->belongsTo('SuporteCategorias', [
             'foreignKey' => 'categoria_id',
@@ -60,8 +66,12 @@ class SuporteChamadosTable extends Table
             ->notEmptyString('usuario_id');
 
         $validator
-            ->integer('destinatario_id')
-            ->allowEmptyString('destinatario_id');
+            ->integer('beneficiado')
+            ->allowEmptyString('beneficiado');
+
+        $validator
+            ->integer('demandante')
+            ->allowEmptyString('demandante');
 
         $validator
             ->boolean('para_outro')

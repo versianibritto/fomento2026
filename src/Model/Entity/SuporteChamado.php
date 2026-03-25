@@ -12,7 +12,8 @@ use Cake\ORM\Entity;
  * @property int|null $ramo
  * @property int|null $parent_id
  * @property int $usuario_id
- * @property int|null $destinatario_id
+ * @property int|null $beneficiado
+ * @property int|null $demandante
  * @property int $para_outro
  * @property int|null $categoria_id
  * @property int $status_id
@@ -33,7 +34,8 @@ class SuporteChamado extends Entity
         'ramo' => true,
         'parent_id' => true,
         'usuario_id' => true,
-        'destinatario_id' => true,
+        'beneficiado' => true,
+        'demandante' => true,
         'para_outro' => true,
         'categoria_id' => true,
         'status_id' => true,
