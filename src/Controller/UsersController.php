@@ -508,6 +508,24 @@ class UsersController extends AppController
             ->orderBy(['vigente' => 'DESC', 'id' => 'DESC'])
             ->all();
 
+        $raicQuery = $this->fetchTable('RaicGeral')->find()
+            ->andWhere(function ($exp) use ($id) {
+                return $exp->or([
+                    'RaicGeral.bolsista' => $id,
+                    'RaicGeral.orientador' => $id,
+                ]);
+            })
+            ->orderBy(['RaicGeral.data_apresentacao' => 'DESC', 'RaicGeral.id' => 'DESC']);
+
+        if (!$temYoda && !$temJedi && !$temPadauan) {
+            $raicQuery->where(['RaicGeral.raic_deleted' => 0]);
+        }
+
+        $raicsPerfil = $raicQuery
+            ->disableHydration()
+            ->all()
+            ->toList();
+
         $this->set(compact(
             'unidades',
             'documentos',
@@ -522,7 +540,8 @@ class UsersController extends AppController
             'cep',
             'enderecoCompleto',
             'temJediPerfil',
-            'temPadauanPerfil'
+            'temPadauanPerfil',
+            'raicsPerfil'
         ));
 
     }

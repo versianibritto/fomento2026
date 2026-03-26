@@ -56,6 +56,19 @@ class RaicsTable extends Table
         $this->belongsTo('Usuarios', [
             'foreignKey' => 'usuario_id',
         ]);
+        $this->belongsTo('Orientadores', [
+            'className' => 'Usuarios',
+            'foreignKey' => 'orientador',
+            'propertyName' => 'orientadore',
+        ]);
+        $this->belongsTo('Coorientadores', [
+            'className' => 'Usuarios',
+            'foreignKey' => 'coorientador',
+            'propertyName' => 'coorientadore',
+        ]);
+        $this->belongsTo('Projetos', [
+            'foreignKey' => 'projeto_orientador',
+        ]);
         $this->belongsTo('ProjetoBolsistas', [
             'foreignKey' => 'projeto_bolsista_id',
         ]);
@@ -64,6 +77,14 @@ class RaicsTable extends Table
         ]);
         $this->belongsTo('Editais', [
             'foreignKey' => 'editai_id',
+        ]);
+        $this->belongsTo('Cadastro', [
+            'className' => 'Usuarios',
+            'foreignKey' => 'usuario_cadastro',
+        ]);
+        $this->belongsTo('Libera', [
+            'className' => 'Usuarios',
+            'foreignKey' => 'usuario_libera',
         ]);
         $this->hasMany('Gabaritos', [
             'foreignKey' => 'raic_id',
@@ -204,9 +225,14 @@ class RaicsTable extends Table
     public function buildRules(RulesChecker $rules): RulesChecker
     {
         $rules->add($rules->existsIn(['usuario_id'], 'Usuarios'), ['errorField' => 'usuario_id']);
+        $rules->add($rules->existsIn(['orientador'], 'Orientadores'), ['errorField' => 'orientador']);
+        $rules->add($rules->existsIn(['coorientador'], 'Coorientadores'), ['errorField' => 'coorientador']);
+        $rules->add($rules->existsIn(['projeto_orientador'], 'Projetos'), ['errorField' => 'projeto_orientador']);
         $rules->add($rules->existsIn(['projeto_bolsista_id'], 'ProjetoBolsistas'), ['errorField' => 'projeto_bolsista_id']);
         $rules->add($rules->existsIn(['unidade_id'], 'Unidades'), ['errorField' => 'unidade_id']);
         $rules->add($rules->existsIn(['editai_id'], 'Editais'), ['errorField' => 'editai_id']);
+        $rules->add($rules->existsIn(['usuario_cadastro'], 'Cadastro'), ['errorField' => 'usuario_cadastro']);
+        $rules->add($rules->existsIn(['usuario_libera'], 'Libera'), ['errorField' => 'usuario_libera']);
 
         return $rules;
     }

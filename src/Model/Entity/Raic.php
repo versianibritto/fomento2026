@@ -19,9 +19,9 @@ use Cake\ORM\Entity;
  * @property string|null $titulo
  * @property string|null $relatorio
  * @property string|null $anexo
- * @property \Cake\I18n\DateTime|null $created
+ * @property \Cake\I18n\FrozenTime|null $created
  * @property string|null $tipo_bolsa
- * @property \Cake\I18n\Date|null $data_apresentacao
+ * @property \Cake\I18n\FrozenDate|null $data_apresentacao
  * @property string|null $local_apresentacao
  * @property string|null $tipo_apresentacao
  * @property float|null $nota_final
@@ -30,20 +30,16 @@ use Cake\ORM\Entity;
  * @property int|null $destaque
  * @property int|null $indicado_premio_capes
  * @property int|null $projeto_bolsista_id
- * @property int $deleted
+ * @property int|null $deleted
  * @property int|null $unidade_id
  * @property int|null $editai_id
- * @property int|null $usuario_cadastro
- * @property int|null $usuario_libera
- * @property \Cake\I18n\DateTime|null $data_liberacao
  *
  * @property \App\Model\Entity\Usuario $usuario
  * @property \App\Model\Entity\ProjetoBolsista $projeto_bolsista
  * @property \App\Model\Entity\Unidade $unidade
  * @property \App\Model\Entity\Editai $editai
- * @property \App\Model\Entity\Gabarito[] $gabaritos
- * @property \App\Model\Entity\ProjetoAnexo[] $projeto_anexos
- * @property \App\Model\Entity\RaicHistorico[] $raic_historicos
+ * @property \App\Model\Entity\RaicReport[] $raic_report
+ * @property \App\Model\Entity\Usuario $orientadore
  */
 class Raic extends Entity
 {
@@ -54,7 +50,7 @@ class Raic extends Entity
      * be mass assigned. For security purposes, it is advised to set '*' to false
      * (or remove it), and explicitly make individual fields accessible as needed.
      *
-     * @var array<string, bool>
+     * @var array
      */
     protected array $_accessible = [
         'usuario_id' => true,
@@ -81,15 +77,14 @@ class Raic extends Entity
         'deleted' => true,
         'unidade_id' => true,
         'editai_id' => true,
-        'usuario_cadastro' => true,
-        'usuario_libera' => true,
-        'data_liberacao' => true,
         'usuario' => true,
         'projeto_bolsista' => true,
         'unidade' => true,
         'editai' => true,
-        'gabaritos' => true,
-        'projeto_anexos' => true,
-        'raic_historicos' => true,
+        'raic_report' => true,
+        'orientadore' => true,
+        'usuario_cadastro' => true,
+        'usuario_libera' => true,
+        'data_liberacao' => true,
     ];
 }

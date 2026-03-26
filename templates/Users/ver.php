@@ -541,12 +541,134 @@ function renderTabela($lista, $titulo, $badge, $ehAdmin, $view, $usuarioId, $col
 </div>
 <?php
 }
+
+function renderTabelaRaic($lista, $titulo, $badge, $ehAdmin, $view, $usuarioId, $collapseId) {
+    $tiposBolsa = [
+        'R' => 'Renovação',
+        'V' => '**Raics de Outras Agências',
+        'Z' => 'Raics de Outras Agências',
+    ];
+    $ehYoda = !empty($view->getRequest()->getAttribute('identity')['yoda']);
+?>
+<div class="card shadow-sm mb-4">
+
+    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+        <div class="fw-semibold">
+            <?= $badge ?> <?= h($titulo) ?>
+        </div>
+        <button class="btn btn-sm btn-outline-secondary"
+                data-bs-toggle="collapse"
+                data-bs-target="#<?= $collapseId ?>">
+            Expandir
+        </button>
+    </div>
+
+    <div class="collapse" id="<?= $collapseId ?>">
+        <div class="card-body p-0">
+            <?php if (count($lista) > 0): ?>
+                <div style="max-height: 420px; overflow-y: auto;">
+                    <table class="table table-hover align-middle mb-0 sortable-table">
+                        <thead class="table-light" style="position: sticky; top: 0; z-index: 3;">
+                            <tr>
+                                <th class="sortable">ID</th>
+                                <th class="sortable">Bolsista</th>
+                                <th class="sortable">Orientador</th>
+                                <th class="sortable">Projeto</th>
+                                <th class="sortable">Tipo Bolsa</th>
+                                <th class="sortable">Data Apresentação</th>
+                                <th class="sortable">Edital</th>
+                                <th class="sortable">Fase</th>
+                                <th class="sortable">Presença</th>
+                                <th class="text-end"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        <?php foreach ($lista as $i): ?>
+                            <?php
+                                $dataApresentacao = !empty($i['data_apresentacao'])
+                                    ? new \Cake\I18n\FrozenDate($i['data_apresentacao'])
+                                    : null;
+                                $tipoBolsa = strtoupper((string)($i['tipo_bolsa'] ?? ''));
+                                $anoCertificado = $dataApresentacao
+                                    ? $dataApresentacao->format('Y')
+                                    : (!empty($i['fim_vigencia']) ? date('Y', strtotime((string)$i['fim_vigencia'])) : date('Y'));
+                            ?>
+                            <tr>
+                                <td>
+                                    <?= $view->Html->link(
+                                        '#' . h($i['id']),
+                                        ['controller' => 'RaicNew', 'action' => 'ver', $i['id']],
+                                        ['class' => 'fw-bold text-decoration-none']
+                                    ) ?>
+                                </td>
+                                <td class="text-center">
+                                    <?= $usuarioId == ($i['bolsista'] ?? null)
+                                        ? bolinhaEu()
+                                        : h($i['nome_bolsista'] ?? '—') ?>
+                                </td>
+                                <td class="text-center">
+                                    <?= $usuarioId == ($i['orientador'] ?? null)
+                                        ? bolinhaEu()
+                                        : h($i['nome_orientador'] ?? '—') ?>
+                                </td>
+                                <td>
+                                    <?= !empty($i['projeto_id'])
+                                        ? h($i['projeto_id'])
+                                        : 'N/A' ?>
+                                </td>
+                                <td>
+                                    <?= h($tiposBolsa[$tipoBolsa] ?? ($i['tipo_bolsa'] ?? '—')) ?>
+                                </td>
+                                <td>
+                                    <?= $dataApresentacao
+                                        ? $dataApresentacao->i18nFormat('dd/MM/yyyy')
+                                        : 'Não marcada' ?>
+                                </td>
+                                <td>
+                                    <?= h($i['nome_edital'] ?? '—') ?><br>
+                                    <small class="text-muted"><?= h($i['nome_programa'] ?? '—') ?></small>
+                                </td>
+                                <td><?= h($i['nome_fase'] ?? '—') ?></td>
+                                <td>
+                                    <?= strtoupper((string)($i['presenca'] ?? '')) === 'S'
+                                        ? '<span class="badge bg-success">Certificado liberado</span>'
+                                        : '<span class="badge bg-secondary">Não liberado</span>' ?>
+                                </td>
+                                <td class="text-end">
+                                    <?php if ($ehYoda && strtoupper((string)($i['presenca'] ?? '')) === 'S'): ?>
+                                        <?= $view->Html->link(
+                                            'Certificado',
+                                            ['controller' => 'Certificados', 'action' => 'ver', $i['id'], 'R', $anoCertificado],
+                                            ['class' => 'btn btn-sm btn-outline-primary me-2', 'target' => '_blank']
+                                        ) ?>
+                                    <?php endif; ?>
+                                    <?php if ($ehAdmin && isset($i['raic_deleted']) && (int)$i['raic_deleted'] !== 0): ?>
+                                        <i class="fa fa-ban text-danger"
+                                        title="Registro inativo / deletado"></i>
+                                    <?php endif; ?>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            <?php else: ?>
+                <div class="p-3 text-center text-muted">
+                    Nenhum registro encontrado.
+                </div>
+            <?php endif; ?>
+        </div>
+    </div>
+</div>
+<?php
+}
 ?>
 
 <?php
 renderTabela($comoBolsista, 'Atua como Bolsista', '<span class="badge bg-primary me-1">B</span>', $ehAdmin, $this, $usuario->id, 'bolsista');
 renderTabela($comoOrientador, 'Atua como Orientador', '<span class="badge bg-info me-1">O</span>', $ehAdmin, $this, $usuario->id, 'orientador');
 renderTabela($comoCoorientador, 'Atua como Coorientador', '<span class="badge bg-secondary me-1">C</span>', $ehAdmin, $this, $usuario->id, 'coorientador');
+renderTabelaRaic($raicsPerfil ?? [], 'RAIC', '<span class="badge bg-warning text-dark me-1">R</span>', $ehAdmin, $this, $usuario->id, 'raic');
 ?>
 
 <script>

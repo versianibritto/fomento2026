@@ -2,6 +2,7 @@
 declare(strict_types=1);
 namespace App\Controller;
 use Cake\ORM\TableRegistry;
+use Cake\I18n\FrozenTime;
 
 class ListasController extends AppController 
 {
@@ -64,6 +65,316 @@ class ListasController extends AppController
         $origem = $this->origem ?? [];
         $cotas = $this->cota ?? [];
         $this->set(compact('situacao', 'programa', 'origem', 'cotas', 'tipo', 'prog'));
+    }
+
+    public function buscaRaic()
+    {
+        $acessoNegado = $this->validarAcessoListas();
+        if ($acessoNegado !== null) {
+            return $acessoNegado;
+        }
+
+        $identity = $this->request->getAttribute('identity');
+        $usuarioId = (int)($identity['id'] ?? 0);
+        $jediCsv = (string)($identity['jedi'] ?? '');
+        $isTi = in_array($usuarioId, [1, 8088], true);
+        $isYoda = !empty($identity['yoda']);
+        $isJedi = !$isTi && !$isYoda && $jediCsv !== '';
+        $unidadesPermitidas = array_values(array_filter(array_map('trim', explode(',', $jediCsv))));
+
+        if (!$isTi && !$isYoda && !$isJedi) {
+            $this->Flash->error('Restrito à gestão e coordenação de unidade.');
+            return $this->redirect(['controller' => 'Index', 'action' => 'index']);
+        }
+
+        $unidadesTable = $this->fetchTable('Unidades');
+        if ($isJedi && !empty($unidadesPermitidas)) {
+            $unidades = $unidadesTable->find('list', [
+                'keyField' => 'id',
+                'valueField' => 'sigla',
+            ])
+                ->where([
+                    'Unidades.id IN' => $unidadesPermitidas,
+                    'Unidades.deleted' => 0,
+                ])
+                ->orderBy(['Unidades.sigla' => 'ASC'])
+                ->toArray();
+        } else {
+            $unidades = $unidadesTable->find('list', [
+                'keyField' => 'id',
+                'valueField' => 'sigla',
+            ])
+                ->where(['Unidades.deleted' => 0])
+                ->orderBy(['Unidades.sigla' => 'ASC'])
+                ->toArray();
+        }
+
+        $anos = [];
+        $anoAtual = (int)FrozenTime::now()->format('Y');
+        for ($ano = $anoAtual; $ano >= ($anoAtual - 5); $ano--) {
+            $anos[(string)$ano] = (string)$ano;
+        }
+
+        $tipoBolsa = [
+            'R' => 'Renovação',
+            'O' => 'Raics de Outras Agencias',
+        ];
+
+        $this->set(compact('unidades', 'anos', 'tipoBolsa', 'isTi', 'isYoda', 'isJedi'));
+    }
+
+    public function resultadoRaic()
+    {
+        $acessoNegado = $this->validarAcessoListas();
+        if ($acessoNegado !== null) {
+            return $acessoNegado;
+        }
+
+        $identity = $this->request->getAttribute('identity');
+        $usuarioId = (int)($identity['id'] ?? 0);
+        $jediCsv = (string)($identity['jedi'] ?? '');
+        $isTi = in_array($usuarioId, [1, 8088], true);
+        $isYoda = !empty($identity['yoda']);
+        $isJedi = !$isTi && !$isYoda && $jediCsv !== '';
+        $unidadesPermitidas = array_values(array_filter(array_map('trim', explode(',', $jediCsv))));
+
+        if (!$isTi && !$isYoda && !$isJedi) {
+            $this->Flash->error('Restrito à gestão e coordenação de unidade.');
+            return $this->redirect(['controller' => 'Index', 'action' => 'index']);
+        }
+
+        $filtros = [
+            'ano' => (string)$this->request->getQuery('ano', ''),
+            'agendada' => (string)$this->request->getQuery('agendada', ''),
+            'unidade_id' => (string)$this->request->getQuery('unidade_id', ''),
+            'certificado' => (string)$this->request->getQuery('certificado', ''),
+            'tipo_bolsa' => (string)$this->request->getQuery('tipo_bolsa', ''),
+        ];
+
+        if ($filtros['ano'] === '' || !ctype_digit($filtros['ano'])) {
+            $this->Flash->error('O filtro de ano é obrigatório.');
+            return $this->redirect(['controller' => 'Listas', 'action' => 'buscaRaic']);
+        }
+
+        $dataLimite = FrozenTime::now()->subYears(5);
+        $query = $this->fetchTable('Raics')->find()
+            ->select([
+                'Raics.id',
+                'Raics.usuario_id',
+                'Raics.orientador',
+                'Raics.unidade_id',
+                'Raics.tipo_bolsa',
+                'Raics.tipo_apresentacao',
+                'Raics.data_apresentacao',
+                'Raics.presenca',
+                'Raics.deleted',
+                'Raics.editai_id',
+                'Raics.created',
+                'Raics.usuario_libera',
+                'Raics.data_liberacao',
+                'Raics.projeto_bolsista_id',
+            ])
+            ->contain([
+                'Usuarios' => function ($q) {
+                    return $q->select([
+                        'Usuarios.id',
+                        'Usuarios.nome',
+                        'Usuarios.telefone',
+                        'Usuarios.telefone_contato',
+                        'Usuarios.celular',
+                        'Usuarios.whatsapp',
+                        'Usuarios.email',
+                        'Usuarios.email_alternativo',
+                        'Usuarios.email_contato',
+                    ]);
+                },
+                'Orientadores' => function ($q) {
+                    return $q->select([
+                        'Orientadores.id',
+                        'Orientadores.nome',
+                        'Orientadores.telefone',
+                        'Orientadores.telefone_contato',
+                        'Orientadores.celular',
+                        'Orientadores.whatsapp',
+                        'Orientadores.email',
+                        'Orientadores.email_alternativo',
+                        'Orientadores.email_contato',
+                    ]);
+                },
+                'Unidades' => function ($q) {
+                    return $q->select(['Unidades.id', 'Unidades.sigla']);
+                },
+                'Editais' => function ($q) {
+                    return $q->select(['Editais.id', 'Editais.fim_vigencia']);
+                },
+            ])
+            ->where(['Raics.created >=' => $dataLimite])
+            ->orderBy(['Raics.id' => 'DESC']);
+
+        $unidadesTable = $this->fetchTable('Unidades');
+        if ($isTi) {
+            $unidades = $unidadesTable->find('list', [
+                'keyField' => 'id',
+                'valueField' => 'sigla',
+            ])->orderBy(['Unidades.sigla' => 'ASC'])->toArray();
+        } elseif ($isYoda) {
+            $query->where(['Raics.deleted' => 0]);
+            $unidades = $unidadesTable->find('list', [
+                'keyField' => 'id',
+                'valueField' => 'sigla',
+            ])->where(['Unidades.deleted' => 0])
+                ->orderBy(['Unidades.sigla' => 'ASC'])
+                ->toArray();
+        } else {
+            $query->where(['Raics.deleted' => 0]);
+            $unidades = [];
+            if (!empty($unidadesPermitidas)) {
+                $unidades = $unidadesTable->find('list', [
+                    'keyField' => 'id',
+                    'valueField' => 'sigla',
+                ])->where([
+                    'Unidades.id IN' => $unidadesPermitidas,
+                    'Unidades.deleted' => 0,
+                ])
+                    ->orderBy(['Unidades.sigla' => 'ASC'])
+                    ->toArray();
+            }
+            if (!empty($unidadesPermitidas)) {
+                $query->where(['Raics.unidade_id IN' => $unidadesPermitidas]);
+            }
+            if ($filtros['unidade_id'] !== '' && in_array($filtros['unidade_id'], $unidadesPermitidas, true)) {
+                $query->where(['Raics.unidade_id' => $filtros['unidade_id']]);
+            }
+        }
+
+        if ($isTi || $isYoda) {
+            if ($filtros['unidade_id'] !== '') {
+                $query->where(['Raics.unidade_id' => $filtros['unidade_id']]);
+            }
+        }
+
+        if ($filtros['ano'] !== '' && ctype_digit($filtros['ano'])) {
+            $query->where(function ($exp) use ($filtros) {
+                return $exp->eq('YEAR(Raics.created)', (int)$filtros['ano'], 'integer');
+            });
+        }
+        if ($filtros['agendada'] === 'S') {
+            $query->where(['Raics.data_apresentacao IS NOT' => null]);
+        } elseif ($filtros['agendada'] === 'N') {
+            $query->where(['Raics.data_apresentacao IS' => null]);
+        }
+        if ($filtros['certificado'] === 'S') {
+            $query->where(['Raics.presenca' => 'S']);
+        } elseif ($filtros['certificado'] === 'N') {
+            $query->where(function ($exp) {
+                return $exp->or([
+                    'Raics.presenca <>' => 'S',
+                    'Raics.presenca IS' => null,
+                ]);
+            });
+        }
+        if ($filtros['tipo_bolsa'] !== '') {
+            if ($filtros['tipo_bolsa'] === 'O') {
+                $query->where(['Raics.tipo_bolsa IN' => ['V', 'Z']]);
+            } else {
+                $query->where(['Raics.tipo_bolsa' => $filtros['tipo_bolsa']]);
+            }
+        }
+
+        if ($this->request->getQuery('acao') === 'excel') {
+            $rows = $query->all();
+            $header = [
+                'id',
+                'orientador',
+                'orientador_telefone',
+                'orientador_telefone_contato',
+                'orientador_celular',
+                'orientador_whatsapp',
+                'orientador_email',
+                'orientador_email_alternativo',
+                'orientador_email_contato',
+                'bolsista',
+                'bolsista_telefone',
+                'bolsista_telefone_contato',
+                'bolsista_celular',
+                'bolsista_whatsapp',
+                'bolsista_email',
+                'bolsista_email_alternativo',
+                'bolsista_email_contato',
+                'unidade_raic',
+                'data_apresentacao',
+                'certificado_liberado',
+                'tipo_apresentacao',
+                'usuario_libera',
+                'data_liberacao',
+                'created',
+                'tipo_bolsa',
+                'projeto_bolsista_id',
+            ];
+            $exportRows = [];
+            foreach ($rows as $raic) {
+                $exportRows[] = [
+                    $raic->id,
+                    $raic->orientadore->nome ?? '',
+                    $raic->orientadore->telefone ?? '',
+                    $raic->orientadore->telefone_contato ?? '',
+                    $raic->orientadore->celular ?? '',
+                    $raic->orientadore->whatsapp ?? '',
+                    $raic->orientadore->email ?? '',
+                    $raic->orientadore->email_alternativo ?? '',
+                    $raic->orientadore->email_contato ?? '',
+                    $raic->usuario->nome ?? '',
+                    $raic->usuario->telefone ?? '',
+                    $raic->usuario->telefone_contato ?? '',
+                    $raic->usuario->celular ?? '',
+                    $raic->usuario->whatsapp ?? '',
+                    $raic->usuario->email ?? '',
+                    $raic->usuario->email_alternativo ?? '',
+                    $raic->usuario->email_contato ?? '',
+                    $raic->unidade->sigla ?? '',
+                    $raic->data_apresentacao ? $raic->data_apresentacao->i18nFormat('dd/MM/yyyy') : '',
+                    strtoupper((string)($raic->presenca ?? '')) === 'S' ? 'Sim' : 'Não',
+                    match (strtoupper((string)($raic->tipo_apresentacao ?? ''))) {
+                        'O' => 'Oral',
+                        'P' => 'Painel',
+                        default => '',
+                    },
+                    $raic->usuario_libera ?? '',
+                    $raic->data_liberacao ? $raic->data_liberacao->i18nFormat('dd/MM/yyyy HH:mm') : '',
+                    $raic->created ? $raic->created->i18nFormat('dd/MM/yyyy HH:mm') : '',
+                    match (strtoupper((string)($raic->tipo_bolsa ?? ''))) {
+                        'R' => 'Renovação',
+                        'V', 'Z' => 'Raics de Outras Agencias',
+                        default => (string)($raic->tipo_bolsa ?? ''),
+                    },
+                    $raic->projeto_bolsista_id ?? '',
+                ];
+            }
+
+            return $this->downloadCsvResponse(
+                'lista_raic_' . date('Ymd_His') . '.csv',
+                $header,
+                $exportRows
+            );
+        }
+
+        $this->paginate = [
+            'limit' => 20,
+            'maxLimit' => 20,
+        ];
+        $listas = $this->paginate($query);
+
+        $anos = [];
+        $anoAtual = (int)FrozenTime::now()->format('Y');
+        for ($ano = $anoAtual; $ano >= ($anoAtual - 5); $ano--) {
+            $anos[(string)$ano] = (string)$ano;
+        }
+        $tipoBolsa = [
+            'R' => 'Renovação',
+            'O' => 'Raics de Outras Agencias',
+        ];
+
+        $this->set(compact('listas', 'filtros', 'unidades', 'anos', 'tipoBolsa', 'isTi', 'isYoda', 'isJedi'));
     }
 
     public function resultado($tipo = null)

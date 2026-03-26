@@ -15,12 +15,10 @@ use Authentication\AuthenticationServiceProviderInterface;
 use Authentication\AuthenticationService;
 use Cake\Core\Configure;
 use Cake\Routing\Router;
-use Authentication\Identifier\PasswordIdentifier;
 use Cake\Core\ContainerInterface;
 use Cake\Datasource\FactoryLocator;
 use Cake\Http\Middleware\CsrfProtectionMiddleware;
 use Cake\ORM\Locator\TableLocator;
-use Cake\Http\Client\Request;
 
 class Application extends BaseApplication implements AuthenticationServiceProviderInterface
 {
@@ -57,46 +55,9 @@ class Application extends BaseApplication implements AuthenticationServiceProvid
 
     public function getAuthenticationService(ServerRequestInterface $request): AuthenticationServiceInterface
     {
-        //$service = new AuthenticationService();
-
-        $service = new AuthenticationService([
-            'unauthenticatedRedirect' => Router::url('/'),
-            'queryParam' => 'redirect',
-        ]);
-
-        // Redirecionamento padrão caso não autenticado
-        /*$service->setConfig([
-            'unauthenticatedRedirect' => [
-                'controller' => 'Users',
-                'action' => 'login',
-            ],
-            'queryParam' => 'redirect',
-        ]);
-        */
         $service = new AuthenticationService([
             'unauthenticatedRedirect' => Router::url('/login'),
             'queryParam' => 'redirect',
-        ]);
-
-
-        
-        $service->loadIdentifier('Authentication.Password', [
-            'fields' => [
-                'username' => 'cpf',
-                'password' => 'password',
-            ],
-            'resolver' => [
-                'className' => 'Authentication.Orm',
-                'userModel' => 'Usuarios'
-            ]
-        ]);
-        
-
-        $identifier = new PasswordIdentifier([
-            'fields' => [
-                'username' => 'cpf',
-                'password' => 'password',
-            ],
         ]);
 
         // Autenticadores
@@ -111,7 +72,18 @@ class Application extends BaseApplication implements AuthenticationServiceProvid
                 'className' => 'Authentication.Orm',
                 'userModel' => 'Usuarios'
             ],
-            'identifiers' => [$identifier],
+            'identifier' => [
+                'Authentication.Password' => [
+                    'fields' => [
+                        'username' => 'cpf',
+                        'password' => 'password',
+                    ],
+                    'resolver' => [
+                        'className' => 'Authentication.Orm',
+                        'userModel' => 'Usuarios',
+                    ],
+                ],
+            ],
         ]);
 
         return $service;

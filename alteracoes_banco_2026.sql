@@ -1505,25 +1505,26 @@ VIEW `geral` AS
             AND (`entrada`.`projeto_id` = `p`.`projeto_id`))));
 
 -- 24/03 mensagens popup home/area interna
-ALTER TABLE `fomento2026`.`mensagens`
-ADD COLUMN `inicio` TIMESTAMP NULL AFTER `modified`,
-ADD COLUMN `fim` TIMESTAMP NULL AFTER `inicio`;
-ALTER TABLE `fomento2026`.`mensagens` 
-CHANGE COLUMN `titulo` `titulo` TEXT NULL DEFAULT NULL ;
-
-ALTER TABLE `fomento2026`.`mensagens` 
-CHANGE COLUMN `titulo` `titulo` TEXT NULL DEFAULT NULL ;
-
-ALTER TABLE `fomento2026`.`mensagens` 
+ALTER TABLE `mensagens`
 ADD COLUMN `inicio` TIMESTAMP NULL AFTER `modified`,
 ADD COLUMN `fim` TIMESTAMP NULL AFTER `inicio`;
 
+ALTER TABLE `mensagens` 
+CHANGE COLUMN `titulo` `titulo` TEXT NULL DEFAULT NULL ;
 
-ALTER TABLE `fomento2026`.`suporte_chamados` 
+ALTER TABLE `mensagens` 
+CHANGE COLUMN `titulo` `titulo` TEXT NULL DEFAULT NULL ;
+
+ALTER TABLE `mensagens` 
+ADD COLUMN `inicio` TIMESTAMP NULL AFTER `modified`,
+ADD COLUMN `fim` TIMESTAMP NULL AFTER `inicio`;
+
+
+ALTER TABLE `suporte_chamados` 
 ADD COLUMN `demandante` INT NULL AFTER `finalizado`,
 CHANGE COLUMN `destinatario_id` `beneficiado` INT UNSIGNED NULL DEFAULT NULL ;
 
-CREATE TABLE `fomento2026`.`calendarios` (
+CREATE TABLE `calendarios` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `tipo` VARCHAR(45) NULL COMMENT 'Feriados, Ausencia(atestado, pessoal), Ponto facultativo, O=Indisponibilidade técnica (servidor caiu etc)',
   `descricao` VARCHAR(100) NULL,
@@ -1533,11 +1534,11 @@ CREATE TABLE `fomento2026`.`calendarios` (
   `dia` DATE NULL,
   PRIMARY KEY (`id`));
 
-ALTER TABLE `fomento2026`.`calendarios`
+ALTER TABLE `calendarios`
 CHANGE COLUMN `tipo` `tipo` ENUM('F', 'A', 'P', 'O') NULL DEFAULT NULL COMMENT 'Feriados, Ausencia(atestado, pessoal), Ponto facultativo, O=Indisponibilidade técnica (servidor caiu etc)' ;
 
 
-INSERT INTO `fomento2026`.`calendarios`
+INSERT INTO `calendarios`
 (`tipo`, `descricao`, `created`, `modified`, `deleted`, `dia`)
 VALUES
 ('F', 'Tiradentes', NOW(), NOW(), NULL, '2026-04-21'),
@@ -1549,9 +1550,76 @@ VALUES
 ('F', 'Dia Nacional de Zumbi e da Consciência Negra', NOW(), NOW(), NULL, '2026-11-20'),
 ('F', 'Natal', NOW(), NOW(), NULL, '2026-12-25');
 
-INSERT INTO `fomento2026`.`calendarios`
+INSERT INTO `calendarios`
 (`tipo`, `descricao`, `created`, `modified`, `deleted`, `dia`)
 VALUES
 ('F', 'Sexta-feira Santa', NOW(), NOW(), NULL, '2026-04-03'),
 ('F', 'Corpus Christi', NOW(), NOW(), NULL, '2026-06-04');
 
+-- ///////////
+
+CREATE  OR REPLACE VIEW `raic_geral` AS   
+    SELECT 
+        `r`.`id` AS `id`,
+        `r`.`usuario_id` AS `bolsista`,
+        `b`.`nome` AS `nome_bolsista`,
+        `b`.`telefone` AS `telefone`,
+        `b`.`telefone_contato` AS `telefone_contato`,
+        `b`.`celular` AS `celular`,
+        `b`.`whatsapp` AS `whatsapp`,
+        `b`.`email` AS `email_bolsista`,
+        `b`.`email_alternativo` AS `email_alternativo_bolsista`,
+        `b`.`email_contato` AS `email_contato_bolsista`,
+        `r`.`orientador` AS `orientador`,
+        `o`.`nome` AS `nome_orientador`,
+        `o`.`telefone` AS `telefone_orientador`,
+        `o`.`telefone_contato` AS `telefone_contato_orientador`,
+        `o`.`celular` AS `celular_orientador`,
+        `o`.`whatsapp` AS `whatsapp_orientador`,
+        `o`.`email` AS `email_orientador`,
+        `o`.`email_alternativo` AS `email_alternativo_orientador`,
+        `o`.`email_contato` AS `email_contato_orientador`,
+        `r`.`projeto_orientador` AS `projeto_id`,
+        r.data_apresentacao as data_apresentacao,
+        r.titulo as titulo,
+        r.tipo_bolsa as tipo_bolsa,
+        r.presenca as presenca,
+        r.deleted as raic_deleted,
+        r.unidade_id as unidade_id,
+        s.sigla as sigla,
+        r.projeto_bolsista_id as projeto_bolsista_id,
+        `pb`.`fase_id` AS `fase_id`,
+        `f`.`nome` AS `nome_fase`,
+        `pb`.`vigente` AS `vigente`,
+        `r`.`editai_id` AS `editai_id`,
+        `e`.`nome` AS `nome_edital`,
+        `p`.`sigla` AS `nome_programa`,
+        `e`.`programa_id` AS `programa_id`,
+        `e`.`fim_vigencia` AS `fim_vigencia`,
+        pb.justificativa_cancelamento as justificativa_cancelamento,
+        pb.deleted as pb_deleted
+      
+    FROM
+        `raics` `r`
+        LEFT JOIN `usuarios` `b` ON `b`.`id` = `r`.`usuario_id`
+        LEFT JOIN `usuarios` `o` ON `o`.`id` = `r`.`orientador`
+        LEFT JOIN `unidades` `s` ON `s`.`id` = `r`.`unidade_id`
+        left join projeto_bolsistas pb on pb.id=r.projeto_bolsista_id
+        LEFT JOIN `fases` `f` ON `f`.`id` = `pb`.`fase_id`
+        LEFT JOIN `editais` `e` ON `e`.`id` = `r`.`editai_id`
+        LEFT JOIN `programas` `p` ON `p`.`id` = `e`.`programa_id`;
+
+
+CREATE TABLE `mensagens` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `titulo` TEXT NULL DEFAULT NULL,
+  `testo` TEXT NULL DEFAULT NULL,
+  `imagem` VARCHAR(255) NULL DEFAULT NULL,
+  `tipo` ENUM('I', 'E') NOT NULL COMMENT 'I=Interna, E=Externa',
+  `deleted` TIMESTAMP NULL DEFAULT NULL,
+  `created` TIMESTAMP NULL DEFAULT NULL,
+  `modified` TIMESTAMP NULL DEFAULT NULL,
+  `inicio` TIMESTAMP NULL DEFAULT NULL,
+  `fim` TIMESTAMP NULL DEFAULT NULL,
+  PRIMARY KEY (`id`)
+);

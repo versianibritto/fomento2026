@@ -130,22 +130,24 @@
                             <?php } ?>
                         </a>
                     </li>
+                    <li class="sidebar-item">
+                        <a href="/raic-new/painel" class="sidebar-link <?=(($this->request->getParam('controller') == 'RaicNew' && $this->request->getParam('action') == 'painel') ? 'active' : '')?>">
+                            Raic
+                        </a>
+                    </li>
                     <?php if ((int)($usuario_logado['escolaridade_id'] ?? 0) >= 10) { ?>
+                        <?php /*
                         <li class="sidebar-item">
                             <a href="/avaliadors/minhas_avaliacoes" class="sidebar-link <?=(($this->request->getParam('action') == 'minhasAvaliacoes') ? 'active' : '')?>">
                                 Minhas Avaliações
                             </a>
                         </li>
+                        */ ?>
                         <!--<li class="sidebar-item">
                             <a href="/users/meus-documentos" class="sidebar-link <?=(($this->request->getParam('action') == 'meusDocumentos') ? 'active' : '')?>">
                                 Meus Documentos
                             </a>
                         </li>-->
-                        <li class="sidebar-item">
-                            <a href="/bolsistas/raic" class="sidebar-link <?=(($this->request->getParam('action') == 'raic') ? 'active' : '')?>">
-                                Raic
-                            </a>
-                        </li>
                         <!--<li class="sidebar-item">
                             <a href="/aulas/direciona" class="sidebar-link <?=(($this->request->getParam('controller') == 'Aulas' && $this->request->getParam('action') == 'liberadas') ? 'active' : '')?>">
                                 Sala de aula / Cursos
@@ -233,24 +235,15 @@
                         </a>
                     </li>
                             -->
-                    
-                    
-                    
-                    <!--
-                    <li class="sidebar-item">
-                        <a href="/avaliadors/raic/1" class="sidebar-link">
-                            Avaliadores - RAIC
-                        </a>
-                    </li>
-                    
-                    <li class="sidebar-item">
-                        <a href="/raics/lista/1" class="sidebar-link">
-                            Listagem Raic
-                        </a>
-                    </li>
-                    
-                    
-                    -->
+
+                    <?php if (!empty($usuario_logado['yoda']) || !empty($usuario_logado['jedi'])): ?>
+                        <li class="sidebar-item">
+                            <a href="/listas/busca-raic" class="sidebar-link <?=(($this->request->getParam('controller') == 'Listas' && in_array($this->request->getParam('action'), ['buscaRaic', 'resultadoRaic'], true)) ? 'active' : '')?>">
+                                Listagem Raic
+                            </a>
+                        </li>
+                    <?php endif; ?>
+
                     
                     
                                       
