@@ -4,7 +4,6 @@ declare(strict_types=1);
 namespace App\Service;
 
 use App\Model\Table\DashboardSourceTable;
-use Cake\ORM\Query;
 use Cake\I18n\FrozenTime;
 
 
@@ -49,40 +48,6 @@ class DashboardService
             'total'=>($inscricoesAndamento + $finalizadas),
         ];
     }
-
-
-
-    public function getInscricoesDetalhadas(int $userId, string $tipo): array
-    {
-        $query = $this->DashboardSource
-            ->find('detalhes')
-            ->where([
-                'OR' => [
-                    'bolsista'     => $userId,
-                    'orientador'   => $userId,
-                    'coorientador' => $userId
-                ]
-            ]);
-
-        switch (strtoupper($tipo)) {
-            case 'A':
-                $query->where(['bloco IN' => ['I', 'F', 'H']]);
-                break;
-
-            case 'V':
-                $query->where(['vigente' => 1]);
-                break;
-
-            default:
-                throw new \InvalidArgumentException("Tipo inválido: {$tipo}");
-        }
-
-        return $query
-            ->orderBy(['Detalhes.id' => 'ASC']) 
-            ->toArray();
-    }
-
-
 
 public function buildYoda(): array
 {

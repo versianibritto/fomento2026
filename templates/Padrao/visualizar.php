@@ -265,7 +265,23 @@ if (!$temDataInicio && !$temDataFim) {
                         <?= !empty($inscricao->created) ? h($inscricao->created->i18nFormat('dd/MM/yyyy')) : $naoInformado ?>
                     </div>
                 <?php endif; ?>
-                <div class="col-md-6"><strong>Edital:</strong> <?= !empty($edital->nome) ? h($edital->nome) : $naoInformado ?></div>
+                <div class="col-md-6">
+                    <strong>Programa:</strong>
+                    <?php
+                        $programaTexto = $edital->programa->sigla
+                            ?? $edital->programa->nome
+                            ?? null;
+                        $editalTexto = $edital->nome ?? null;
+                    ?>
+                    <?php if (!empty($programaTexto)): ?>
+                        <?= h($programaTexto) ?>
+                        <?php if ($ehTIVisualizacao && !empty($editalTexto)): ?>
+                            <small><i>(<?= h($editalTexto) ?>)</i></small>
+                        <?php endif; ?>
+                    <?php else: ?>
+                        <?= $naoInformado ?>
+                    <?php endif; ?>
+                </div>
                 <div class="col-md-6">
                     <strong>Situação:</strong>
                     <?php if (!empty($inscricao->fase->nome)): ?>

@@ -37,7 +37,10 @@
                 <thead class="table-light">
                     <tr>
                         <th class="sortable" data-sort="id">Inscrição <i class="fa fa-sort ms-1 text-muted"></i></th>
-                        <th class="sortable" data-sort="bolsista">Bolsista Entrando <i class="fa fa-sort ms-1 text-muted"></i></th>
+                        <th class="sortable" data-sort="bolsista">
+                            <?= $tipo === 'C' ? 'Bolsista Saindo' : 'Bolsista Entrando' ?>
+                            <i class="fa fa-sort ms-1 text-muted"></i>
+                        </th>
                         <?php if ($tipo === 'S'): ?>
                             <th class="sortable" data-sort="bolsista-saindo">Bolsista Saindo <i class="fa fa-sort ms-1 text-muted"></i></th>
                         <?php endif; ?>
@@ -69,7 +72,7 @@
                                     </a>
                                 </td>
                                 <td>
-                                    <?= h($i['bolsista_entrando'] ?? '-') ?>
+                                    <?= h($tipo === 'C' ? ($i['bolsista_saindo'] ?? '-') : ($i['bolsista_entrando'] ?? '-')) ?>
                                 </td>
                                 <?php if ($tipo === 'S'): ?>
                                     <td><?= h($i['bolsista_saindo'] ?? '-') ?></td>
@@ -146,7 +149,7 @@
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="<?= $tipo === 'S' ? 8 : 9 ?>" class="text-center text-muted fw-bold">Nenhum registro encontrado.</td>
+                            <td colspan="<?= $tipo === 'S' ? 10 : 9 ?>" class="text-center text-muted fw-bold">Nenhum registro encontrado.</td>
                         </tr>
                     <?php endif; ?>
                 </tbody>

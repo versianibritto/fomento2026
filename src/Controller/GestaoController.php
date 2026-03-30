@@ -624,7 +624,9 @@ class GestaoController extends AppController
                 'fonte' => 'IC',
                 'programa_id' => (int)($item->programa_id ?? $item->programa ?? 0),
                 'bolsista_entrando' => $formatarNome($item->bolsista_usuario->nome ?? null),
-                'bolsista_saindo' => $formatarNome($item->substituto->bolsista_usuario->nome ?? null),
+                'bolsista_saindo' => $tipo === 'C'
+                    ? $formatarNome($item->bolsista_usuario->nome ?? null)
+                    : $formatarNome($item->substituto->bolsista_usuario->nome ?? null),
                 'orientador' => $formatarNome($item->orientadore->nome ?? null),
                 'unidade' => (string)($item->orientadore->unidade->sigla ?? '-'),
                 'data_solicitacao' => $dataSolicitacao,
@@ -677,7 +679,9 @@ class GestaoController extends AppController
                 'fonte' => 'PDJ',
                 'programa_id' => (int)($item->programa_id ?? $item->programa ?? 0),
                 'bolsista_entrando' => $formatarNome($item->bolsista_usuario->nome ?? null),
-                'bolsista_saindo' => $formatarNome($item->substitutospdj->bolsista_usuario->nome ?? null),
+                'bolsista_saindo' => $tipo === 'C'
+                    ? $formatarNome($item->bolsista_usuario->nome ?? null)
+                    : $formatarNome($item->substitutospdj->bolsista_usuario->nome ?? null),
                 'orientador' => $formatarNome($item->orientadore->nome ?? null),
                 'unidade' => (string)($item->orientadore->unidade->sigla ?? '-'),
                 'data_solicitacao' => $dataSolicitacao,

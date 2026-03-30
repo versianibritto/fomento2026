@@ -417,6 +417,38 @@ function badgeVigente($vigente) {
         : '<span class="badge bg-secondary">Não vigente</span>';
 }
 
+function textoPrograma($item, bool $ehTi): string
+{
+    $programa = trim((string)($item['nome_programa'] ?? $item->nome_programa ?? ''));
+    $edital = trim((string)($item['nome_edital'] ?? $item->nome_edital ?? ''));
+
+    if ($programa === '') {
+        $programa = $edital !== '' ? $edital : '—';
+    }
+
+    $html = h($programa);
+
+    if ($ehTi && $edital !== '') {
+        $html .= '<br><small class="text-muted"><i>(' . h($edital) . ')</i></small>';
+    }
+
+    return $html;
+}
+
+function textoOrigem($item): string
+{
+    $origem = strtoupper(trim((string)($item['origem'] ?? $item->origem ?? '')));
+    $mapa = [
+        'N' => 'Nova',
+        'R' => 'Renovação',
+        'S' => 'Substituição',
+        'A' => 'Subst Na Vigência',
+        'T' => 'Mudança de orientação/projeto',
+    ];
+
+    return h($mapa[$origem] ?? ($origem !== '' ? $origem : '—'));
+}
+
 function renderTabela($lista, $titulo, $badge, $ehAdmin, $view, $usuarioId, $collapseId) {
 ?>
 <div class="card shadow-sm mb-4">
@@ -444,7 +476,8 @@ function renderTabela($lista, $titulo, $badge, $ehAdmin, $view, $usuarioId, $col
                                 <th class="sortable">Orientador</th>
                                 <th class="sortable">Bolsista</th>
                                 <th class="sortable">Coorientador</th>
-                                <th class="sortable">Edital</th>
+                                <th class="sortable">Programa</th>
+                                <th class="sortable">Origem</th>
                                 <th class="sortable">Fase</th>
                                 <th class="sortable">Vigente</th>
                                 <th class="sortable">Início</th>
@@ -494,8 +527,11 @@ function renderTabela($lista, $titulo, $badge, $ehAdmin, $view, $usuarioId, $col
                                 </td>
 
                                 <td>
-                                    <?= h($i['nome_edital']) ?><br>
-                                    <small class="text-muted"><?= h($i['nome_programa']) ?></small>
+                                    <?= textoPrograma($i, $ehAdmin) ?>
+                                </td>
+
+                                <td>
+                                    <?= textoOrigem($i) ?>
                                 </td>
 
                                 <td>

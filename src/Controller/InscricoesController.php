@@ -2433,9 +2433,9 @@ class InscricoesController extends AppController
         $origemInscricao = strtoupper(trim((string)($inscricao->origem ?? '')));
         $rotuloOrigem = 'Bolsa Nova';
         if ($origemInscricao === 'R') {
-            $rotuloOrigem = 'Renovacao';
+            $rotuloOrigem = 'Renovação';
         } elseif ($origemInscricao === 'S') {
-            $rotuloOrigem = 'Subst';
+            $rotuloOrigem = 'Substituição';
         } elseif ($origemInscricao === 'A') {
             $rotuloOrigem = 'Subst na Implantacao';
         }

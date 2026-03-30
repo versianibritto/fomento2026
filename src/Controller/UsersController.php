@@ -449,6 +449,8 @@ class UsersController extends AppController
         $deficiencia = $this->deficiencia;
         $documentos = $this->documentos;
 
+
+        /*
         $escolaridadeNome = $usuario->escolaridade->nome ?? null;
         if ($escolaridadeNome === null && !empty($usuario->escolaridade_id)) {
             $escolaridadeNome = $this->fetchTable('Escolaridades')->find()
@@ -466,6 +468,7 @@ class UsersController extends AppController
                 ->disableHydration()
                 ->first()['nome'] ?? null;
         }
+            */    
 
         $street = $usuario->street ?? null;
         if ($street === null && !empty($usuario->street_id)) {
@@ -482,6 +485,8 @@ class UsersController extends AppController
             $street->district->city->nome ?? null,
             $street->district->city->state->sigla ?? null,
         ]));
+
+        
 
         $temJediPerfil = $usuario->jedi !== null && $usuario->jedi !== '';
         $temPadauanPerfil = $usuario->padauan !== null && $usuario->padauan !== '';
@@ -535,8 +540,8 @@ class UsersController extends AppController
             'programas',
             'usuario',
             'bolsas',
-            'escolaridadeNome',
-            'vinculoNome',
+            //'escolaridadeNome',
+            //'vinculoNome',
             'cep',
             'enderecoCompleto',
             'temJediPerfil',

@@ -390,15 +390,53 @@ class AppController extends Controller
             
 
             
+            $subs = 0;
+            $subs_pdj = 0;
+            $canc = 0;
+            $canc_pdj = 0;
+            $atv = 0;
+            $atv_pdj = 0;
+
+            if ($usuario->yoda) {
+                $rowsDashyoda = TableRegistry::getTableLocator()
+                    ->get('Dashyodacounts')
+                    ->find()
+                    ->enableHydration(false)
+                    ->toArray();
+
+                foreach ($rowsDashyoda as $rowDashyoda) {
+                    $qtd = (int)($rowDashyoda['qtd'] ?? 0);
+                    $faseId = (int)($rowDashyoda['fase_id'] ?? 0);
+                    $programaId = (int)($rowDashyoda['programa_id'] ?? 0);
+                    $ehPdj = $programaId === 1;
+
+                    if ((int)($rowDashyoda['vigente'] ?? 0) === 1) {
+                        if ($ehPdj) {
+                            $atv_pdj += $qtd;
+                        } else {
+                            $atv += $qtd;
+                        }
+                    }
+
+                    if (in_array($faseId, [12, 21], true)) {
+                        if ($ehPdj) {
+                            $canc_pdj += $qtd;
+                        } else {
+                            $canc += $qtd;
+                        }
+                    }
+
+                    if ($faseId === 15) {
+                        if ($ehPdj) {
+                            $subs_pdj += $qtd;
+                        } else {
+                            $subs += $qtd;
+                        }
+                    }
+                }
+            }
+
             if($usuario->yoda) {
-                $canc = TableRegistry::getTableLocator()->get('ProjetoBolsistas')->find()->where(['situacao in' => ['C', 'W'], 'deleted IS' => null])->count();
-                $canc_pdj = TableRegistry::getTableLocator()->get('PdjInscricoes')->find()->where(['situacao in' => ['C', 'W'], 'deleted IS NULL'])->count();
-
-                $subs = TableRegistry::getTableLocator()->get('ProjetoBolsistas')->find()->where(['situacao' => 'U' , 'deleted IS' => null])->count();
-                $subs_pdj = TableRegistry::getTableLocator()->get('PdjInscricoes')->find()->where(['situacao' => 'U' , 'deleted IS NULL'])->count();
-
-                $atv = TableRegistry::getTableLocator()->get('ProjetoBolsistas')->find()->where(['vigente' => 1,  'deleted IS' => null])->count();
-                $atv_pdj = TableRegistry::getTableLocator()->get('PdjInscricoes')->find()->where(['vigente' => 1,  'deleted IS NULL'])->count();
                 $feedbackCount = $feedbacksTable->find()
                     ->where([
                         'Feedbacks.origem' => 'R',

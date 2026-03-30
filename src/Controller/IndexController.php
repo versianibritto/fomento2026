@@ -206,45 +206,6 @@ class IndexController extends AppController
         
         // Transformar em array
         $detalhes = $detalhesQuery->enableHydration(false)->toArray();
-        if (!empty($detalhes)) {
-            $ids = [];
-            foreach ($detalhes as $linha) {
-                $idLinha = (int)($linha['id'] ?? 0);
-                if ($idLinha > 0) {
-                    $ids[] = $idLinha;
-                }
-            }
-            $ids = array_values(array_unique($ids));
-            if (!empty($ids)) {
-                $origensMap = $this->fetchTable('ProjetoBolsistas')->find()
-                    ->select(['id', 'origem'])
-                    ->where(['ProjetoBolsistas.id IN' => $ids])
-                    ->enableHydration(false)
-                    ->all()
-                    ->combine('id', 'origem')
-                    ->toArray();
-
-                foreach ($detalhes as $idx => $linha) {
-                    $idLinha = (int)($linha['id'] ?? 0);
-                    $detalhes[$idx]['origem'] = $origensMap[$idLinha] ?? null;
-                    if ($detalhes[$idx]['origem'] === null) {
-                        $fallback = $this->fetchTable('ProjetoBolsistas')->find()
-                            ->select(['origem'])
-                            ->where([
-                                'ProjetoBolsistas.projeto_id' => (int)($linha['projeto_id'] ?? 0),
-                                'ProjetoBolsistas.orientador' => (int)($linha['orientador'] ?? 0),
-                                'ProjetoBolsistas.editai_id' => (int)($linha['editai_id'] ?? 0),
-                                'ProjetoBolsistas.deleted IS' => null,
-                            ])
-                            ->orderBy(['ProjetoBolsistas.id' => 'DESC'])
-                            ->first();
-                        if ($fallback) {
-                            $detalhes[$idx]['origem'] = $fallback->origem;
-                        }
-                    }
-                }
-            }
-        }
 
         $this->set(compact('detalhes', 'tipo'));
     }

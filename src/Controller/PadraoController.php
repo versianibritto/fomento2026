@@ -29,20 +29,9 @@ class PadraoController extends AppController
             return $this->redirect(['controller' => 'Index', 'action' => 'dashdetalhes', 'T']);
         }
 
-        $ehYoda = $this->ehYoda();
-        $conditions = [
-            'ProjetoBolsistas.id' => (int)$inscricaoId,
-        ];
-        if (!$ehYoda) {
-            $conditions['OR'] = [
-                ['ProjetoBolsistas.orientador' => (int)$identity->id],
-                ['ProjetoBolsistas.coorientador' => (int)$identity->id],
-            ];
-        }
-
         $inscricao = $this->fetchTable('ProjetoBolsistas')->find()
             ->contain([
-                'Editais',
+                'Editais' => ['Programas'],
                 'Bolsistas',
                 'Orientadores',
                 'Coorientadores' => ['Escolaridades', 'Vinculos'],
@@ -50,12 +39,37 @@ class PadraoController extends AppController
                 'Fases',
                 'Anexos' => ['conditions' => 'Anexos.deleted IS NULL', 'AnexosTipos', 'Usuarios'],
             ])
-            ->where($conditions)
+            ->where(['ProjetoBolsistas.id' => (int)$inscricaoId])
             ->first();
 
         if (!$inscricao) {
             $this->Flash->error('Inscricao não localizada para visualizacao.');
-            return $this->redirect(['controller' => 'Index', 'action' => 'dashdetalhes', 'T']);
+            return $this->redirect(['controller' => 'Index', 'action' => 'index']);
+        }
+
+        $ehYoda = $this->ehYoda();
+        $identityId = (int)($identity->id ?? 0);
+        $ehOrientador = $identityId > 0 && $identityId === (int)($inscricao->orientador ?? 0);
+        $ehCoorientador = $identityId > 0 && $identityId === (int)($inscricao->coorientador ?? 0);
+        $ehBolsista = $identityId > 0 && $identityId === (int)($inscricao->bolsista ?? 0);
+
+        $jediPermitidas = array_values(array_filter(array_map('trim', explode(',', (string)($identity->jedi ?? '')))));
+        $unidadeOrientador = (string)($inscricao->orientadore->unidade_id ?? $inscricao->orientadore->unidade?->id ?? '');
+        $ehJediPermitido = !$ehYoda
+            && !empty($jediPermitidas)
+            && $unidadeOrientador !== ''
+            && in_array($unidadeOrientador, $jediPermitidas, true);
+
+        $padauanPermitidos = array_values(array_filter(array_map('trim', explode(',', (string)($identity->padauan ?? '')))));
+        $programaInscricao = (string)((int)($inscricao->programa_id ?? $inscricao->editai->programa_id ?? 0));
+        $ehPadauanPermitido = !$ehYoda
+            && !empty($padauanPermitidos)
+            && $programaInscricao !== '0'
+            && in_array($programaInscricao, $padauanPermitidos, true);
+
+        if (!$ehYoda && !$ehOrientador && !$ehCoorientador && !$ehBolsista && !$ehJediPermitido && !$ehPadauanPermitido) {
+            $this->Flash->error('Sem acesso a esta inscrição. Somente Gestão e coordenação da unidade da inscrição.');
+            return $this->redirect(['controller' => 'Index', 'action' => 'index']);
         }
 
         $edital = $inscricao->editai ?? null;
@@ -65,6 +79,7 @@ class PadraoController extends AppController
         }
         if (!$edital && $editaiId > 0) {
             $edital = $this->fetchTable('Editais')->find()
+                ->contain(['Programas'])
                 ->where(['Editais.id' => (int)$editaiId])
                 ->first();
         }

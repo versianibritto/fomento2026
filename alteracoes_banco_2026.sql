@@ -1623,3 +1623,41 @@ CREATE TABLE `mensagens` (
   `fim` TIMESTAMP NULL DEFAULT NULL,
   PRIMARY KEY (`id`)
 );
+
+
+CREATE  OR REPLACE 
+VIEW `dashdetalhes` AS
+    SELECT 
+        `pb`.`id` AS `id`,
+        `pb`.`bolsista` AS `bolsista`,
+        `b`.`nome` AS `nome_bolsista`,
+        `pb`.`orientador` AS `orientador`,
+        `o`.`nome` AS `nome_orientador`,
+        `pb`.`coorientador` AS `coorientador`,
+        `c`.`nome` AS `nome_coorientador`,
+        `pb`.`projeto_id` AS `projeto_id`,
+        `pb`.`fase_id` AS `fase_id`,
+        `f`.`nome` AS `nome_fase`,
+        `f`.`bloco` AS `bloco`,
+        `pb`.`vigente` AS `vigente`,
+        pb.origem as origem,
+        `pb`.`editai_id` AS `editai_id`,
+        `e`.`nome` AS `nome_edital`,
+        `e`.`controller` AS `controller`,
+        `p`.`sigla` AS `nome_programa`,
+        `pb`.`data_inicio` AS `data_inicio`,
+        `pb`.`data_fim` AS `data_fim`,
+        `pb`.`programa_id` AS `programa_id`,
+        `e`.`fim_vigencia` AS `fim_vigencia`,
+        (CASE
+            WHEN (`pb`.`deleted` IS NULL) THEN 1
+            ELSE 0
+        END) AS `ativo`
+    FROM
+        ((((((`projeto_bolsistas` `pb`
+        LEFT JOIN `usuarios` `b` ON ((`b`.`id` = `pb`.`bolsista`)))
+        LEFT JOIN `usuarios` `o` ON ((`o`.`id` = `pb`.`orientador`)))
+        LEFT JOIN `usuarios` `c` ON ((`c`.`id` = `pb`.`coorientador`)))
+        LEFT JOIN `fases` `f` ON ((`f`.`id` = `pb`.`fase_id`)))
+        LEFT JOIN `editais` `e` ON ((`e`.`id` = `pb`.`editai_id`)))
+        LEFT JOIN `programas` `p` ON ((`p`.`id` = `e`.`programa_id`)));

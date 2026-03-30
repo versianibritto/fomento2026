@@ -111,6 +111,11 @@ class DashdetalhesTable extends Table
             ->allowEmptyString('vigente');
 
         $validator
+            ->scalar('origem')
+            ->maxLength('origem', 1)
+            ->allowEmptyString('origem');
+
+        $validator
             ->allowEmptyString('editai_id');
 
         $validator

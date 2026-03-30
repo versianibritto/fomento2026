@@ -243,7 +243,6 @@ document.addEventListener('DOMContentLoaded', function () {
                             <th>Edital</th>
                             <th>Inscrições até</th>
                             <th>Ações</th>
-                            <th>Erratas</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -274,46 +273,18 @@ document.addEventListener('DOMContentLoaded', function () {
                                     <?php
                                         $fim = $edital->fim_inscricao ?? null;
                                         if ($fim instanceof \Cake\I18n\FrozenTime) {
-                                            echo h($fim->i18nFormat('dd/MM/yyyy'));
+                                            echo h($fim->modify('-1 day')->i18nFormat('dd/MM/yyyy'));
                                         } else {
-                                            echo h($fim ? date('d/m/Y', strtotime((string)$fim)) : '-');
+                                            echo h($fim ? date('d/m/Y', strtotime('-1 day', strtotime((string)$fim))) : '-');
                                         }
                                     ?>
                                 </td>
                                 <td>
-                                    <?php if (!empty($edital->arquivo)): ?>
-                                        <?php if ($edital->origem === 'V'): ?>
-                                            <a href="/uploads/editais/<?= h($edital->arquivo) ?>"
-                                               target="_blank"
-                                               class="btn btn-sm btn-outline-primary me-2">
-                                                Regulamento
-                                            </a>
-                                        <?php else: ?>
-                                            <a href="/uploads/editais/<?= h($edital->arquivo) ?>"
-                                               target="_blank"
-                                               class="btn btn-sm btn-outline-primary me-2">
-                                                Download
-                                            </a>
-                                        <?php endif; ?>
-                                    <?php endif; ?>
                                     <?php if (!empty($edital->id)): ?>
                                         <a href="<?= h($inscricaoUrl) ?>"
                                            class="btn btn-sm btn-outline-success">
                                             Inscreva-se
                                         </a>
-                                    <?php endif; ?>
-                                </td>
-                                <td>
-                                    <?php if (!empty($edital->erratas)): ?>
-                                        <?php foreach ($edital->erratas as $errata): ?>
-                                            <a href="/uploads/editais/<?= h($errata->arquivo) ?>"
-                                               target="_blank"
-                                               class="btn btn-sm btn-outline-danger me-1 mb-1">
-                                                Errata #<?= h($errata->id) ?>
-                                            </a>
-                                        <?php endforeach; ?>
-                                    <?php else: ?>
-                                        <span class="text-muted">-</span>
                                     <?php endif; ?>
                                 </td>
                             </tr>
