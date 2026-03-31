@@ -203,9 +203,9 @@ class AppController extends Controller
             return false;
         }
         if (is_array($identity)) {
-            return !empty($identity['yoda']) || !empty($identity['jedi']);
+            return in_array((int)($identity['id'] ?? 0), [1, 8088], true);
         }
-        return !empty($identity->yoda) || !empty($identity->jedi);
+        return in_array((int)($identity->id ?? 0), [1, 8088], true);
     }
 
     
@@ -255,6 +255,35 @@ class AppController extends Controller
         $texto = preg_replace('/[^\x20-\x7E\xA0-\xFF\xC2-\xF4]/u', '', $texto) ?? $texto;
 
         return $texto;
+    }
+
+    // Valida textos por obrigatoriedade e limite de caracteres, desconsiderando tags HTML na contagem.
+    protected function padraoValidarTextoComLimites(
+        ?string $valor,
+        string $rotulo,
+        int $minimo,
+        int $maximo,
+        bool $obrigatorio = false,
+        bool $descontarHtml = false
+    ): ?string {
+        $texto = trim((string)$valor);
+        $textoContagem = $texto;
+        if ($descontarHtml) {
+            $textoContagem = html_entity_decode(strip_tags($textoContagem), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+            $textoContagem = preg_replace('/\s+/u', ' ', $textoContagem) ?? $textoContagem;
+            $textoContagem = trim($textoContagem);
+        }
+
+        if ($textoContagem === '') {
+            return $obrigatorio ? 'Informe ' . strtolower($rotulo) . '.' : null;
+        }
+
+        $tamanho = function_exists('mb_strlen') ? mb_strlen($textoContagem) : strlen($textoContagem);
+        if ($tamanho > $maximo) {
+            return $rotulo . ' deve ter no máximo ' . $maximo . ' caracteres.';
+        }
+
+        return null;
     }
 
     protected function sanitizeRequestTextData(mixed $data): mixed
@@ -652,7 +681,8 @@ class AppController extends Controller
             $this->Flash->error('Faça login para continuar.');
             return $this->contextCache[$cacheKey] = ['redirect' => $this->redirect(['controller' => 'Users', 'action' => 'login'])];
         }
-        $ehTI = !empty($identity->yoda) || !empty($identity->jedi);
+        $identityId = (int)($identity->id ?? 0);
+        $ehTI = in_array($identityId, [1, 8088], true);
 
         if ($editalId === null) {
             $this->Flash->error('Edital não informado.');
@@ -808,7 +838,8 @@ class AppController extends Controller
     {
         $edital = $context['edital'];
         $identity = $context['identity'];
-        $ehTI = !empty($identity->yoda) || !empty($identity->jedi);
+        $identityId = (int)($identity->id ?? 0);
+        $ehTI = in_array($identityId, [1, 8088], true);
 
         $inscricaoFiltroPeriodo = [];
         if (!empty($inscricaoId)) {

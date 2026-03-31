@@ -888,7 +888,7 @@ class RenovacoesController extends AppController
                 ->contain(['Areas', 'Linhas'])
                 ->where([
                     'Projetos.id' => (int)$inscricao->projeto_id,
-                    'Projetos.usuario_id' => (int)$context['identity']->id,
+                   // 'Projetos.usuario_id' => (int)$context['identity']->id,
                     'Projetos.deleted IS' => null,
                 ])
                 ->first();
@@ -1046,7 +1046,7 @@ class RenovacoesController extends AppController
             }
             if ($podePreencherResumoProjeto) {
                 $resumo = trim((string)($dados['resumo'] ?? ''));
-                $erroResumoProjeto = $this->validarTextoComLimites($resumo, 'Resumo do projeto', 20, 4000, true);
+                $erroResumoProjeto = parent::padraoValidarTextoComLimites($resumo, 'Resumo do projeto', 20, 4000, true, true);
                 if ($erroResumoProjeto !== null) {
                     $this->Flash->error($erroResumoProjeto);
                     return $this->redirect(['action' => 'projetoRenovacao', $context['edital']->id, $inscricao->id]);
@@ -1219,20 +1219,20 @@ class RenovacoesController extends AppController
             $resumoSubprojetoNovo = trim((string)($dados['sp_resumo'] ?? ''));
             $justificativaAlteracao = trim((string)($dados['justificativa_alteracao'] ?? ''));
             $errosTextoSubprojeto = [];
-            $erroResumoRelatorio = $this->validarTextoComLimites($resumoRelatorio, 'Resumo do relatório', 20, 4000);
+            $erroResumoRelatorio = parent::padraoValidarTextoComLimites($resumoRelatorio, 'Resumo do relatório', 20, 4000, false, true);
             if ($erroResumoRelatorio !== null) {
                 $errosTextoSubprojeto[] = $erroResumoRelatorio;
             }
             if ($modoSubprojeto === 'D') {
-                $erroTituloSubprojeto = $this->validarTextoComLimites($tituloSubprojetoNovo, 'Título do subprojeto', 20, 255);
+                $erroTituloSubprojeto = parent::padraoValidarTextoComLimites($tituloSubprojetoNovo, 'Título do subprojeto', 20, 255, false, false);
                 if ($erroTituloSubprojeto !== null) {
                     $errosTextoSubprojeto[] = $erroTituloSubprojeto;
                 }
-                $erroResumoSubprojeto = $this->validarTextoComLimites($resumoSubprojetoNovo, 'Resumo do subprojeto', 20, 4000);
+                $erroResumoSubprojeto = parent::padraoValidarTextoComLimites($resumoSubprojetoNovo, 'Resumo do subprojeto', 20, 4000, false, true);
                 if ($erroResumoSubprojeto !== null) {
                     $errosTextoSubprojeto[] = $erroResumoSubprojeto;
                 }
-                $erroJustificativa = $this->validarTextoComLimites($justificativaAlteracao, 'Justificativa da alteração', 20, 4000);
+                $erroJustificativa = parent::padraoValidarTextoComLimites($justificativaAlteracao, 'Justificativa da alteração', 20, 4000, false, true);
                 if ($erroJustificativa !== null) {
                     $errosTextoSubprojeto[] = $erroJustificativa;
                 }
@@ -1823,21 +1823,9 @@ class RenovacoesController extends AppController
         if (empty($inscricao->projeto_id) || !$projeto) {
             $errosProjeto[] = 'Cadastre o projeto.';
         } else {
-            $erroTituloProjeto = $this->validarTextoComLimites((string)($projeto->titulo ?? ''), 'Título do projeto', 20, 255, true);
-            if ($erroTituloProjeto !== null) {
-                $errosProjeto[] = $erroTituloProjeto;
-            }
             $resumoProjeto = trim((string)($projeto->resumo ?? ''));
             if ($resumoProjeto === '') {
                 $errosProjeto[] = 'Informe resumo do projeto.';
-            }
-            $erroFinanciadores = $this->validarTextoComLimites((string)($projeto->financiamento ?? ''), 'Instituições financiadoras', 20, 255);
-            if ($erroFinanciadores !== null) {
-                $errosProjeto[] = $erroFinanciadores;
-            }
-            $erroPalavras = $this->validarTextoComLimites((string)($projeto->palavras_chaves ?? ''), 'Palavras-chave', 20, 255);
-            if ($erroPalavras !== null) {
-                $errosProjeto[] = $erroPalavras;
             }
             if (empty($projeto->area_id)) {
                 $errosProjeto[] = 'Informe a Área CNPQ do projeto.';
@@ -1855,15 +1843,26 @@ class RenovacoesController extends AppController
         }
 
         $errosSubprojeto = [];
-        $erroTituloSubprojeto = $this->validarTextoComLimites((string)($inscricao->sp_titulo ?? ''), 'Título do subprojeto', 20, 255, true);
-        if ($erroTituloSubprojeto !== null) {
-            $errosSubprojeto[] = $erroTituloSubprojeto;
+        $tituloSubprojetoAtual = trim((string)($inscricao->sp_titulo ?? ''));
+        if ($tituloSubprojetoAtual === '') {
+            $errosSubprojeto[] = 'Informe título do subprojeto.';
+        } elseif (strtoupper(trim((string)($inscricao->subprojeto_renovacao ?? ''))) === 'D') {
+            $erroTituloSubprojeto = parent::padraoValidarTextoComLimites($tituloSubprojetoAtual, 'Título do subprojeto', 20, 255, true, false);
+            if ($erroTituloSubprojeto !== null) {
+                $errosSubprojeto[] = $erroTituloSubprojeto;
+            }
         }
-        $erroResumoSubprojeto = $this->validarTextoComLimites((string)($inscricao->sp_resumo ?? ''), 'Resumo do subprojeto', 20, 4000, true);
-        if ($erroResumoSubprojeto !== null) {
-            $errosSubprojeto[] = $erroResumoSubprojeto;
+
+        $resumoSubprojetoAtual = (string)($inscricao->sp_resumo ?? '');
+        if (trim($resumoSubprojetoAtual) === '') {
+            $errosSubprojeto[] = 'Informe resumo do subprojeto.';
+        } elseif (strtoupper(trim((string)($inscricao->subprojeto_renovacao ?? ''))) === 'D') {
+            $erroResumoSubprojeto = parent::padraoValidarTextoComLimites($resumoSubprojetoAtual, 'Resumo do subprojeto', 20, 4000, true, true);
+            if ($erroResumoSubprojeto !== null) {
+                $errosSubprojeto[] = $erroResumoSubprojeto;
+            }
         }
-        $erroResumoRelatorio = $this->validarTextoComLimites((string)($inscricao->resumo_relatorio ?? ''), 'Resumo do relatório', 20, 4000, true);
+        $erroResumoRelatorio = parent::padraoValidarTextoComLimites((string)($inscricao->resumo_relatorio ?? ''), 'Resumo do relatório', 20, 4000, true, true);
         if ($erroResumoRelatorio !== null) {
             $errosSubprojeto[] = $erroResumoRelatorio;
         }
@@ -1871,7 +1870,7 @@ class RenovacoesController extends AppController
             $errosSubprojeto[] = 'Informe se autoriza a publicação em revista.';
         }
         if (strtoupper(trim((string)($inscricao->subprojeto_renovacao ?? ''))) === 'D') {
-            $erroJustificativa = $this->validarTextoComLimites((string)($inscricao->justificativa_alteracao ?? ''), 'Justificativa da alteração', 20, 4000, true);
+            $erroJustificativa = parent::padraoValidarTextoComLimites((string)($inscricao->justificativa_alteracao ?? ''), 'Justificativa da alteração', 20, 4000, true, true);
             if ($erroJustificativa !== null) {
                 $errosSubprojeto[] = $erroJustificativa;
             }
@@ -2251,29 +2250,6 @@ class RenovacoesController extends AppController
 
         $this->set(compact('inscricao'));
         $this->set($context);
-    }
-
-    private function tamanhoTexto(string $valor): int
-    {
-        return function_exists('mb_strlen') ? mb_strlen($valor) : strlen($valor);
-    }
-
-    private function validarTextoComLimites(
-        ?string $valor,
-        string $rotulo,
-        int $minimo,
-        int $maximo,
-        bool $obrigatorio = false
-    ): ?string {
-        $texto = trim((string)$valor);
-        if ($texto === '') {
-            return $obrigatorio ? 'Informe ' . strtolower($rotulo) . '.' : null;
-        }
-        $tamanho = $this->tamanhoTexto($texto);
-        if ($tamanho > $maximo) {
-            return $rotulo . ' deve ter no maximo ' . $maximo . ' caracteres.';
-        }
-        return null;
     }
 
     private function montarHtmlTermoInscricao(

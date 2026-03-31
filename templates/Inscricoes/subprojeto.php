@@ -49,7 +49,7 @@
                         'type' => 'textarea',
                         'class' => 'form-control',
                         'rows' => 4,
-                        'maxlength' => 4000,
+                        //'maxlength' => 4000,
                         'value' => $inscricao->sp_resumo ?? null,
                     ]) ?>
                 </div>

@@ -94,7 +94,7 @@
                         'type' => 'textarea',
                         'class' => 'form-control' . ($valorResumo === '' ? ' campo-vazio' : ''),
                         'rows' => 6,
-                        'maxlength' => 4000,
+                        //'maxlength' => 4000,
                     ]) ?>
                 </div>
                 <div class="col-12 mt-3">

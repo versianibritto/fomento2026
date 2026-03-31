@@ -988,7 +988,7 @@ class InscricoesController extends AppController
                 ->contain(['Areas', 'Linhas'])
                 ->where([
                     'Projetos.id' => (int)$inscricao->projeto_id,
-                    'Projetos.usuario_id' => (int)$context['identity']->id,
+                 //   'Projetos.usuario_id' => (int)$context['identity']->id,
                     'Projetos.deleted IS' => null,
                 ])
                 ->first();
@@ -1203,19 +1203,19 @@ class InscricoesController extends AppController
             $financiadoresInformado = trim((string)($dados['financiadores'] ?? ''));
             $palavrasInformado = trim((string)($dados['palavras_chaves'] ?? ''));
             $errosTextoProjeto = [];
-            $erroTituloProjeto = $this->validarTextoComLimites($tituloInformado, 'Titulo do projeto', 20, 255);
+            $erroTituloProjeto = parent::padraoValidarTextoComLimites($tituloInformado, 'Titulo do projeto', 20, 255, false, false);
             if ($erroTituloProjeto !== null) {
                 $errosTextoProjeto[] = $erroTituloProjeto;
             }
-            $erroResumoProjeto = $this->validarTextoComLimites($resumoInformado, 'Resumo do projeto', 20, 4000);
+            $erroResumoProjeto = parent::padraoValidarTextoComLimites($resumoInformado, 'Resumo do projeto', 20, 4000, false, true);
             if ($erroResumoProjeto !== null) {
                 $errosTextoProjeto[] = $erroResumoProjeto;
             }
-            $erroFinanciadores = $this->validarTextoComLimites($financiadoresInformado, 'Instituicoes financiadoras', 20, 255);
+            $erroFinanciadores = parent::padraoValidarTextoComLimites($financiadoresInformado, 'Instituicoes financiadoras', 20, 255, false, false);
             if ($erroFinanciadores !== null) {
                 $errosTextoProjeto[] = $erroFinanciadores;
             }
-            $erroPalavras = $this->validarTextoComLimites($palavrasInformado, 'Palavras-chave', 20, 255);
+            $erroPalavras = parent::padraoValidarTextoComLimites($palavrasInformado, 'Palavras-chave', 20, 255, false, false);
             if ($erroPalavras !== null) {
                 $errosTextoProjeto[] = $erroPalavras;
             }
@@ -1325,7 +1325,7 @@ class InscricoesController extends AppController
                 $projetoEntity = $projetosTable->find()
                     ->where([
                         'Projetos.id' => (int)$inscricao->projeto_id,
-                        'Projetos.usuario_id' => (int)$context['identity']->id,
+                       // 'Projetos.usuario_id' => (int)$context['identity']->id,
                         'Projetos.deleted IS' => null,
                     ])
                     ->first();
@@ -1443,16 +1443,16 @@ class InscricoesController extends AppController
             $spTitulo = trim((string)($dados['sp_titulo'] ?? ''));
             $spResumo = trim((string)($dados['sp_resumo'] ?? ''));
             $errosTextoSubprojeto = [];
-            $erroTituloSubprojeto = $this->validarTextoComLimites($spTitulo, 'Título do subprojeto', 20, 255);
+            $erroTituloSubprojeto = parent::padraoValidarTextoComLimites($spTitulo, 'Título do subprojeto', 20, 255, false, false);
             if ($erroTituloSubprojeto !== null) {
                 $errosTextoSubprojeto[] = $erroTituloSubprojeto;
             }
-            $erroResumoSubprojeto = $this->validarTextoComLimites($spResumo, 'Resumo do subprojeto', 20, 4000);
+            $erroResumoSubprojeto = parent::padraoValidarTextoComLimites($spResumo, 'Resumo do subprojeto', 20, 4000, false, true);
             if ($erroResumoSubprojeto !== null) {
                 $errosTextoSubprojeto[] = $erroResumoSubprojeto;
             }
             $justificativaBolsa = trim((string)($dados['justificativa_bolsa'] ?? ''));
-            $erroJustificativaBolsa = $this->validarTextoComLimites($justificativaBolsa, 'Justificativa da bolsa', 0, 4000);
+            $erroJustificativaBolsa = parent::padraoValidarTextoComLimites($justificativaBolsa, 'Justificativa da bolsa', 0, 4000, false, true);
             if ($erroJustificativaBolsa !== null) {
                 $errosTextoSubprojeto[] = $erroJustificativaBolsa;
             }
@@ -1931,19 +1931,19 @@ class InscricoesController extends AppController
         if (empty($inscricao->projeto_id) || !$projeto) {
             $errosProjeto[] = 'Cadastre o projeto.';
         } else {
-            $erroTituloProjeto = $this->validarTextoComLimites((string)($projeto->titulo ?? ''), 'Título do projeto', 20, 255, true);
+            $erroTituloProjeto = parent::padraoValidarTextoComLimites((string)($projeto->titulo ?? ''), 'Título do projeto', 20, 255, true, false);
             if ($erroTituloProjeto !== null) {
                 $errosProjeto[] = $erroTituloProjeto;
             }
-            $erroResumoProjeto = $this->validarTextoComLimites((string)($projeto->resumo ?? ''), 'Resumo do projeto', 20, 4000, true);
+            $erroResumoProjeto = parent::padraoValidarTextoComLimites((string)($projeto->resumo ?? ''), 'Resumo do projeto', 20, 4000, true, true);
             if ($erroResumoProjeto !== null) {
                 $errosProjeto[] = $erroResumoProjeto;
             }
-            $erroFinanciadores = $this->validarTextoComLimites((string)($projeto->financiamento ?? ''), 'Instituições financiadoras', 20, 255);
+            $erroFinanciadores = parent::padraoValidarTextoComLimites((string)($projeto->financiamento ?? ''), 'Instituições financiadoras', 20, 255, false, false);
             if ($erroFinanciadores !== null) {
                 $errosProjeto[] = $erroFinanciadores;
             }
-            $erroPalavras = $this->validarTextoComLimites((string)($projeto->palavras_chaves ?? ''), 'Palavras-chave', 20, 255);
+            $erroPalavras = parent::padraoValidarTextoComLimites((string)($projeto->palavras_chaves ?? ''), 'Palavras-chave', 20, 255, false, false);
             if ($erroPalavras !== null) {
                 $errosProjeto[] = $erroPalavras;
             }

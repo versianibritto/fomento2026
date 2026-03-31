@@ -24,6 +24,7 @@
                 <?php
                     $naoInformado = 'Não informado';
                     $valorTitulo = trim((string)($projetoSelecionado->titulo ?? ''));
+                    $valorTituloTela = trim(html_entity_decode(strip_tags($valorTitulo), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
                     $valorGrandeArea = $grandeAreaSelecionada !== null && isset($grandesAreas[$grandeAreaSelecionada])
                         ? (string)$grandesAreas[$grandeAreaSelecionada]
                         : '';
@@ -39,6 +40,7 @@
                     $valorFinanciadores = trim((string)($projetoSelecionado->financiamento ?? ''));
                     $valorPalavras = trim((string)($projetoSelecionado->palavras_chaves ?? ''));
                     $valorResumo = trim((string)($projetoSelecionado->resumo ?? ''));
+                    $valorResumoTela = trim(html_entity_decode(strip_tags($valorResumo), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
                     $rotuloAnexoTipo5 = 'Anexo do projeto';
                     foreach ($anexosTiposProjeto as $tipoProjetoInfo) {
                         if ((int)$tipoProjetoInfo->id === 5) {
@@ -55,7 +57,7 @@
                         <div class="col-12">
                             <div class="border rounded p-2 bg-light h-100">
                                 <div class="small text-muted">Título do projeto</div>
-                                <div><?= h($valorTitulo !== '' ? $valorTitulo : $naoInformado) ?></div>
+                                <div><?= h($valorTituloTela !== '' ? $valorTituloTela : $naoInformado) ?></div>
                             </div>
                         </div>
                         <div class="col-md-6">
@@ -145,14 +147,14 @@
                                     'type' => 'textarea',
                                     'class' => 'form-control campo-vazio',
                                     'rows' => 5,
-                                    'maxlength' => 4000,
+                                    //'maxlength' => 4000,
                                     'required' => true,
                                     'value' => '',
                                 ]) ?>
                             <?php else : ?>
                                 <details class="border rounded p-2 bg-light">
                                     <summary class="fw-semibold">Resumo do projeto</summary>
-                                    <div class="mt-2" style="white-space: pre-line;"><?= h($valorResumo !== '' ? $valorResumo : $naoInformado) ?></div>
+                                    <div class="mt-2" style="white-space: pre-line;"><?= h($valorResumoTela !== '' ? $valorResumoTela : $naoInformado) ?></div>
                                 </details>
                             <?php endif; ?>
                         </div>

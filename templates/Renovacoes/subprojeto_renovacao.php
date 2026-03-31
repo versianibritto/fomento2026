@@ -114,7 +114,7 @@
                         'type' => 'textarea',
                         'class' => 'form-control' . ($valorResumoRelatorio === '' ? ' campo-vazio' : ''),
                         'rows' => 4,
-                        'maxlength' => 4000,
+                        //'maxlength' => 4000,
                         'value' => $inscricao->resumo_relatorio ?? null,
                     ]) ?>
                 </div>
@@ -196,7 +196,7 @@
                         'type' => 'textarea',
                         'class' => 'form-control' . ($valorResumoSubprojeto === '' ? ' campo-vazio' : ''),
                         'rows' => 4,
-                        'maxlength' => 4000,
+                        //'maxlength' => 4000,
                         'value' => $inscricao->sp_resumo ?? null,
                     ]) ?>
                 </div>
