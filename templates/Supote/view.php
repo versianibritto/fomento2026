@@ -25,7 +25,7 @@
             </div>
             <hr class="my-3">
             <div class="text-muted small">Descrição</div>
-            <div><?= h($chamado->texto) ?></div>
+            <div class="suporte-texto-html"><?= (string)($chamado->texto ?? '') ?></div>
             <div class="mt-3">
                 <?php if (!empty($chamado->anexo_1)): ?>
                     <a href="/uploads/anexos/<?= h($chamado->anexo_1) ?>" class="btn btn-sm btn-outline-secondary me-1" target="_blank">Anexo 1</a>
@@ -90,7 +90,7 @@
                             <?=$this->Form->control('texto', [
                                 'label' => 'Mensagem para o cliente',
                                 'type' => 'textarea',
-                                'class' => 'form-control',
+                                'class' => 'form-control js-tinymce-suporte',
                                 'rows' => 4,
                                 'required' => false
                             ])?>
@@ -152,7 +152,7 @@
                                 <span class="fw-semibold"><?= h((string)$autor) ?></span>
                                 <span class="text-muted">• <?= $item->created ? h($item->created->subHours(3)->i18nFormat('dd/MM/yyyy HH:mm')) : '-' ?></span>
                             </div>
-                            <div class="reply-text"><?= h((string)($item->texto ?? '')) ?></div>
+                            <div class="reply-text suporte-texto-html"><?= (string)($item->texto ?? '') ?></div>
                             <?php if (!empty($item->anexo_1) || !empty($item->anexo_2) || !empty($item->anexo_3)): ?>
                                 <div class="mt-2">
                                     <?php if (!empty($item->anexo_1)): ?>
@@ -195,9 +195,10 @@
                         <?=$this->Form->control('texto', [
                             'label' => 'Mensagem',
                             'type' => 'textarea',
-                            'class' => 'form-control',
+                            'class' => 'form-control js-tinymce-suporte',
                             'rows' => 4,
-                            'required' => true
+                            'required' => false,
+                            'data-editor-required' => '1'
                         ])?>
                     </div>
                     <div class="text-muted small mb-2">Você pode anexar até 3 arquivos.</div>
@@ -245,9 +246,10 @@
                         <?=$this->Form->control('texto', [
                             'label' => 'Mensagem',
                             'type' => 'textarea',
-                            'class' => 'form-control',
+                            'class' => 'form-control js-tinymce-suporte',
                             'rows' => 4,
-                            'required' => true
+                            'required' => false,
+                            'data-editor-required' => '1'
                         ])?>
                     </div>
                     <div class="text-muted small mb-2">Você pode anexar até 3 arquivos.</div>
@@ -320,6 +322,9 @@
 </div>
 
 <style>
+    .suporte-texto-html p:last-child {
+        margin-bottom: 0;
+    }
     .reply-item {
         border-left: 3px solid #e3e6ea;
         padding-left: 14px;
@@ -337,8 +342,52 @@
     }
 </style>
 
+<script src="https://cdn.jsdelivr.net/npm/tinymce@7/tinymce.min.js" referrerpolicy="origin"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    if (window.tinymce) {
+        tinymce.init({
+            selector: '.js-tinymce-suporte',
+            height: 280,
+            menubar: false,
+            branding: false,
+            plugins: 'lists link table code image autoresize',
+            toolbar: 'undo redo | blocks | bold italic underline | alignleft aligncenter alignright | bullist numlist | link table | code',
+            convert_urls: false,
+            relative_urls: false,
+            remove_script_host: false,
+            setup: function (editor) {
+                editor.on('change input undo redo', function () {
+                    editor.save();
+                });
+            }
+        });
+    }
+
+    document.querySelectorAll('form').forEach(function (form) {
+        form.addEventListener('submit', function (event) {
+            if (window.tinymce) {
+                tinymce.triggerSave();
+            }
+
+            let hasError = false;
+            form.querySelectorAll('textarea.js-tinymce-suporte[data-editor-required="1"]').forEach(function (textarea) {
+                const plainText = textarea.value.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/gi, ' ').trim();
+                if (plainText === '') {
+                    hasError = true;
+                    textarea.classList.add('is-invalid');
+                } else {
+                    textarea.classList.remove('is-invalid');
+                }
+            });
+
+            if (hasError) {
+                event.preventDefault();
+                window.alert('Preencha a mensagem antes de enviar.');
+            }
+        });
+    });
+
     document.querySelectorAll('.btn-add-next-resposta').forEach(function (btn) {
         btn.addEventListener('click', function () {
             const next = this.getAttribute('data-next');

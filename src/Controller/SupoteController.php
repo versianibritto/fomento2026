@@ -53,6 +53,7 @@ class SupoteController extends AppController
                 'demanda_interna',
                 'categoria',
                 'texto',
+                'ultima_resposta',
                 'status',
                 'reaberto',
                 'data_finalizacao',
@@ -63,10 +64,12 @@ class SupoteController extends AppController
                 'tempo_execucao_util',
             ];
 
+            $ultimasRespostas = $this->obterUltimasRespostasExportacao($rows);
             $exportRows = [];
             foreach ($rows as $item) {
-                $criadoEm = $item->created;
-                $finalizadoEm = $item->finalizado ?? null;
+                $criadoEm = $this->normalizarDataSuporteParaNegocio($item->created);
+                $finalizadoEm = $this->normalizarDataSuporteParaNegocio($item->finalizado ?? null);
+                $ramoId = (int)($item->ramo ?? $item->id);
                 $tempoTotalDecorrido = '';
                 $tempoExecucaoUtil = '';
                 if ($criadoEm && $finalizadoEm) {
@@ -82,16 +85,17 @@ class SupoteController extends AppController
 
                 $exportRows[] = [
                     $item->id,
-                    $this->formatarDataBancoParaTela($criadoEm, 'dd/MM/yyyy HH:mm:ss', ''),
+                    $criadoEm ? (string)$criadoEm->i18nFormat('dd/MM/yyyy HH:mm:ss') : '',
                     $item->usuario->nome ?? '',
                     $item->usuario_demandante->nome ?? '',
                     $item->usuario_beneficiado->nome ?? '',
                     $this->chamadoEhDemandaInterna((int)$item->usuario_id) ? 'Sim' : 'Nao',
                     $item->suporte_categoria->nome ?? '',
-                    $item->texto ?? '',
+                    $this->limparHtmlTextoExportacao($item->texto ?? ''),
+                    $ultimasRespostas[$ramoId] ?? '',
                     $item->suporte_status->nome ?? '',
                     (int)($item->reaberto ?? 0) === 1 ? 'Sim' : 'Nao',
-                    $this->formatarDataBancoParaTela($finalizadoEm, 'dd/MM/yyyy HH:mm:ss', ''),
+                    $finalizadoEm ? (string)$finalizadoEm->i18nFormat('dd/MM/yyyy HH:mm:ss') : '',
                     $tempoTotalDecorrido,
                     $this->getDetalheAbertura($criadoEm, $calendarioMap),
                     $this->abertoNoExpediente($criadoEm, $calendarioMap) ? 'Sim' : 'Nao',
@@ -564,6 +568,69 @@ class SupoteController extends AppController
     private function chamadoEhDemandaInterna(int $usuarioId): bool
     {
         return in_array($usuarioId, [1, 8088], true);
+    }
+
+    private function normalizarDataSuporteParaNegocio($value): ?FrozenTime
+    {
+        if (!$value) {
+            return null;
+        }
+
+        $data = $value instanceof FrozenTime
+            ? $value
+            : ($value instanceof \DateTimeInterface
+                ? FrozenTime::instance($value)
+                : new FrozenTime((string)$value));
+
+        return $data->addHours(-3);
+    }
+
+    private function limparHtmlTextoExportacao(?string $texto): string
+    {
+        $texto = (string)$texto;
+        $texto = html_entity_decode($texto, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $texto = strip_tags($texto);
+        $texto = preg_replace('/\s+/u', ' ', str_replace("\xc2\xa0", ' ', $texto));
+
+        return trim((string)$texto);
+    }
+
+    private function obterUltimasRespostasExportacao($rows): array
+    {
+        $ramoIds = [];
+
+        foreach ($rows as $item) {
+            $ramoIds[] = (int)($item->ramo ?? $item->id);
+        }
+
+        $ramoIds = array_values(array_unique(array_filter($ramoIds)));
+        if ($ramoIds === []) {
+            return [];
+        }
+
+        $respostas = $this->fetchTable('SuporteChamados')->find()
+            ->select(['id', 'ramo', 'texto', 'created'])
+            ->where([
+                'SuporteChamados.ramo IN' => $ramoIds,
+                'SuporteChamados.parent_id IS NOT' => null,
+            ])
+            ->orderBy([
+                'SuporteChamados.ramo' => 'ASC',
+                'SuporteChamados.created' => 'DESC',
+                'SuporteChamados.id' => 'DESC',
+            ])
+            ->all();
+
+        $map = [];
+        foreach ($respostas as $resposta) {
+            $ramoId = (int)($resposta->ramo ?? 0);
+            if ($ramoId <= 0 || isset($map[$ramoId])) {
+                continue;
+            }
+            $map[$ramoId] = $this->limparHtmlTextoExportacao($resposta->texto ?? '');
+        }
+
+        return $map;
     }
 
     private function formatarDuracaoHorasUteis($inicio, $fim, array $calendarioMap = []): string

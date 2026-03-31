@@ -76,8 +76,8 @@ class AppController extends Controller
 
         $this->racas = [
             'B' => 'Branca',
-            'N' => 'Preta',
-            'P' => 'Parda',
+            'N' => 'Negra (Pretos/Pardos)',
+            //'P' => 'Parda',
             'A' => 'Amarela',
             'I' => 'Indigena',
             'X' => 'Não desejo informar'];        

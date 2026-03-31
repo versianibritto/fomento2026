@@ -65,9 +65,10 @@
                     <?=$this->Form->control('texto', [
                         'label' => 'Descrição',
                         'type' => 'textarea',
-                        'class' => 'form-control',
+                        'class' => 'form-control js-tinymce-suporte',
                         'rows' => 5,
-                        'required' => true
+                        'required' => false,
+                        'data-editor-required' => '1'
                     ])?>
                 </div>
 
@@ -118,8 +119,52 @@
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/tinymce@7/tinymce.min.js" referrerpolicy="origin"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    if (window.tinymce) {
+        tinymce.init({
+            selector: '.js-tinymce-suporte',
+            height: 280,
+            menubar: false,
+            branding: false,
+            plugins: 'lists link table code image autoresize',
+            toolbar: 'undo redo | blocks | bold italic underline | alignleft aligncenter alignright | bullist numlist | link table | code',
+            convert_urls: false,
+            relative_urls: false,
+            remove_script_host: false,
+            setup: function (editor) {
+                editor.on('change input undo redo', function () {
+                    editor.save();
+                });
+            }
+        });
+    }
+
+    document.querySelectorAll('form').forEach(function (form) {
+        form.addEventListener('submit', function (event) {
+            if (window.tinymce) {
+                tinymce.triggerSave();
+            }
+
+            let hasError = false;
+            form.querySelectorAll('textarea.js-tinymce-suporte[data-editor-required="1"]').forEach(function (textarea) {
+                const plainText = textarea.value.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/gi, ' ').trim();
+                if (plainText === '') {
+                    hasError = true;
+                    textarea.classList.add('is-invalid');
+                } else {
+                    textarea.classList.remove('is-invalid');
+                }
+            });
+
+            if (hasError) {
+                event.preventDefault();
+                window.alert('Preencha a descrição antes de registrar o chamado.');
+            }
+        });
+    });
+
     document.querySelectorAll('.btn-add-next').forEach(function (btn) {
         btn.addEventListener('click', function () {
             const next = this.getAttribute('data-next');

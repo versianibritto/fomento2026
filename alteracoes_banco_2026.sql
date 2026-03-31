@@ -1661,3 +1661,10 @@ VIEW `dashdetalhes` AS
         LEFT JOIN `fases` `f` ON ((`f`.`id` = `pb`.`fase_id`)))
         LEFT JOIN `editais` `e` ON ((`e`.`id` = `pb`.`editai_id`)))
         LEFT JOIN `programas` `p` ON ((`p`.`id` = `e`.`programa_id`)));
+
+
+UPDATE `vinculos` SET `nome` = 'Servidor Público Fiocruz - Ativo' WHERE (`id` = '1');
+UPDATE `vinculos` SET `nome` = 'Servidor Público Fiocruz - Aposentado' WHERE (`id` = '11');
+UPDATE `vinculos` SET `nome` = 'Aluno de Mestrado' WHERE (`id` = '12');
+UPDATE `vinculos` SET `deleted` = '1' WHERE (`id` = '14');
+UPDATE `vinculos` SET `nome` = 'Bolsista de Fomento a Pesquisa' WHERE (`id` = '13');
