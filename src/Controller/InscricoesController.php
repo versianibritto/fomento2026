@@ -1918,6 +1918,18 @@ class InscricoesController extends AppController
         if ($orientadorServidor !== 1 && empty($inscricao->coorientador)) {
             $errosCoorientador[] = 'Informe o coorientador.';
         }
+        if (!empty($inscricao->coorientador)) {
+            $mensagemElegibilidadeCoorientador = $this->checkCoorientador(
+                (int)$inscricao->coorientador,
+                (int)$inscricao->orientador,
+                (int)($inscricao->programa_id ?? $edital->programa_id ?? 0),
+                (int)($inscricao->editai_id ?? $edital->id ?? 0),
+                (int)$inscricao->id
+            );
+            if ($mensagemElegibilidadeCoorientador !== null) {
+                $errosCoorientador[] = $mensagemElegibilidadeCoorientador;
+            }
+        }
         if (!empty($errosCoorientador)) {
             $falhas[] = [
                 'nome' => 'Coorientador',

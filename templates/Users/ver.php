@@ -3,6 +3,15 @@
  * Template: Users/ver.php
  * Header fixo com nome do usuário (viewport)
  */
+
+$programaSocialMap = [
+    'I' => 'IC Manguinhos/ENSP',
+    'A' => 'IC Mata Atlântica',
+    'M' => 'IC Maré',
+    'G' => 'IC Indígena',
+    'C' => 'IC Coleções Biológicas',
+    'N' => 'Não me enquadro nestes editais',
+];
 ?>
 
 <style>
@@ -209,11 +218,8 @@ body.sidebar-collapse .user-id-bar {
                     </div>
                     <div class="col-md-6">
                         <strong>Edital Social:</strong>
-                        <?= !empty($usuario->ic)
-                            ? ($usuario->ic === 'M' ? 'IC Maré'
-                                : ($usuario->ic === 'A' ? 'IC Mata Atlântica'
-                                : ($usuario->ic === 'I' ? 'IC Manguinhos/ENSP'
-                                : 'Não se enquadra')))
+                        <?= !empty($usuario->ic) && isset($programaSocialMap[$usuario->ic])
+                            ? h($programaSocialMap[$usuario->ic])
                             : '<span class="badge bg-danger">Não Informado</span>' ?>
                     </div>
                 </div>
@@ -225,33 +231,90 @@ body.sidebar-collapse .user-id-bar {
 
                 <div class="row">
                     <div class="col-md-6">
-                        <strong>Escolaridade:</strong>
-                        <?= !empty($escolaridadeNome)
-                            ? h($escolaridadeNome)
-                            : '<span class="badge bg-danger">Não Informado</span>' ?>
-                    </div>
-                    <div class="col-md-6">
-                        <strong>Curso:</strong>
-                        <?= !empty($usuario->curso)
-                            ? h($usuario->curso)
+                        <strong>Lattes:</strong>
+                        <?= !empty($usuario->lattes)
+                            ? h((string)$usuario->lattes)
                             : '<span class="badge bg-danger">Não Informado</span>' ?>
                     </div>
                 </div>
 
                 <div class="row mt-2">
                     <div class="col-md-6">
+                        <strong>Escolaridade:</strong>
+                        <?= !empty($escolaridadeNome)
+                            ? h($escolaridadeNome)
+                            : '<span class="badge bg-danger">Não Informado</span>' ?>
+                    </div>
+                    <div class="col-md-6">
                         <strong>Ano de Conclusão:</strong>
                         <?= !empty($usuario->ano_conclusao)
                             ? h($usuario->ano_conclusao)
                             : '<span class="badge bg-danger">Não Informado</span>' ?>
                     </div>
+                </div>
+
+                <div class="row mt-2">
+                    <div class="col-md-6">
+                        <strong>Curso:</strong>
+                        <?= !empty($usuario->curso)
+                            ? h($usuario->curso)
+                            : '<span class="badge bg-danger">Não Informado</span>' ?>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Instituição de Ensino:</strong>
+                        <?= !empty($usuario->instituicao?->sigla)
+                            ? h($usuario->instituicao->sigla)
+                            : '<span class="badge bg-danger">Não Informado</span>' ?>
+                    </div>
+                </div>
+
+                <div class="row mt-2">
+                    <div class="col-md-6">
+                        <strong>Unidade Fiocruz:</strong>
+                        <?= !empty($usuario->unidade?->nome)
+                            ? h($usuario->unidade->nome)
+                            : '<span class="badge bg-danger">Não Informado</span>' ?>
+                    </div>
+                </div>
+
+                <div class="row mt-2">
                     <div class="col-md-6">
                         <strong>Vínculo:</strong>
                         <?= !empty($vinculoNome)
                             ? h($vinculoNome)
                             : '<span class="badge bg-danger">Não Informado</span>' ?>
                     </div>
+                    <div class="col-md-6">
+                        <strong>SIAPE:</strong>
+                        <?php if ((int)($usuario->vinculo?->servidor ?? 0) !== 1): ?>
+                            <span class="badge bg-secondary">N/A (não servidor)</span>
+                        <?php elseif (!empty($usuario->matricula_siape)): ?>
+                            <?= h($usuario->matricula_siape) ?>
+                        <?php else: ?>
+                            <span class="badge bg-danger">Não Informado</span>
+                        <?php endif; ?>
+                    </div>
                 </div>
+
+                <?php if (
+                    !empty($usuario->departamento) ||
+                    !empty($usuario->laboratorio)
+                ): ?>
+                <div class="row mt-2">
+                    <?php if (!empty($usuario->departamento)): ?>
+                    <div class="col-md-6">
+                        <strong>Departamento:</strong>
+                        <?= h($usuario->departamento) ?>
+                    </div>
+                    <?php endif; ?>
+                    <?php if (!empty($usuario->laboratorio)): ?>
+                    <div class="col-md-6">
+                        <strong>Laboratório:</strong>
+                        <?= h($usuario->laboratorio) ?>
+                    </div>
+                    <?php endif; ?>
+                </div>
+                <?php endif; ?>
 
                 <hr>
 

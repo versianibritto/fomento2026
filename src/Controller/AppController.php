@@ -1105,7 +1105,6 @@ class AppController extends Controller
         ?int $inscricaoIdExcluir = null
     ): ?string {
         $usuariosTable = TableRegistry::getTableLocator()->get('Usuarios');
-        $vinculosTable = TableRegistry::getTableLocator()->get('Vinculos');
         if (($programaId ?? 0) <= 0 && !empty($editalId)) {
             $programaId = (int)(TableRegistry::getTableLocator()->get('Editais')->find()
                 ->select(['programa_id'])
@@ -1114,11 +1113,14 @@ class AppController extends Controller
                 ?->programa_id ?? 0);
         }
 
-        $inscricaoTable = ((int)$programaId > 1)
-            ? TableRegistry::getTableLocator()->get('ProjetoBolsistas')
-            : TableRegistry::getTableLocator()->get('PdjInscricoes');
+        $inscricaoTable = TableRegistry::getTableLocator()->get('ProjetoBolsistas');
 
         $coorientador = $usuariosTable->find()
+            ->contain([
+                'Vinculos' => function ($q) {
+                    return $q->select(['Vinculos.id', 'Vinculos.servidor']);
+                }
+            ])
             ->select(['id', 'escolaridade_id', 'vinculo_id'])
             ->where(['Usuarios.id' => $coorientadorId])
             ->first();
@@ -1130,56 +1132,53 @@ class AppController extends Controller
             return 'O CPF informado e o mesmo do orientador. Indique um coorientador diferente.';
         }
 
-        if ((int)($coorientador->escolaridade_id ?? 0) !== 10) {
-            return 'Coorientador inelegível: a escolaridade deve ser Doutorado (id=10).';
-        }
-
         $orientador = $usuariosTable->find()
+            ->contain([
+                'Vinculos' => function ($q) {
+                    return $q->select(['Vinculos.id', 'Vinculos.servidor']);
+                }
+            ])
             ->select(['id', 'vinculo_id'])
             ->where(['Usuarios.id' => $orientadorId])
             ->first();
 
-        if ($orientador && !empty($orientador->vinculo_id)) {
-            $idsVinculo = [(int)$orientador->vinculo_id];
-            if (!empty($coorientador->vinculo_id)) {
-                $idsVinculo[] = (int)$coorientador->vinculo_id;
+        $orientadorServidor = (int)($orientador->vinculo?->servidor ?? 0);
+        $coorientadorServidor = (int)($coorientador->vinculo?->servidor ?? 0);
+        if ($orientadorServidor !== 1 && $coorientadorServidor !== 1) {
+            return 'Coorientador inelegível: para orientador com vínculo não servidor, o coorientador precisa ter vínculo de servidor.';
+        }
+
+        /*
+        Regra futura preservada:
+        - se o orientador possuir vínculo servidor, o coorientador poderá ter escolaridade 9 ou 10
+        - caso contrário, o coorientador deverá ter escolaridade 10
+
+        $escolaridadeCoorientador = (int)($coorientador->escolaridade_id ?? 0);
+        if ($orientadorServidor === 1) {
+            if (!in_array($escolaridadeCoorientador, [9, 10], true)) {
+                return 'Coorientador inelegível: para orientador com vínculo servidor, a escolaridade do coorientador deve ser Mestrado ou Doutorado.';
             }
-            $idsVinculo = array_values(array_unique(array_filter($idsVinculo)));
+        } elseif ($escolaridadeCoorientador !== 10) {
+            return 'Coorientador inelegível: para orientador com vínculo não servidor a escolaridade deve ser Doutorado.';
+        }
+        */
 
-            if (!empty($idsVinculo)) {
-                $vinculos = $vinculosTable->find()
-                    ->select(['id', 'servidor'])
-                    ->where(['Vinculos.id IN' => $idsVinculo])
-                    ->enableHydration(false)
-                    ->all()
-                    ->toArray();
-
-                $porId = [];
-                foreach ($vinculos as $item) {
-                    $porId[(int)$item['id']] = (int)($item['servidor'] ?? 0);
-                }
-
-                $orientadorServidor = $porId[(int)$orientador->vinculo_id] ?? 0;
-                $coorientadorServidor = $porId[(int)($coorientador->vinculo_id ?? 0)] ?? 0;
-                if ($orientadorServidor === 0 && $coorientadorServidor !== 1) {
-                    return 'Coorientador inelegível: para orientador com vinculo não servidor, o coorientador precisa ter vinculo de servidor.';
-                }
-            }
+        $escolaridadeCoorientador = (int)($coorientador->escolaridade_id ?? 0);
+        if ($escolaridadeCoorientador !== 10) {
+            return 'Coorientador inelegível: a escolaridade do coorientador deve ser Doutorado.';
         }
 
         $condicoesInscricaoBase = [
             'coorientador' => $coorientadorId,
             'fase_id <' => 10,
+            'deleted IS' => null,
         ];
-        if ((int)$programaId === 1) {
-            $condicoesInscricaoBase[] = 'deleted IS NULL';
-        } elseif ((int)$programaId > 1) {
-            $condicoesInscricaoBase['deleted IS'] = null;
-        } 
         if ((int)$programaId > 0) {
             $condicoesInscricaoBase['programa_id'] = (int)$programaId;
         }
-       
+        if (($inscricaoIdExcluir ?? 0) > 0) {
+            $condicoesInscricaoBase['id !='] = (int)$inscricaoIdExcluir;
+        }
 
         $qtdInscricoes = $inscricaoTable->find()
             ->where($condicoesInscricaoBase)

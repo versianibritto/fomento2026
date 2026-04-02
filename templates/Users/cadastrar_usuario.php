@@ -2,7 +2,7 @@
 <?=$this->Form->create($user, ['autocomplete' => 'off', 'class' => 'user-edit-form'])?>
 <?php
 $cpfTravado = !empty($cpfTravado);
-$mostrarSiape = !empty($vinculoPesquisador40hId) && (string)($user->vinculo_id ?? '') === (string)$vinculoPesquisador40hId;
+$mostrarSiape = in_array((int)($user->vinculo_id ?? 0), $vinculosServidorIds ?? [], true);
 $cpfReadonly = ['label' => 'CPF', 'class' => 'form-control', 'maxlength' => 25, 'required' => true];
 if ($cpfTravado) {
     $cpfReadonly['readonly'] = true;
@@ -28,7 +28,7 @@ $emailAltOpts = ['type' => 'email', 'class' => 'form-control', 'maxlength'=>100]
 
 <div class="col-12">
     <div class="card shadow-sm border-0">
-        <?=$this->Form->hidden('vinculo_pesq_40h_id', ['value' => $vinculoPesquisador40hId ?? '', 'id' => 'vinculo-pesq-40h-id'])?>
+        <?=$this->Form->hidden('vinculos_servidor_ids', ['value' => implode(',', $vinculosServidorIds ?? []), 'id' => 'vinculos-servidor-ids'])?>
         <div class="card-body">
             <div class="d-flex flex-wrap align-items-center justify-content-between mb-3">
                 <h4 class="mb-0">Dados do Usuário</h4>
@@ -332,7 +332,7 @@ $emailAltOpts = ['type' => 'email', 'class' => 'form-control', 'maxlength'=>100]
 
 <div class="row g-3">
     <div class="col-12 col-md-3">
-        <?=$this->Form->button(($cadastroNovo ? "Cadastrar Bolsista" : "Gravar"), ['class' => 'btn btn-success w-100'])?>
+        <?=$this->Form->button(($cadastroNovo ? "Cadastrar Usuário" : "Gravar"), ['class' => 'btn btn-success w-100'])?>
     </div>
     <div class="col-12 col-md-9 d-flex align-items-center text-muted small">
         Revise os dados antes de salvar. Campos ocultos aparecem conforme as escolhas.
@@ -406,9 +406,12 @@ function atualizarDependenciasVinculo() {
     var escolaridade = parseInt($('#escolaridade-id').val(), 10);
     var isGraduacaoPos = !isNaN(escolaridade) && escolaridade > 7;
     var vinculo = String($('#vinculo-id').val() || '');
-    var vinculoPesq40h = String($('#vinculo-pesq-40h-id').val() || '');
+    var vinculosServidor = String($('#vinculos-servidor-ids').val() || '')
+        .split(',')
+        .map(function (item) { return String(item).trim(); })
+        .filter(Boolean);
     var exigeInterno = isGraduacaoPos && vinculo !== '' && vinculo !== '7';
-    var exigeSiape = isGraduacaoPos && vinculoPesq40h !== '' && vinculo === vinculoPesq40h;
+    var exigeSiape = isGraduacaoPos && vinculosServidor.indexOf(vinculo) !== -1;
 
     $('#divSiape').toggle(exigeSiape);
     toggleRequired('#matricula-siape', exigeSiape);

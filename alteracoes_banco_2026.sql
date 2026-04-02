@@ -1668,3 +1668,4 @@ UPDATE `vinculos` SET `nome` = 'Servidor Público Fiocruz - Aposentado' WHERE (`
 UPDATE `vinculos` SET `nome` = 'Aluno de Mestrado' WHERE (`id` = '12');
 UPDATE `vinculos` SET `deleted` = '1' WHERE (`id` = '14');
 UPDATE `vinculos` SET `nome` = 'Bolsista de Fomento a Pesquisa' WHERE (`id` = '13');
+UPDATE `vinculos` SET `servidor` = '1' WHERE (`id` = '11');

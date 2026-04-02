@@ -450,25 +450,25 @@ class UsersController extends AppController
         $documentos = $this->documentos;
 
 
-        /*
         $escolaridadeNome = $usuario->escolaridade->nome ?? null;
         if ($escolaridadeNome === null && !empty($usuario->escolaridade_id)) {
-            $escolaridadeNome = $this->fetchTable('Escolaridades')->find()
+            $escolaridadeRow = $this->fetchTable('Escolaridades')->find()
                 ->select(['nome'])
                 ->where(['Escolaridades.id' => (int)$usuario->escolaridade_id])
                 ->disableHydration()
-                ->first()['nome'] ?? null;
+                ->first();
+            $escolaridadeNome = $escolaridadeRow['nome'] ?? null;
         }
 
         $vinculoNome = $usuario->vinculo->nome ?? null;
         if ($vinculoNome === null && !empty($usuario->vinculo_id)) {
-            $vinculoNome = $this->fetchTable('Vinculos')->find()
+            $vinculoRow = $this->fetchTable('Vinculos')->find()
                 ->select(['nome'])
                 ->where(['Vinculos.id' => (int)$usuario->vinculo_id])
                 ->disableHydration()
-                ->first()['nome'] ?? null;
+                ->first();
+            $vinculoNome = $vinculoRow['nome'] ?? null;
         }
-            */    
 
         $street = $usuario->street ?? null;
         if ($street === null && !empty($usuario->street_id)) {
@@ -540,8 +540,8 @@ class UsersController extends AppController
             'programas',
             'usuario',
             'bolsas',
-            //'escolaridadeNome',
-            //'vinculoNome',
+            'escolaridadeNome',
+            'vinculoNome',
             'cep',
             'enderecoCompleto',
             'temJediPerfil',
@@ -596,14 +596,7 @@ class UsersController extends AppController
             'valueField' => 'nome',
         ])
         ->where(['deleted'=>0])->orderBy(['nome'=>'ASC']);
-        $vinculoPesquisador40hId = $this->fetchTable('Vinculos')->find()
-            ->select(['id'])
-            ->where([
-                'Vinculos.deleted' => 0,
-                'Vinculos.nome LIKE' => '%pesquisador%40%',
-            ])
-            ->first()
-            ?->id;
+        $vinculosServidorIds = $this->obterVinculosServidorIds();
 
         if ($this->request->is(['patch', 'post', 'put'])) {
           
@@ -685,7 +678,7 @@ class UsersController extends AppController
             ];
             $errosObrigatorios = $this->validarObrigatoriosUsuario(
                 $dadosValidacao,
-                $vinculoPesquisador40hId ? (int)$vinculoPesquisador40hId : null
+                $vinculosServidorIds
             );
             if (!empty($errosObrigatorios)) {
                 $this->Flash->error(implode('<br>', $errosObrigatorios), ['escape' => false]);
@@ -793,7 +786,7 @@ class UsersController extends AppController
         ])
             ->orderBy(['sigla' => 'ASC']);
         
-        $this->set(compact('deficiencia', 'user', 'vinculos', 'racas', 'sexo', 'documentos','escolaridades', 'unidades', 'ufs', 'vinculoPesquisador40hId'));
+        $this->set(compact('deficiencia', 'user', 'vinculos', 'racas', 'sexo', 'documentos','escolaridades', 'unidades', 'ufs', 'vinculosServidorIds'));
     }
 
     public function cadastrarUsuario($cpf = null, $papel = null, $inscricaoId = null, $editalId = null, $fluxo = null)
@@ -812,14 +805,7 @@ class UsersController extends AppController
         $isTi = in_array((int)$identity->id, [1, 8088], true);
         $papel = strtoupper(trim((string)$papel));
         $fluxo = strtoupper(trim((string)$fluxo));
-        $vinculoPesquisador40hId = $this->fetchTable('Vinculos')->find()
-            ->select(['id'])
-            ->where([
-                'Vinculos.deleted' => 0,
-                'Vinculos.nome LIKE' => '%pesquisador%40%',
-            ])
-            ->first()
-            ?->id;
+        $vinculosServidorIds = $this->obterVinculosServidorIds();
         
         $condicoesInscricaoBase = [];
 
@@ -911,7 +897,7 @@ class UsersController extends AppController
                 $dados['ic'] = $icInformado;
             }
 
-            $errosObrigatorios = $this->validarObrigatoriosUsuario($dados, $vinculoPesquisador40hId ? (int)$vinculoPesquisador40hId : null);
+            $errosObrigatorios = $this->validarObrigatoriosUsuario($dados, $vinculosServidorIds);
             if (!empty($errosObrigatorios)) {
                 $this->Flash->error(implode('<br>', $errosObrigatorios), ['escape' => false]);
                 return $this->redirect($this->request->getRequestTarget());
@@ -1062,7 +1048,7 @@ class UsersController extends AppController
             'editalId',
             'inscricaoId',
             'papel',
-            'vinculoPesquisador40hId'
+            'vinculosServidorIds'
         ));
         return $this->render('cadastrar_usuario');
     }
@@ -1502,7 +1488,7 @@ class UsersController extends AppController
         $this->set(compact('unidades', 'programas', 'user'));
     }
 
-    protected function validarObrigatoriosUsuario(array $dados, ?int $vinculoPesquisador40hId = null): array
+    protected function validarObrigatoriosUsuario(array $dados, array $vinculosServidorIds = []): array
     {
         $erros = [];
         $get = function (string $chave) use ($dados) {
@@ -1553,14 +1539,29 @@ class UsersController extends AppController
                 $erros[] = 'Laboratório é obrigatório.';
             }
         }
-        if ($escolaridadeId > 7 && $vinculoPesquisador40hId !== null && $vinculoId === $vinculoPesquisador40hId && $get('matricula_siape') === '') {
-            $erros[] = 'Matrícula SIAPE é obrigatória para o vínculo Pesquisador 40h.';
+        if ($escolaridadeId > 7 && in_array($vinculoId, $vinculosServidorIds, true) && $get('matricula_siape') === '') {
+            $erros[] = 'Matrícula SIAPE é obrigatória para vínculos marcados como servidor.';
         }
         if (in_array($escolaridadeId, [6, 7], true) && $get('ic') === '') {
             $erros[] = 'Programa/Edital Social de interesse é obrigatório.';
         }
 
         return $erros;
+    }
+
+    protected function obterVinculosServidorIds(): array
+    {
+        return $this->fetchTable('Vinculos')->find()
+            ->select(['id'])
+            ->where([
+                'Vinculos.deleted' => 0,
+                'Vinculos.servidor' => 1,
+            ])
+            ->disableHydration()
+            ->all()
+            ->extract('id')
+            ->map(static fn($id) => (int)$id)
+            ->toList();
     }
 
     //=======================

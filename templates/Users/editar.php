@@ -1,5 +1,5 @@
 <?php
-$mostrarSiape = !empty($vinculoPesquisador40hId) && (string)($user->vinculo_id ?? '') === (string)$vinculoPesquisador40hId;
+$mostrarSiape = in_array((int)($user->vinculo_id ?? 0), $vinculosServidorIds ?? [], true);
 $enderecoAtual = null;
 if (!empty($user->street)) {
     $partesEndereco = array_filter([
@@ -24,7 +24,7 @@ if (!empty($user->street)) {
 
 <div class="col-12">
     <div class="card shadow-sm border-0">
-        <?=$this->Form->hidden('vinculo_pesq_40h_id', ['value' => $vinculoPesquisador40hId ?? '', 'id' => 'vinculo-pesq-40h-id'])?>
+        <?=$this->Form->hidden('vinculos_servidor_ids', ['value' => implode(',', $vinculosServidorIds ?? []), 'id' => 'vinculos-servidor-ids'])?>
         <div class="card-body">
             <div class="d-flex flex-wrap align-items-center justify-content-between mb-3">
                 <h4 class="mb-0">Dados do Usuário</h4>
@@ -503,9 +503,12 @@ function atualizarDependenciasVinculo() {
     var escolaridade = parseInt($('#escolaridade-id').val(), 10);
     var isGraduacaoPos = !isNaN(escolaridade) && escolaridade > 7;
     var vinculo = String($('#vinculo-id').val() || '');
-    var vinculoPesq40h = String($('#vinculo-pesq-40h-id').val() || '');
+    var vinculosServidor = String($('#vinculos-servidor-ids').val() || '')
+        .split(',')
+        .map(function (item) { return String(item).trim(); })
+        .filter(Boolean);
     var exigeInterno = isGraduacaoPos && vinculo !== '' && vinculo !== '7';
-    var exigeSiape = isGraduacaoPos && vinculoPesq40h !== '' && vinculo === vinculoPesq40h;
+    var exigeSiape = isGraduacaoPos && vinculosServidor.indexOf(vinculo) !== -1;
 
     $('#divSiape').toggle(exigeSiape);
     toggleRequired('#matricula-siape', exigeSiape);
