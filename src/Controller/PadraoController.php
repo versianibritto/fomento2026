@@ -895,10 +895,15 @@ class PadraoController extends AppController
                         $nova->set($coluna, $inscricao->get($coluna));
                     }
 
-                    $origemAntiga = strtoupper((string)($inscricao->origem ?? ''));
                     $nova->orientador = $orientadorDestino;
                     $nova->coorientador = null;
-                    $nova->origem = in_array($origemAntiga, ['A', 'S'], true) ? $origemAntiga : 'T';
+                    $nova->origem = $inscricao->origem;
+                    $nova->data_inicio = date('Y-m-d H:i:s');
+                    $nova->fase_id = 11;
+                    $nova->troca_projeto = 0; // so e um se for alteração de projeto
+                    $nova->heranca = 1;
+                    $nova->vigente = 1;
+                    $nova->deleted = null;
                     $nova->resultado = null;
                     $nova->revista_id = null;
                     $nova->autorizacao = null;
@@ -926,8 +931,10 @@ class PadraoController extends AppController
 
                     $faseAntiga = (int)($inscricao->fase_id ?? 0);
                     $inscricaoPatch = $tblProjetoBolsistas->patchEntity($inscricao, [
-                        'origem' => 'T',
+                        //'origem' => 'T',
                         'vigente' => 0,
+                        'fase_id' => 20,
+                        'data_fim' => date('Y-m-d H:i:s'),
                     ]);
                     $salvouAntiga = $tblProjetoBolsistas->save($inscricaoPatch);
                     if (!$salvouAntiga) {
@@ -936,7 +943,7 @@ class PadraoController extends AppController
                     $this->historico(
                         (int)$inscricao->id,
                         $faseAntiga,
-                        $faseAntiga,
+                        20,
                         'Troca de orientador - Inscricao alterada #' . (int)$nova->id . '. Justificativa: ' . $justificativa,
                         true
                     );

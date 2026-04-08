@@ -40,7 +40,7 @@
                         <?php if ($sexoLogado === 'F') : ?>
                             <div class="row g-2 align-items-center">
                                 <div class="col-md-6">
-                                    <label for="filhos-menor" class="form-label mb-0">Orientadora, possui filhos menores de 5 anos?</label>
+                                    <label for="filhos-menor" class="form-label mb-0">Orientadora, possui filhos menores de 8 anos?</label>
                                 </div>
                                 <div class="col-md-6">
                                     <?= $this->Form->control('filhos_menor', [
@@ -51,9 +51,9 @@
                                         'empty' => 'Selecione',
                                         'value' => $inscricao->filhos_menor ?? null,
                                         'options' => [
-                                            '0' => 'Não possuo filhos, ou são maiores de 5 anos',
-                                            '1' => 'Possuo um filho menor de 5 anos',
-                                            '2' => 'Mais de um filho menor de 5 anos',
+                                            '0' => 'Não possuo filhos, ou são maiores de 8 anos',
+                                            '1' => 'Possuo um filho menor de 8 anos',
+                                            '2' => 'Mais de um filho menor de 8 anos',
                                         ],
                                     ]) ?>
                                 </div>

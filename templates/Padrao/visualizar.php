@@ -9,16 +9,25 @@ $origemAtual = strtoupper((string)($origemAtual ?? ($inscricao->origem ?? '')));
 $ehYoda = !empty($this->request->getAttribute('identity')['yoda']);
 $isRenovacao = $origemAtual === 'R';
 $pdjInscricaoId = !empty($inscricao->pdj_inscricoe_id) ? (int)$inscricao->pdj_inscricoe_id : null;
-$mostrarReferenciaAnterior = in_array($origemAtual, ['R', 'S', 'A'], true);
+$ehTrocaProjeto = (int)($inscricao->troca_projeto ?? 0) === 1;
+$mostrarReferenciaAnterior = in_array($origemAtual, ['R', 'S', 'A'], true) || $ehTrocaProjeto;
 $referenciaAnteriorValor = null;
+$referenciaAnteriorDescricao = null;
 if ($origemAtual === 'R') {
     $referenciaAnteriorValor = $inscricao->referencia_inscricao_anterior ?? null;
+    $referenciaAnteriorDescricao = 'inscricao que foi renovada';
 } elseif (in_array($origemAtual, ['S', 'A'], true)) {
     $referenciaAnteriorValor = $inscricao->bolsista_anterior ?? null;
+    $referenciaAnteriorDescricao = 'inscricao que foi substituida';
+} elseif ($ehTrocaProjeto) {
+    $referenciaAnteriorValor = $inscricao->referencia_inscricao_anterior ?? null;
+    $referenciaAnteriorDescricao = 'inscricao do orientador original';
 }
 $referenciaAnteriorId = (is_numeric((string)$referenciaAnteriorValor) && (int)$referenciaAnteriorValor > 0)
     ? (int)$referenciaAnteriorValor
     : null;
+$trocaProjetoTexto = (int)($inscricao->troca_projeto ?? 0) === 1 ? 'Sim' : 'Não';
+$herancaTexto = (int)($inscricao->heranca ?? 0) === 1 ? 'Sim' : 'Não';
 $dataInicioTexto = null;
 $dataFimTexto = null;
 $temDataInicio = !empty($inscricao->data_inicio);
@@ -238,33 +247,22 @@ if (!$temDataInicio && !$temDataFim) {
     <div class="card mb-3">
         <div class="card-body">
             <div class="row g-2 resumo-principal">
-                <?php if ($mostrarReferenciaAnterior): ?>
-                    <div class="col-md-6">
-                        <strong>Data da inscrição:</strong>
-                        <?= !empty($inscricao->created) ? h($inscricao->created->i18nFormat('dd/MM/yyyy')) : $naoInformado ?>
-                    </div>
-                    <div class="col-md-6">
-                        <strong>Referência anterior:</strong>
-                        <?php if ($referenciaAnteriorId !== null): ?>
-                            <a href="<?= $this->Url->build([
-                                'controller' => 'Padrao',
-                                'action' => 'visualizar',
-                                $referenciaAnteriorId,
-                            ]) ?>" target="_blank" class="text-decoration-none fw-semibold">
-                                #<?= h((string)$referenciaAnteriorId) ?>
-                            </a>
-                        <?php elseif ($referenciaAnteriorValor !== null && $referenciaAnteriorValor !== ''): ?>
-                            <?= h((string)$referenciaAnteriorValor) ?>
+                <div class="col-md-6">
+                    <strong>Data da inscrição:</strong>
+                    <?= !empty($inscricao->created) ? h($inscricao->created->i18nFormat('dd/MM/yyyy')) : $naoInformado ?>
+                </div>
+                <div class="col-md-6">
+                    <strong>Situação:</strong>
+                    <?php if (!empty($inscricao->fase->nome)): ?>
+                        <?php if ((int)($inscricao->vigente ?? 0) === 1): ?>
+                            <span class="badge bg-success"><?= h($inscricao->fase->nome) ?></span>
                         <?php else: ?>
-                            <?= $naoInformado ?>
+                            <?= h($inscricao->fase->nome) ?>
                         <?php endif; ?>
-                    </div>
-                <?php else: ?>
-                    <div class="col-md-12">
-                        <strong>Data da inscricao:</strong>
-                        <?= !empty($inscricao->created) ? h($inscricao->created->i18nFormat('dd/MM/yyyy')) : $naoInformado ?>
-                    </div>
-                <?php endif; ?>
+                    <?php else: ?>
+                        <?= $naoInformado ?>
+                    <?php endif; ?>
+                </div>
                 <div class="col-md-6">
                     <strong>Programa:</strong>
                     <?php
@@ -283,22 +281,40 @@ if (!$temDataInicio && !$temDataFim) {
                     <?php endif; ?>
                 </div>
                 <div class="col-md-6">
-                    <strong>Situação:</strong>
-                    <?php if (!empty($inscricao->fase->nome)): ?>
-                        <?php if ((int)($inscricao->vigente ?? 0) === 1): ?>
-                            <span class="badge bg-success"><?= h($inscricao->fase->nome) ?></span>
-                        <?php else: ?>
-                            <?= h($inscricao->fase->nome) ?>
-                        <?php endif; ?>
+                    <strong>Cota:</strong>
+                    <?php
+                        $cotaValor = (string)($inscricao->cota ?? '');
+                        echo !empty($cotas[$cotaValor]) ? h($cotas[$cotaValor]) : ($cotaValor !== '' ? h($cotaValor) : $naoInformado);
+                    ?>
+                </div>
+                <div class="col-md-6">
+                    <strong>Origem:</strong>
+                    <?= !empty($origens[(string)($inscricao->origem ?? '')]) ? h($origens[(string)($inscricao->origem ?? '')]) : $naoInformado ?>
+                </div>
+                <div class="col-md-6">
+                    <strong>Referência anterior:</strong>
+                    <?php if ($mostrarReferenciaAnterior && $referenciaAnteriorId !== null): ?>
+                        <a href="<?= $this->Url->build([
+                            'controller' => 'Padrao',
+                            'action' => 'visualizar',
+                            $referenciaAnteriorId,
+                        ]) ?>" target="_blank" class="text-decoration-none fw-semibold">
+                            #<?= h((string)$referenciaAnteriorId) ?><?= $referenciaAnteriorDescricao ? ' (' . h($referenciaAnteriorDescricao) . ')' : '' ?>
+                        </a>
+                    <?php elseif ($mostrarReferenciaAnterior && $referenciaAnteriorValor !== null && $referenciaAnteriorValor !== ''): ?>
+                        <?= h((string)$referenciaAnteriorValor) ?><?= $referenciaAnteriorDescricao ? ' (' . h($referenciaAnteriorDescricao) . ')' : '' ?>
                     <?php else: ?>
                         <?= $naoInformado ?>
                     <?php endif; ?>
                 </div>
-                <div class="col-md-6"><strong>Cota:</strong> <?php
-                    $cotaValor = (string)($inscricao->cota ?? '');
-                    echo !empty($cotas[$cotaValor]) ? h($cotas[$cotaValor]) : ($cotaValor !== '' ? h($cotaValor) : $naoInformado);
-                ?></div>
-                <div class="col-md-6"><strong>Origem:</strong> <?= !empty($origens[(string)($inscricao->origem ?? '')]) ? h($origens[(string)($inscricao->origem ?? '')]) : $naoInformado ?></div>
+                <div class="col-md-6">
+                    <strong>Troca de Projeto:</strong>
+                    <?= $trocaProjetoTexto ?>
+                </div>
+                <div class="col-md-6">
+                    <strong>Troca de Orientador (herança):</strong>
+                    <?= $herancaTexto ?>
+                </div>
                 <?php if ($isRenovacao): ?>
                     <div class="col-md-6">
                         <strong>Autorização da revista:</strong>
