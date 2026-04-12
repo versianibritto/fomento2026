@@ -477,7 +477,7 @@ function bolinhaEu() {
 function badgeVigente($vigente) {
     return $vigente
         ? '<span class="badge bg-success">Vigente</span>'
-        : '<span class="badge bg-secondary">Não vigente</span>';
+        : '<span class="badge bg-secondary">Não</span>';
 }
 
 function textoPrograma($item, bool $ehTi): string
@@ -506,7 +506,7 @@ function textoOrigem($item): string
         'R' => 'Renovação',
         'S' => 'Substituição',
         'A' => 'Subst Na Vigência',
-        'T' => 'Mudança de orientação/projeto',
+        'T' => 'Troca Orient/Proj',
     ];
 
     return h($mapa[$origem] ?? ($origem !== '' ? $origem : '—'));
@@ -531,7 +531,7 @@ function renderTabela($lista, $titulo, $badge, $ehAdmin, $view, $usuarioId, $col
         <div class="card-body p-0">
 
             <?php if (count($lista) > 0): ?>
-                <div style="max-height: 420px; overflow-y: auto;">
+                <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0 sortable-table">
                         <thead class="table-light" style="position: sticky; top: 0; z-index: 3;">
                             <tr>
@@ -608,7 +608,7 @@ function renderTabela($lista, $titulo, $badge, $ehAdmin, $view, $usuarioId, $col
                                 <td>
                                     <?= $inicio
                                         ? $inicio->i18nFormat('dd/MM/yyyy')
-                                        : '<span class="badge bg-warning text-dark">Não implementado</span>' ?>
+                                        : '<span class="badge bg-warning text-dark">Não <br>implementado</span>' ?>
                                 </td>
 
                                 <td>
@@ -665,7 +665,7 @@ function renderTabelaRaic($lista, $titulo, $badge, $ehAdmin, $view, $usuarioId, 
     <div class="collapse" id="<?= $collapseId ?>">
         <div class="card-body p-0">
             <?php if (count($lista) > 0): ?>
-                <div style="max-height: 420px; overflow-y: auto;">
+                <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0 sortable-table">
                         <thead class="table-light" style="position: sticky; top: 0; z-index: 3;">
                             <tr>

@@ -164,6 +164,12 @@ if (!$temDataInicio && !$temDataFim) {
     .sumula-separador {
         margin: 1rem 0 0.75rem;
     }
+    .visualizacao-tabela {
+        overflow-x: visible;
+    }
+    .visualizacao-tabela .table {
+        margin-bottom: 0;
+    }
 </style>
 <div class="container mt-4">
     <h4 class="mb-2">
@@ -456,7 +462,7 @@ if (!$temDataInicio && !$temDataFim) {
                         <?php if (empty($sumulasEdital) || $sumulasEdital->count() === 0): ?>
                             <p><span class="badge bg-danger">Nenhum item de súmula encontrado</span></p>
                         <?php else: ?>
-                            <div class="table-responsive">
+                            <div class="visualizacao-tabela">
                                 <table class="table table-sm table-striped align-middle">
                                     <thead>
                                         <tr>
@@ -859,7 +865,7 @@ if (!$temDataInicio && !$temDataFim) {
                         <?= !empty($resultadoMap[(string)($inscricao->resultado ?? '')]) ? h($resultadoMap[(string)$inscricao->resultado]) : $naoInformado ?>
                     </p>
                     <?php if (!empty($avaliacoes) && $avaliacoes->count() > 0): ?>
-                        <div class="table-responsive">
+                        <div class="visualizacao-tabela">
                             <table class="table table-sm table-striped align-middle">
                                 <thead>
                                     <tr>
