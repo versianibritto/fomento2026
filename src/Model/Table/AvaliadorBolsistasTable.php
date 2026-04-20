@@ -12,6 +12,10 @@ use Cake\Validation\Validator;
  * AvaliadorBolsistas Model
  *
  * @property \App\Model\Table\AvaliadorsTable&\Cake\ORM\Association\BelongsTo $Avaliadors
+ * @property \App\Model\Table\UsuariosTable&\Cake\ORM\Association\BelongsTo $Usuarios
+ * @property \App\Model\Table\RaicsTable&\Cake\ORM\Association\BelongsTo $Raics
+ * @property \App\Model\Table\WorkshopsTable&\Cake\ORM\Association\BelongsTo $Workshops
+ * @property \App\Model\Table\ProjetoBolsistasTable&\Cake\ORM\Association\BelongsTo $ProjetoBolsistas
  * @property \App\Model\Table\EditaisTable&\Cake\ORM\Association\BelongsTo $Editais
  * @property \App\Model\Table\BancasTable&\Cake\ORM\Association\BelongsTo $Bancas
  * @property \App\Model\Table\AvaliationsTable&\Cake\ORM\Association\HasMany $Avaliations
@@ -53,6 +57,18 @@ class AvaliadorBolsistasTable extends Table
         $this->belongsTo('Avaliadors', [
             'foreignKey' => 'avaliador_id',
         ]);
+        $this->belongsTo('Usuarios', [
+            'foreignKey' => 'usuario_id',
+        ]);
+        $this->belongsTo('Raics', [
+            'foreignKey' => 'raic_id',
+        ]);
+        $this->belongsTo('Workshops', [
+            'foreignKey' => 'workshop_id',
+        ]);
+        $this->belongsTo('ProjetoBolsistas', [
+            'foreignKey' => 'projeto_bolsista_id',
+        ]);
         $this->belongsTo('Editais', [
             'foreignKey' => 'editai_id',
         ]);
@@ -79,6 +95,22 @@ class AvaliadorBolsistasTable extends Table
         $validator
             ->nonNegativeInteger('bolsista')
             ->allowEmptyString('bolsista');
+
+        $validator
+            ->nonNegativeInteger('usuario_id')
+            ->allowEmptyString('usuario_id');
+
+        $validator
+            ->nonNegativeInteger('raic_id')
+            ->allowEmptyString('raic_id');
+
+        $validator
+            ->nonNegativeInteger('workshop_id')
+            ->allowEmptyString('workshop_id');
+
+        $validator
+            ->nonNegativeInteger('projeto_bolsista_id')
+            ->allowEmptyString('projeto_bolsista_id');
 
         $validator
             ->scalar('tipo')
@@ -152,6 +184,10 @@ class AvaliadorBolsistasTable extends Table
     public function buildRules(RulesChecker $rules): RulesChecker
     {
         $rules->add($rules->existsIn(['avaliador_id'], 'Avaliadors'), ['errorField' => 'avaliador_id']);
+        $rules->add($rules->existsIn(['usuario_id'], 'Usuarios'), ['errorField' => 'usuario_id']);
+        $rules->add($rules->existsIn(['raic_id'], 'Raics'), ['errorField' => 'raic_id']);
+        $rules->add($rules->existsIn(['workshop_id'], 'Workshops'), ['errorField' => 'workshop_id']);
+        $rules->add($rules->existsIn(['projeto_bolsista_id'], 'ProjetoBolsistas'), ['errorField' => 'projeto_bolsista_id']);
         $rules->add($rules->existsIn(['editai_id'], 'Editais'), ['errorField' => 'editai_id']);
         $rules->add($rules->existsIn(['banca_id'], 'Bancas'), ['errorField' => 'banca_id']);
 

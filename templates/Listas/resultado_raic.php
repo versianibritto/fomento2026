@@ -114,7 +114,19 @@ $tipoBolsaLabel = (($filtros['tipo_bolsa'] ?? '') !== '' && isset($tipoBolsa[$fi
                                             <span class="text-success small">Liberado</span>
                                         <?php endif; ?>
                                     <?php else: ?>
-                                        <span class="text-muted small">Não</span>
+                                        <div class="d-flex flex-column align-items-start gap-1">
+                                            <span class="text-muted small">Não liberado</span>
+                                            <?php if (!empty($raic->data_apresentacao)): ?>
+                                                <?= $this->Form->postLink(
+                                                    'Liberar',
+                                                    ['controller' => 'RaicNew', 'action' => 'liberacertificado', $raic->id],
+                                                    [
+                                                        'class' => 'btn btn-xs btn-outline-success',
+                                                        'confirm' => 'Confirma a liberação do certificado desta RAIC?',
+                                                    ]
+                                                ) ?>
+                                            <?php endif; ?>
+                                        </div>
                                     <?php endif; ?>
                                 </td>
                                 <td>
@@ -128,31 +140,19 @@ $tipoBolsaLabel = (($filtros['tipo_bolsa'] ?? '') !== '' && isset($tipoBolsa[$fi
                                     <?php if ((int)($raic->deleted ?? 0) !== 1): ?>
                                         <div class="d-flex flex-wrap gap-2 justify-content-end">
                                             <?php if (empty($raic->data_apresentacao)): ?>
-                                                <?php /*
                                                 <?= $this->Html->link(
                                                     'Agendar',
-                                                    ['controller' => 'Raics', 'action' => 'agendar', $raic->id],
+                                                    ['controller' => 'RaicNew', 'action' => 'agendar', $raic->id],
                                                     ['class' => 'btn btn-sm btn-outline-primary']
                                                 ) ?>
-                                                */ ?>
                                             <?php elseif ($raic->data_apresentacao->format('Ymd') >= date('Ymd')): ?>
                                                 <?= $this->Html->link(
-                                                    'Alterar agendamento',
-                                                    ['controller' => 'Raics', 'action' => 'alteraapresentacao', $raic->id],
+                                                    'Reagendar',
+                                                    ['controller' => 'RaicNew', 'action' => 'agendar', $raic->id],
                                                     ['class' => 'btn btn-sm btn-outline-secondary']
                                                 ) ?>
                                             <?php endif; ?>
 
-                                            <?php if (strtoupper((string)($raic->presenca ?? '')) !== 'S'): ?>
-                                                <?= $this->Form->postLink(
-                                                    'Liberar certificado',
-                                                    ['controller' => 'RaicNew', 'action' => 'liberacertificado', $raic->id],
-                                                    [
-                                                        'class' => 'btn btn-sm btn-warning',
-                                                        'confirm' => 'Confirma a liberação do certificado desta RAIC?',
-                                                    ]
-                                                ) ?>
-                                            <?php endif; ?>
                                         </div>
                                     <?php endif; ?>
                                 </td>

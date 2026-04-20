@@ -2252,6 +2252,29 @@ class RenovacoesController extends AppController
         $this->set($context);
     }
 
+    private function resolverSiglaInstituicaoCurso($usuario): string
+    {
+        $valor = trim((string)($usuario->instituicao_curso ?? ''));
+        if ($valor === '') {
+            return '';
+        }
+
+        if (!empty($usuario->instituicao?->sigla)) {
+            return (string)$usuario->instituicao->sigla;
+        }
+
+        if (!ctype_digit($valor)) {
+            return $valor;
+        }
+
+        $instituicao = $this->fetchTable('Instituicaos')->find()
+            ->select(['sigla'])
+            ->where(['Instituicaos.id' => (int)$valor])
+            ->first();
+
+        return !empty($instituicao?->sigla) ? (string)$instituicao->sigla : $valor;
+    }
+
     private function montarHtmlTermoInscricao(
         $edital,
         $inscricao,
@@ -2276,7 +2299,7 @@ class RenovacoesController extends AppController
         $nomeBolsista = $fmt($bolsista->nome ?? '');
         $cpfBolsista = $fmt(preg_replace('/\D+/', '', (string)($bolsista->cpf ?? '')));
         $cursoBolsista = $fmt($bolsista->curso ?? '');
-        $instituicaoBolsista = $fmt($bolsista->instituicao_curso ?? '');
+        $instituicaoBolsista = $fmt($this->resolverSiglaInstituicaoCurso($bolsista));
         $tituloProjeto = $fmt($projeto->titulo ?? '');
         $numeroSistemaFmt = $fmt($numeroSistema);
         $inscricaoNumeroFmt = $fmt($inscricaoNumero);

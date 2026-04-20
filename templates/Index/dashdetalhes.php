@@ -187,7 +187,7 @@
                                                     'F',
                                                 ]) ?>"
                                                 class="btn btn-sm btn-outline-danger mb-1"
-                                                onclick="return confirm('Deseja finalizar este projeto?');">
+                                                onclick="return confirm('Deseja finalizar esta inscrição?');">
                                                     Finalizar
                                                 </a>
                                             <?php endif; ?>

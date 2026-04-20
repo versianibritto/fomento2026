@@ -11,6 +11,10 @@ use Cake\ORM\Entity;
  * @property int $id
  * @property int|null $avaliador_id
  * @property int|null $bolsista
+ * @property int|null $usuario_id
+ * @property int|null $raic_id
+ * @property int|null $workshop_id
+ * @property int|null $projeto_bolsista_id
  * @property string|null $tipo
  * @property string|null $ano
  * @property string|null $situacao
@@ -29,6 +33,10 @@ use Cake\ORM\Entity;
  * @property int|null $banca_id
  *
  * @property \App\Model\Entity\Avaliador $avaliador
+ * @property \App\Model\Entity\User $usuario
+ * @property \App\Model\Entity\Raic $raic
+ * @property \App\Model\Entity\Workshop $workshop
+ * @property \App\Model\Entity\ProjetoBolsista $projeto_bolsista
  * @property \App\Model\Entity\Editai $editai
  * @property \App\Model\Entity\Banca $banca
  * @property \App\Model\Entity\Avaliation[] $avaliations
@@ -47,6 +55,10 @@ class AvaliadorBolsista extends Entity
     protected array $_accessible = [
         'avaliador_id' => true,
         'bolsista' => true,
+        'usuario_id' => true,
+        'raic_id' => true,
+        'workshop_id' => true,
+        'projeto_bolsista_id' => true,
         'tipo' => true,
         'ano' => true,
         'situacao' => true,
@@ -64,6 +76,10 @@ class AvaliadorBolsista extends Entity
         'ordem' => true,
         'banca_id' => true,
         'avaliador' => true,
+        'usuario' => true,
+        'raic' => true,
+        'workshop' => true,
+        'projeto_bolsista' => true,
         'editai' => true,
         'banca' => true,
         'avaliations' => true,

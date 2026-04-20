@@ -111,9 +111,261 @@ class RestritoController extends AppController
                 'class' => 'btn-success',
                 'icon' => 'fas fa-file-excel',
             ],
+            [
+                'titulo' => 'Carga RAIC Vigentes',
+                'descricao' => 'Previa e cria RAIC para bolsistas vigentes filtrando por unidade e edital ativo',
+                'url' => ['controller' => 'Restrito', 'action' => 'cargaRaicsVigentes'],
+                'class' => 'btn-primary',
+                'icon' => 'fas fa-copy',
+            ],
         ];
 
         $this->set(compact('atalhos'));
+    }
+
+    public function cargaRaicsVigentes()
+    {
+        $this->request->allowMethod(['get', 'post']);
+
+        $filtros = [
+            'unidade_id' => (int)($this->request->getData('unidade_id', $this->request->getQuery('unidade_id', 0))),
+            'editai_id' => (int)($this->request->getData('editai_id', $this->request->getQuery('editai_id', 0))),
+            'raic_editai_id' => (int)($this->request->getData('raic_editai_id', $this->request->getQuery('raic_editai_id', 0))),
+            'status_lista' => (string)($this->request->getData('status_lista', $this->request->getQuery('status_lista', 'elegiveis'))),
+        ];
+        $buscaSolicitada = $this->request->is('post') || $this->request->getQuery('filtrar') !== null;
+
+        $editaisAtivos = $this->fetchTable('Editais')->find('list', [
+            'keyField' => 'id',
+            'valueField' => 'nome',
+        ])
+            ->where([
+                'Editais.origem IN' => ['R', 'N'],
+                'Editais.programa_id <>' => 1,
+                'Editais.inicio_vigencia <' => date('Y-m-d H:i:s'),
+                'Editais.fim_vigencia >' => date('Y-m-d H:i:s'),
+            ])
+            ->orderBy(['Editais.nome' => 'ASC'])
+            ->toArray();
+
+        $editaisRaicAbertos = $this->fetchTable('Editais')->find('list', [
+            'keyField' => 'id',
+            'valueField' => 'nome',
+        ])
+            ->where([
+                'Editais.origem' => 'V',
+                'Editais.inicio_inscricao < NOW()',
+                'Editais.fim_inscricao > NOW()',
+            ])
+            ->orderBy(['Editais.nome' => 'ASC'])
+            ->toArray();
+
+        $unidades = $this->fetchTable('Unidades')->find('list', [
+            'keyField' => 'id',
+            'valueField' => 'sigla',
+        ])
+            ->orderBy(['Unidades.sigla' => 'ASC'])
+            ->toArray();
+
+        $totalCandidatos = 0;
+        $totalElegiveis = 0;
+        $totalInelegiveis = 0;
+        $candidatos = [];
+        if ($buscaSolicitada && empty($filtros['raic_editai_id'])) {
+            $this->Flash->error('Selecione a RAIC para realizar a busca.');
+            $buscaSolicitada = false;
+        }
+
+        if ($buscaSolicitada) {
+            $queryElegiveis = $this->montarQueryCargaRaicsVigentes($filtros, false);
+            $queryInelegiveis = $this->montarQueryCargaRaicsVigentes($filtros, true);
+
+            $totalElegiveis = $queryElegiveis->count();
+            $totalInelegiveis = $queryInelegiveis->count();
+            $totalCandidatos = $totalElegiveis + $totalInelegiveis;
+
+            if ($filtros['status_lista'] === 'todos') {
+                $candidatosElegiveis = (clone $queryElegiveis)->limit(150)->all();
+                $candidatosInelegiveis = (clone $queryInelegiveis)->limit(150)->all();
+                $candidatos = [];
+                foreach ($candidatosElegiveis as $item) {
+                    $item['situacao_carga'] = 'elegivel';
+                    $candidatos[] = $item;
+                }
+                foreach ($candidatosInelegiveis as $item) {
+                    $item['situacao_carga'] = 'inelegivel';
+                    $candidatos[] = $item;
+                }
+            } else {
+                $queryListagem = $filtros['status_lista'] === 'inelegiveis' ? $queryInelegiveis : $queryElegiveis;
+                $candidatos = (clone $queryListagem)
+                    ->limit(300)
+                    ->all()
+                    ->toArray();
+                foreach ($candidatos as &$item) {
+                    $item['situacao_carga'] = $filtros['status_lista'] === 'inelegiveis' ? 'inelegivel' : 'elegivel';
+                }
+                unset($item);
+            }
+        }
+
+        if ($this->request->is('post') && (string)$this->request->getData('acao') === 'executar') {
+            if (empty($filtros['raic_editai_id'])) {
+                $this->Flash->error('Selecione o edital RAIC de destino para executar a carga.');
+                $this->set(compact('filtros', 'buscaSolicitada', 'editaisAtivos', 'editaisRaicAbertos', 'unidades', 'candidatos', 'totalCandidatos', 'totalElegiveis', 'totalInelegiveis'));
+                return;
+            }
+
+            if (!$buscaSolicitada) {
+                $this->Flash->error('Execute a busca antes de realizar a carga.');
+                $this->set(compact('filtros', 'buscaSolicitada', 'editaisAtivos', 'editaisRaicAbertos', 'unidades', 'candidatos', 'totalCandidatos', 'totalElegiveis', 'totalInelegiveis'));
+                return;
+            }
+
+            if ($totalElegiveis === 0) {
+                $this->Flash->info('Nao ha registros elegiveis para processar.');
+                return $this->redirect(['action' => 'cargaRaicsVigentes', '?' => array_filter([
+                    'unidade_id' => $filtros['unidade_id'],
+                    'editai_id' => $filtros['editai_id'],
+                    'raic_editai_id' => $filtros['raic_editai_id'],
+                    'status_lista' => $filtros['status_lista'],
+                ])]);
+            }
+
+            $tblRaics = $this->fetchTable('Raics');
+            $tblRaicHistoricos = $this->fetchTable('RaicHistoricos');
+            $raicEditalId = (int)$filtros['raic_editai_id'];
+            $candidatosExecucao = $this->montarQueryCargaRaicsVigentes($filtros, false)->all();
+
+            try {
+                $tblRaics->getConnection()->transactional(function () use ($candidatosExecucao, $tblRaics, $tblRaicHistoricos, $raicEditalId): void {
+                    foreach ($candidatosExecucao as $bolsista) {
+                        $raic = $tblRaics->newEmptyEntity();
+                        $raic->usuario_id = !empty($bolsista['bolsista']) ? (int)$bolsista['bolsista'] : null;
+                        $raic->orientador = !empty($bolsista['orientador']) ? (int)$bolsista['orientador'] : null;
+                        $raic->titulo = !empty($bolsista['sp_titulo']) ? (string)$bolsista['sp_titulo'] : null;
+                        $raic->projeto_orientador = !empty($bolsista['projeto_id']) ? (int)$bolsista['projeto_id'] : null;
+                        $raic->projeto_bolsista_id = (int)$bolsista['id'];
+                        $raic->unidade_id = !empty($bolsista['orientador_unidade_id']) ? (int)$bolsista['orientador_unidade_id'] : null;
+                        $raic->editai_id = $raicEditalId;
+                        $raic->deleted = 0;
+                        $raic->tipo_bolsa = strtoupper((string)($bolsista['tipo_bolsa'] ?? '')) === 'Z' ? 'Z' : 'Z';
+                        $raic->usuario_cadastro = (int)$this->request->getAttribute('identity')->id;
+
+                        if (!$tblRaics->save($raic)) {
+                            throw new \RuntimeException('Falha ao criar RAIC para a inscricao #' . (int)$bolsista['id'] . '.');
+                        }
+
+                        $historico = $tblRaicHistoricos->newEmptyEntity();
+                        $historico->raic_id = (int)$raic->id;
+                        $historico->usuario_id = (int)$this->request->getAttribute('identity')->id;
+                        $historico->alteracao = 'criação ou cadastro massivo';
+                        $historico->justificativa = 'carga inicial dos bolsistas vigentes';
+
+                        if (!$tblRaicHistoricos->save($historico)) {
+                            throw new \RuntimeException('Falha ao gravar historico da RAIC #' . (int)$raic->id . '.');
+                        }
+                    }
+                });
+
+                $this->Flash->success('Carga concluida com sucesso. ' . $totalElegiveis . ' RAIC(s) criada(s).');
+                return $this->redirect(['action' => 'cargaRaicsVigentes', '?' => array_filter([
+                    'unidade_id' => $filtros['unidade_id'],
+                    'editai_id' => $filtros['editai_id'],
+                    'raic_editai_id' => $filtros['raic_editai_id'],
+                    'status_lista' => $filtros['status_lista'],
+                    'filtrar' => 1,
+                ])]);
+            } catch (\Throwable $e) {
+                $this->flashFriendlyException(
+                    $e,
+                    'Erro no Sistema - Carga de RAIC de bolsistas vigentes',
+                    'Houve um erro ao executar a carga de RAIC. Tente novamente.'
+                );
+
+                return $this->redirect(['action' => 'cargaRaicsVigentes', '?' => array_filter([
+                    'unidade_id' => $filtros['unidade_id'],
+                    'editai_id' => $filtros['editai_id'],
+                    'raic_editai_id' => $filtros['raic_editai_id'],
+                    'status_lista' => $filtros['status_lista'],
+                ])]);
+            }
+        }
+
+        $this->set(compact(
+            'filtros',
+            'buscaSolicitada',
+            'editaisAtivos',
+            'editaisRaicAbertos',
+            'unidades',
+            'candidatos',
+            'totalCandidatos',
+            'totalElegiveis',
+            'totalInelegiveis'
+        ));
+    }
+
+    protected function montarQueryCargaRaicsVigentes(array $filtros, bool $inelegiveis)
+    {
+        $tblProjetoBolsistas = $this->fetchTable('ProjetoBolsistas');
+        $tblRaics = $this->fetchTable('Raics');
+
+        $query = $tblProjetoBolsistas->find()
+            ->select([
+                'id' => 'ProjetoBolsistas.id',
+                'editai_id' => 'ProjetoBolsistas.editai_id',
+                'projeto_id' => 'ProjetoBolsistas.projeto_id',
+                'bolsista' => 'ProjetoBolsistas.bolsista',
+                'orientador' => 'ProjetoBolsistas.orientador',
+                'sp_titulo' => 'ProjetoBolsistas.sp_titulo',
+                'tipo_bolsa' => 'ProjetoBolsistas.tipo_bolsa',
+                'edital_nome' => 'Editais.nome',
+                'bolsista_nome' => 'Bolsistas.nome',
+                'orientador_nome' => 'Orientadores.nome',
+                'orientador_unidade_id' => 'Orientadores.unidade_id',
+                'unidade_sigla' => 'Unidades.sigla',
+                'projeto_titulo' => 'Projetos.titulo',
+            ])
+            ->enableAutoFields(false)
+            ->enableHydration(false)
+            ->leftJoinWith('Bolsistas')
+            ->leftJoinWith('Orientadores.Unidades')
+            ->leftJoinWith('Projetos')
+            ->innerJoinWith('Editais')
+            ->where([
+                'ProjetoBolsistas.vigente' => 1,
+                'ProjetoBolsistas.deleted IS' => null,
+                'Editais.programa_id <>' => 1,
+            ])
+            ->orderBy([
+                'Editais.nome' => 'ASC',
+                'Orientadores.nome' => 'ASC',
+                'Bolsistas.nome' => 'ASC',
+                'ProjetoBolsistas.id' => 'ASC',
+            ]);
+
+        if (!empty($filtros['unidade_id'])) {
+            $query->where(['Orientadores.unidade_id' => (int)$filtros['unidade_id']]);
+        }
+
+        if (!empty($filtros['editai_id'])) {
+            $query->where(['ProjetoBolsistas.editai_id' => (int)$filtros['editai_id']]);
+        }
+
+        $subqueryDuplicados = $tblRaics->find()
+            ->select(['usuario_id'])
+            ->where([
+                'Raics.deleted' => 0,
+                'Raics.editai_id' => (int)$filtros['raic_editai_id'],
+                'Raics.usuario_id IS NOT' => null,
+            ]);
+
+        $query->where($inelegiveis
+            ? ['ProjetoBolsistas.bolsista IN' => $subqueryDuplicados]
+            : ['ProjetoBolsistas.bolsista NOT IN' => $subqueryDuplicados]);
+
+
+        return $query;
     }
 
     public function exportarAvaliadors()

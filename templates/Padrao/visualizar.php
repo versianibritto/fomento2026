@@ -212,6 +212,14 @@ if (!$temDataInicio && !$temDataFim) {
             ], ['class' => 'btn btn-sm btn-outline-secondary']) ?>
         <?php endif; ?>
 
+        <?php  if (($inscricao->vigente)): ?>
+            <?= $this->Html->link('Termo 2025', [
+                'controller' => 'Padrao',
+                'action' => 'imprimirSolicitacao',
+                (int)$inscricao->id,
+            ], ['class' => 'btn btn-sm btn-outline-secondary']) ?>
+        <?php endif; ?>
+
         <?php if (in_array($faseAtual, [5], true)): ?>
             <?= $this->Html->link('Finalizar', [
                 'controller' => $controllerFluxo,
@@ -250,6 +258,14 @@ if (!$temDataInicio && !$temDataFim) {
             ]) ?>
         <?php endif; ?>
     </div>
+    <?php
+        // Paliativo temporario na visualizacao.
+        // Remover este bloco quando as fases 6 e 7 voltarem a ser exibidas normalmente para nao-Yoda.
+        $forcarSituacaoFinalizadoNaVisualizacao = !$ehYoda && in_array((int)($inscricao->fase_id ?? 0), [6, 7], true);
+        $situacaoExibicao = $forcarSituacaoFinalizadoNaVisualizacao
+            ? 'Finalizado'
+            : ($inscricao->fase->nome ?? null);
+    ?>
     <div class="card mb-3">
         <div class="card-body">
             <div class="row g-2 resumo-principal">
@@ -259,11 +275,11 @@ if (!$temDataInicio && !$temDataFim) {
                 </div>
                 <div class="col-md-6">
                     <strong>Situação:</strong>
-                    <?php if (!empty($inscricao->fase->nome)): ?>
+                    <?php if (!empty($situacaoExibicao)): ?>
                         <?php if ((int)($inscricao->vigente ?? 0) === 1): ?>
-                            <span class="badge bg-success"><?= h($inscricao->fase->nome) ?></span>
+                            <span class="badge bg-success"><?= h($situacaoExibicao) ?></span>
                         <?php else: ?>
-                            <?= h($inscricao->fase->nome) ?>
+                            <?= h($situacaoExibicao) ?>
                         <?php endif; ?>
                     <?php else: ?>
                         <?= $naoInformado ?>
@@ -371,8 +387,8 @@ if (!$temDataInicio && !$temDataFim) {
                 <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-subprojeto" type="button">Subprojeto/Relatório</button></li>
                 <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-coorientador" type="button">Coorientador</button></li>
                 <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-avaliacao" type="button">Avaliação</button></li>
-                <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-historico" type="button">Histórico</button></li>
                 <?php if ($ehYoda): ?>
+                    <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-historico" type="button">Histórico</button></li>
                     <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-gestao" type="button">Gestão</button></li>
                 <?php endif; ?>
             </ul>
@@ -383,7 +399,7 @@ if (!$temDataInicio && !$temDataFim) {
                         <p><span class="badge bg-danger">Bolsista não informado</span></p>
                     <?php else: ?>
                         <p><strong>Nome:</strong> <?= !empty($inscricao->bolsista_usuario->nome) ? h($inscricao->bolsista_usuario->nome) : $naoInformado ?></p>
-                        <p><strong>Universidade:</strong> <?= !empty($inscricao->bolsista_usuario->instituicao_curso) ? h($inscricao->bolsista_usuario->instituicao_curso) : $naoInformado ?></p>
+                        <p><strong>Universidade:</strong> <?= !empty($inscricao->bolsista_usuario->instituicao?->sigla) ? h($inscricao->bolsista_usuario->instituicao->sigla) : (!empty($inscricao->bolsista_usuario->instituicao_curso) && !is_numeric($inscricao->bolsista_usuario->instituicao_curso) ? h($inscricao->bolsista_usuario->instituicao_curso) : $naoInformado) ?></p>
                         <p><strong>Curso:</strong> <?= !empty($inscricao->bolsista_usuario->curso) ? h($inscricao->bolsista_usuario->curso) : $naoInformado ?></p>
                     <?php endif; ?>
                     <p><strong>Primeiro período:</strong> <?= $inscricao->primeiro_periodo === null ? $naoInformado : ((int)$inscricao->primeiro_periodo === 1 ? 'Sim' : 'Nao') ?></p>
@@ -815,7 +831,7 @@ if (!$temDataInicio && !$temDataFim) {
                         <p><strong>Nome:</strong> <?= !empty($inscricao->coorientadore->nome) ? h($inscricao->coorientadore->nome) : $naoInformado ?></p>
                         <div class="row g-2">
                             <div class="col-md-6"><strong>Curso:</strong> <?= !empty($inscricao->coorientadore->curso) ? h($inscricao->coorientadore->curso) : $naoInformado ?></div>
-                            <div class="col-md-6"><strong>Universidade:</strong> <?= !empty($inscricao->coorientadore->instituicao_curso) ? h($inscricao->coorientadore->instituicao_curso) : $naoInformado ?></div>
+                            <div class="col-md-6"><strong>Universidade:</strong> <?= !empty($inscricao->coorientadore->instituicao?->sigla) ? h($inscricao->coorientadore->instituicao->sigla) : (!empty($inscricao->coorientadore->instituicao_curso) && !is_numeric($inscricao->coorientadore->instituicao_curso) ? h($inscricao->coorientadore->instituicao_curso) : $naoInformado) ?></div>
                             <div class="col-md-6"><strong>Escolaridade:</strong> <?= !empty($inscricao->coorientadore->escolaridade->nome) ? h($inscricao->coorientadore->escolaridade->nome) : $naoInformado ?></div>
                             <div class="col-md-6"><strong>Vinculo:</strong> <?= !empty($inscricao->coorientadore->vinculo->nome) ? h($inscricao->coorientadore->vinculo->nome) : $naoInformado ?></div>
                         </div>

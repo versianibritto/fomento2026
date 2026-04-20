@@ -3,6 +3,8 @@ namespace App\Controller;
 
 use App\Controller\AppController;
 use Cake\Event\EventInterface;
+use Cake\ORM\TableRegistry;
+
 
 class PadraoController extends AppController
 {
@@ -21,6 +23,84 @@ class PadraoController extends AppController
         return null;
     }
 
+
+     public function imprimirSolicitacao($pb)
+    {
+        $this->viewBuilder()->setLayout('ajax');
+
+        $identity = $this->identityLogado;
+        if (empty($pb)) {
+            $this->Flash->error('Parametros invalidos para o termo.');
+            return $this->redirect(['controller' => 'Index', 'action' => 'index']);
+        }
+
+        $bol = $this->fetchTable('ProjetoBolsistas')->find()
+            ->contain([
+                'Bolsistas'=>'Instituicaos', 'Editais'=>'Programas', 'Orientadores'=>['Vinculos', 'Escolaridades']
+            ])
+            ->where(['ProjetoBolsistas.id' => (int)$pb])
+            ->first();
+
+        if (!$pb) {
+            $this->Flash->error('Inscricao não localizada para o termo.');
+            return $this->redirect(['controller' => 'Index', 'action' => 'index']);
+        }
+
+        $ehYoda = $this->ehYoda();
+        $identityId = (int)($identity->id ?? 0);
+        $ehOrientador = $identityId > 0 && $identityId === (int)($bol->orientador ?? 0);
+
+
+        if (!$ehYoda && !$ehOrientador) {
+            $this->Flash->error('Apenas o orientador pode gerar o documento');
+            return $this->redirect(['controller' => 'Index', 'action' => 'index']);
+        }
+            
+        if((!in_array($bol->vigente, [1]))) {
+            $this->Flash->error('Esta função abrange apenas bolsas vigentes.');
+            return $this->redirect(['controller' => 'Index', 'action' => 'index']);          
+        }
+
+        if((in_array($bol->editai->programa_id, [1]))) {
+            $this->Flash->error('Esta função abrange apenas Ics.');
+            return $this->redirect(['controller' => 'Index', 'action' => 'index']);          
+        }
+        
+                  
+        if( ($bol->editai_id > 37)){
+            $this->Flash->error('Esta função abrange apenas bolsas vigentes dos editais de 2025.');
+            return $this->redirect(['controller' => 'Index', 'action' => 'index']);
+        }
+
+
+        //verifica aceite do bolsista
+            if((!in_array($bol->resposta_bolsista, ['A']))) {
+                $this->Flash->error('Não é possivel imprimir o termo sem o aceite do bolsista.');
+                return $this->redirect(['controller' => 'Index', 'action' => 'index']);
+            }
+        //
+
+            $projeto = TableRegistry::getTableLocator()->get('Projetos')->get($bol->projeto_id,['contain'=>[
+                'Usuarios'=>[
+                    'Escolaridades',
+                    'Unidades',
+                    'Vinculos'
+                ],
+                'Areas',
+                'Linhas',
+                'ProjetoBolsistas'=>[
+                    'Bolsistas',
+                    'Orientadores',
+                    'Coorientadores'
+                ]
+            ]
+        ]);  
+        $teste_idade=parent::idade($bol->bolsista_usuario->data_nascimento->i18nFormat('YYYY-MM-dd'));
+        
+
+        $this->set(compact('projeto', 'bol', 'teste_idade'));
+    }
+
     public function visualizar($inscricaoId = null)
     {
         $identity = $this->identityLogado;
@@ -32,9 +112,9 @@ class PadraoController extends AppController
         $inscricao = $this->fetchTable('ProjetoBolsistas')->find()
             ->contain([
                 'Editais' => ['Programas'],
-                'Bolsistas',
+                'Bolsistas' => ['Instituicaos'],
                 'Orientadores',
-                'Coorientadores' => ['Escolaridades', 'Vinculos'],
+                'Coorientadores' => ['Escolaridades', 'Vinculos', 'Instituicaos'],
                 'Projetos' => ['Areas' => ['GrandesAreas'], 'Linhas' => ['AreasFiocruz']],
                 'Fases',
                 'Anexos' => ['conditions' => 'Anexos.deleted IS NULL', 'AnexosTipos', 'Usuarios'],

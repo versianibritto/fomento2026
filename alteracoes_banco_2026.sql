@@ -1669,3 +1669,26 @@ UPDATE `vinculos` SET `nome` = 'Aluno de Mestrado' WHERE (`id` = '12');
 UPDATE `vinculos` SET `deleted` = '1' WHERE (`id` = '14');
 UPDATE `vinculos` SET `nome` = 'Bolsista de Fomento a Pesquisa' WHERE (`id` = '13');
 UPDATE `vinculos` SET `servidor` = '1' WHERE (`id` = '11');
+
+-- Avaliações 18/4
+ 
+ALTER TABLE `avaliador_bolsistas` 
+ADD COLUMN `usuario_id` INT NULL AFTER `banca_id`;
+
+-- ajuste de banco
+UPDATE avaliador_bolsistas ab
+INNER JOIN avaliadors a
+    ON a.id = ab.avaliador_id
+SET ab.usuario_id = a.usuario_id
+WHERE ab.usuario_id IS NULL and ab.id>0;
+
+ALTER TABLE `avaliador_bolsistas` 
+ADD COLUMN `raic_id` INT NULL AFTER `usuario_id`,
+ADD COLUMN `workshop_id` INT NULL AFTER `raic_id`,
+ADD COLUMN `projeto_bolsista_id` INT NULL AFTER `workshop_id`;
+
+ALTER TABLE `fomento2026`.`projeto_bolsistas` 
+ADD COLUMN `homologado` ENUM('S', 'N') NULL AFTER `justificativa_bolsa`,
+ADD COLUMN `homologado_data` TIMESTAMP NULL AFTER `homologado`,
+ADD COLUMN `homologado_por` INT NULL AFTER `homologado_data`,
+ADD COLUMN `homologado_justificativa` TEXT NULL AFTER `homologado_por`;
