@@ -92,6 +92,11 @@ class DashyodacountsTable extends Table
             ->dateTime('fim_vigencia')
             ->allowEmptyDateTime('fim_vigencia');
 
+        $validator
+            ->scalar('homologado')
+            ->maxLength('homologado', 1)
+            ->allowEmptyString('homologado');
+
         return $validator;
     }
 

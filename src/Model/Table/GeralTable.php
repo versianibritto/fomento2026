@@ -424,6 +424,24 @@ class GeralTable extends Table
             ->integer('heranca')
             ->allowEmptyString('heranca');
 
+        $validator
+            ->scalar('homologado')
+            ->maxLength('homologado', 1)
+            ->allowEmptyString('homologado');
+
+        $validator
+            ->scalar('homologado_data')
+            ->allowEmptyString('homologado_data');
+
+        $validator
+            ->scalar('homologado_por')
+            ->maxLength('homologado_por', 150)
+            ->allowEmptyString('homologado_por');
+
+        $validator
+            ->scalar('homologado_justificativa')
+            ->allowEmptyString('homologado_justificativa');
+
         return $validator;
     }
 }

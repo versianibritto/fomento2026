@@ -1998,6 +1998,118 @@ class RestritoController extends AppController
         $this->set(compact('pastasUpload'));
     }
 
+    public function migrarHomologacaoHistoricaProjetoBolsistas()
+    {
+        $this->request->allowMethod(['post']);
+
+        $tblProjetoBolsistas = TableRegistry::getTableLocator()->get('ProjetoBolsistas');
+        $connection = $tblProjetoBolsistas->getConnection();
+
+        try {
+            $resultado = $connection->transactional(function ($conn) {
+                $totalFase6 = (int)$conn->execute("
+                    SELECT COUNT(*) AS total
+                    FROM projeto_bolsistas pb
+                    WHERE pb.fase_id = 6
+                ")->fetch('assoc')['total'];
+
+                $totalFase7 = (int)$conn->execute("
+                    SELECT COUNT(*) AS total
+                    FROM projeto_bolsistas pb
+                    WHERE pb.fase_id = 7
+                ")->fetch('assoc')['total'];
+
+                $mapeaveisFase6 = (int)$conn->execute("
+                    SELECT COUNT(*) AS total
+                    FROM projeto_bolsistas pb
+                    INNER JOIN (
+                        SELECT sh.projeto_bolsista_id, MAX(sh.id) AS historico_id
+                        FROM situacao_historicos sh
+                        WHERE sh.fase_atual = 6
+                        GROUP BY sh.projeto_bolsista_id
+                    ) ult ON ult.projeto_bolsista_id = pb.id
+                    WHERE pb.fase_id = 6
+                ")->fetch('assoc')['total'];
+
+                $mapeaveisFase7 = (int)$conn->execute("
+                    SELECT COUNT(*) AS total
+                    FROM projeto_bolsistas pb
+                    INNER JOIN (
+                        SELECT sh.projeto_bolsista_id, MAX(sh.id) AS historico_id
+                        FROM situacao_historicos sh
+                        WHERE sh.fase_atual = 7
+                        GROUP BY sh.projeto_bolsista_id
+                    ) ult ON ult.projeto_bolsista_id = pb.id
+                    WHERE pb.fase_id = 7
+                ")->fetch('assoc')['total'];
+
+                $conn->execute("
+                    UPDATE projeto_bolsistas pb
+                    INNER JOIN (
+                        SELECT sh.projeto_bolsista_id, MAX(sh.id) AS historico_id
+                        FROM situacao_historicos sh
+                        WHERE sh.fase_atual = 6
+                        GROUP BY sh.projeto_bolsista_id
+                    ) ult ON ult.projeto_bolsista_id = pb.id
+                    INNER JOIN situacao_historicos sh ON sh.id = ult.historico_id
+                    SET
+                        pb.homologado = 'S',
+                        pb.homologado_data = COALESCE(sh.modified, sh.created),
+                        pb.homologado_por = sh.usuario_id,
+                        pb.homologado_justificativa = NULL
+                    WHERE pb.fase_id = 6
+                ");
+                $atualizadosFase6 = (int)$conn->execute('SELECT ROW_COUNT() AS total')->fetch('assoc')['total'];
+
+                $conn->execute("
+                    UPDATE projeto_bolsistas pb
+                    INNER JOIN (
+                        SELECT sh.projeto_bolsista_id, MAX(sh.id) AS historico_id
+                        FROM situacao_historicos sh
+                        WHERE sh.fase_atual = 7
+                        GROUP BY sh.projeto_bolsista_id
+                    ) ult ON ult.projeto_bolsista_id = pb.id
+                    INNER JOIN situacao_historicos sh ON sh.id = ult.historico_id
+                    SET
+                        pb.homologado = 'N',
+                        pb.homologado_data = COALESCE(sh.modified, sh.created),
+                        pb.homologado_por = sh.usuario_id,
+                        pb.homologado_justificativa = sh.justificativa
+                    WHERE pb.fase_id = 7
+                ");
+                $atualizadosFase7 = (int)$conn->execute('SELECT ROW_COUNT() AS total')->fetch('assoc')['total'];
+
+                return compact(
+                    'totalFase6',
+                    'totalFase7',
+                    'mapeaveisFase6',
+                    'mapeaveisFase7',
+                    'atualizadosFase6',
+                    'atualizadosFase7'
+                );
+            });
+
+            $semHistoricoFase6 = max(0, (int)$resultado['totalFase6'] - (int)$resultado['mapeaveisFase6']);
+            $semHistoricoFase7 = max(0, (int)$resultado['totalFase7'] - (int)$resultado['mapeaveisFase7']);
+
+            $this->Flash->success(
+                'Migração de homologação concluída. ' .
+                'Fase 6: alvos=' . (int)$resultado['totalFase6'] .
+                ', mapeáveis=' . (int)$resultado['mapeaveisFase6'] .
+                ', atualizados=' . (int)$resultado['atualizadosFase6'] .
+                ', sem histórico=' . $semHistoricoFase6 . '. ' .
+                'Fase 7: alvos=' . (int)$resultado['totalFase7'] .
+                ', mapeáveis=' . (int)$resultado['mapeaveisFase7'] .
+                ', atualizados=' . (int)$resultado['atualizadosFase7'] .
+                ', sem histórico=' . $semHistoricoFase7 . '.'
+            );
+        } catch (\Throwable $e) {
+            $this->Flash->error('Erro na migração de homologação histórica: ' . $e->getMessage());
+        }
+
+        return $this->redirect($this->referer(['action' => 'index']));
+    }
+
     protected function uploadImagemMensagem($file): array
     {
         if (!is_object($file) || !$file->getClientFilename()) {

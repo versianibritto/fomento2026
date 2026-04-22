@@ -96,10 +96,15 @@ use Cake\ORM\Entity;
  * @property int|null $ano_doutorado
  * @property bool|null $recem_servidor
  * @property string|null $justificativa_bolsa
+ * @property string|null $homologado
+ * @property \Cake\I18n\DateTime|null $homologado_data
+ * @property int|null $homologado_por
+ * @property string|null $homologado_justificativa
  *
  * @property \App\Model\Entity\Editai $editai
  * @property \App\Model\Entity\Projeto $projeto
  * @property \App\Model\Entity\Usuario $usuario
+ * @property \App\Model\Entity\Usuario $homologador
  * @property \App\Model\Entity\MotivoCancelamento $motivo_cancelamento
  * @property \App\Model\Entity\Area $area
  * @property \App\Model\Entity\ProjetoBolsista $matriz_projeto_bolsista
@@ -213,9 +218,14 @@ class ProjetoBolsista extends Entity
         'ano_doutorado' => true,
         'recem_servidor' => true,
         'justificativa_bolsa' => true,
+        'homologado' => true,
+        'homologado_data' => true,
+        'homologado_por' => true,
+        'homologado_justificativa' => true,
         'editai' => true,
         'projeto' => true,
         'usuario' => true,
+        'homologador' => true,
         'motivo_cancelamento' => true,
         'area' => true,
         'matriz_projeto_bolsista' => true,

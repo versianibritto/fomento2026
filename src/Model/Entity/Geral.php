@@ -96,6 +96,10 @@ use Cake\ORM\Entity;
  * @property int|null $referencia_inscricao_anterior
  * @property int|null $troca_projeto
  * @property int|null $heranca
+ * @property string|null $homologado
+ * @property string|null $homologado_data
+ * @property string|null $homologado_por
+ * @property string|null $homologado_justificativa
  */
 class Geral extends Entity
 {
@@ -193,5 +197,9 @@ class Geral extends Entity
         'referencia_inscricao_anterior' => true,
         'troca_projeto' => true,
         'heranca' => true,
+        'homologado' => true,
+        'homologado_data' => true,
+        'homologado_por' => true,
+        'homologado_justificativa' => true,
     ];
 }

@@ -571,7 +571,7 @@
 
             <?php if (!$homologacaoPermitida): ?>
                 <div class="alert alert-danger mb-0 fw-semibold border-2">
-                    Somente inscrições nas fases Finalizada, Homologada ou Não homologada podem ser homologadas ou não homologadas.
+                    Somente inscrições na fase Finalizada podem seguir para homologação neste fluxo.
                 </div>
             <?php else: ?>
                 <div class="d-flex flex-wrap gap-2 justify-content-end">
@@ -582,8 +582,7 @@
                     ]) ?>
                         <?= $this->Form->hidden('acao_homologacao', ['value' => 'homologar']) ?>
                         <?= $this->Form->hidden('confirmou_reavaliacao', ['value' => $exigeConfirmacaoReavaliacao ? '0' : '1']) ?>
-                        <button type="submit" class="btn btn-success"
-                            onclick="return confirmarReavaliacao('form-homologar', 'Confirma a homologação desta inscrição?');">
+                        <button type="button" class="btn btn-success" id="btn-homologar">
                             Homologar
                         </button>
                     <?= $this->Form->end() ?>
@@ -614,9 +613,9 @@
                             </div>
                             <div class="d-flex gap-2 justify-content-end">
                                 <button
-                                    type="submit"
+                                    type="button"
                                     class="btn btn-danger"
-                                    onclick="return confirmarReavaliacao('form-nao-homologar', 'Confirma a não homologação desta inscrição?');">
+                                    id="btn-confirmar-nao-homologar">
                                     Confirmar não homologação
                                 </button>
                             </div>
@@ -631,17 +630,42 @@
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const exigeConfirmacaoReavaliacao = <?= $exigeConfirmacaoReavaliacao ? 'true' : 'false' ?>;
+    const mensagemReavaliacaoHomologar = 'Esta inscrição já possui homologação registrada. Se continuar, o resultado será sobrescrito. Deseja continuar com a homologação?';
+    const mensagemReavaliacaoNaoHomologar = 'Esta inscrição já possui homologação registrada. Se continuar, o resultado será sobrescrito. Deseja continuar com a não homologação?';
+    const box = document.getElementById('box-nao-homologar');
+    const btnMostrarNaoHomologar = document.getElementById('btn-mostrar-nao-homologar');
+    const btnHomologar = document.getElementById('btn-homologar');
+    const textareaMotivo = document.getElementById('motivo-nao-homologar');
+    const formHomologar = document.getElementById('form-homologar');
+    const formNaoHomologar = document.getElementById('form-nao-homologar');
+    const btnConfirmarNaoHomologar = document.getElementById('btn-confirmar-nao-homologar');
 
-    window.confirmarReavaliacao = function (formId, mensagemAcao) {
-        const confirmouAcao = window.confirm(mensagemAcao);
+    const atualizarBoxNaoHomologar = function (mostrar) {
+        if (!box) {
+            return;
+        }
+        box.style.display = mostrar ? 'block' : 'none';
+        if (textareaMotivo) {
+            textareaMotivo.required = mostrar;
+            if (!mostrar) {
+                textareaMotivo.setCustomValidity('');
+            }
+        }
+        if (btnMostrarNaoHomologar) {
+            btnMostrarNaoHomologar.textContent = mostrar ? 'Cancelar não homologação' : 'Não homologar';
+        }
+    };
+
+    const executarConfirmacaoReavaliacao = function (formId, mensagemAcao) {
+        let mensagemConfirmacao = mensagemAcao;
+        if (exigeConfirmacaoReavaliacao) {
+            mensagemConfirmacao = formId === 'form-homologar'
+                ? mensagemReavaliacaoHomologar
+                : mensagemReavaliacaoNaoHomologar;
+        }
+
+        const confirmouAcao = window.confirm(mensagemConfirmacao);
         if (!confirmouAcao) {
-            return false;
-        }
-        if (!exigeConfirmacaoReavaliacao) {
-            return true;
-        }
-        const confirmouReavaliacao = window.confirm('Esta inscrição já havia sido verificada. Deseja realmente alterar a avaliação?');
-        if (!confirmouReavaliacao) {
             return false;
         }
         const form = document.getElementById(formId);
@@ -654,15 +678,39 @@ document.addEventListener('DOMContentLoaded', function () {
         return true;
     };
 
-    const btn = document.getElementById('btn-mostrar-nao-homologar');
-    const box = document.getElementById('box-nao-homologar');
-    if (!btn || !box) {
-        return;
+    window.confirmarReavaliacao = executarConfirmacaoReavaliacao;
+
+    if (btnHomologar && formHomologar) {
+        btnHomologar.addEventListener('click', function () {
+            atualizarBoxNaoHomologar(false);
+            if (!executarConfirmacaoReavaliacao('form-homologar', 'Confirma a homologação desta inscrição?')) {
+                return;
+            }
+            formHomologar.submit();
+        });
     }
-    btn.addEventListener('click', function () {
-        const exibindo = box.style.display !== 'none';
-        box.style.display = exibindo ? 'none' : 'block';
-    });
+
+    if (btnConfirmarNaoHomologar && formNaoHomologar) {
+        btnConfirmarNaoHomologar.addEventListener('click', function () {
+            if (textareaMotivo && !textareaMotivo.checkValidity()) {
+                textareaMotivo.reportValidity();
+                return;
+            }
+            if (!executarConfirmacaoReavaliacao('form-nao-homologar', 'Confirma a não homologação desta inscrição?')) {
+                return;
+            }
+            formNaoHomologar.submit();
+        });
+    }
+
+    if (btnMostrarNaoHomologar && box) {
+        btnMostrarNaoHomologar.addEventListener('click', function () {
+            const exibindo = box.style.display !== 'none';
+            atualizarBoxNaoHomologar(!exibindo);
+        });
+    }
+
+    atualizarBoxNaoHomologar(box && box.style.display !== 'none');
 });
 
 document.querySelectorAll('.homologacao-anexo-file').forEach(function (input) {

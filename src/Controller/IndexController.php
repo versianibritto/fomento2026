@@ -232,6 +232,8 @@ class IndexController extends AppController
             'andamento'    => 0,
             'finalizadas'  => 0,
             'total'        => 0,
+            'homologacaoPendente' => 0,
+            'homologacaoTotal' => 0,
             'cancel'       => 0,
             'subst'        => 0,
             'aceito'       => 0,
@@ -247,6 +249,8 @@ class IndexController extends AppController
         foreach ($rows as $r) {
             $qtd = (int)$r['qtd'];
             $vigenciaNaoIniciada = !empty($r['inicio_vigencia']) && $r['inicio_vigencia'] > $hoje;
+            $ehFinalizada = $vigenciaNaoIniciada && in_array($r['bloco'], ['F', 'H', 'R'], true);
+            $statusHomologacao = trim((string)($r['homologado'] ?? ''));
 
             if ((int)$r['vigente'] === 1) {
                 $dashboard['bolsasAtivas'] += $qtd;
@@ -256,8 +260,16 @@ class IndexController extends AppController
                 $dashboard['andamento'] += $qtd;
             }
 
-            if ($vigenciaNaoIniciada && in_array($r['bloco'], ['F', 'H', 'R'], true)) {
+            if ($ehFinalizada) {
                 $dashboard['finalizadas'] += $qtd;
+                $dashboard['homologacaoTotal'] += $qtd;
+                if ($statusHomologacao === '') {
+                    $dashboard['homologacaoPendente'] += $qtd;
+                } elseif ($statusHomologacao === 'S') {
+                    $dashboard['aceito'] += $qtd;
+                } elseif ($statusHomologacao === 'N') {
+                    $dashboard['recusado'] += $qtd;
+                }
             }
 
              if (in_array($r['fase_id'], [12, 21], true)) {
@@ -267,14 +279,6 @@ class IndexController extends AppController
              if (in_array($r['fase_id'], [15], true)) {
                 $dashboard['subst'] += $qtd;
             }
-
-             if ($vigenciaNaoIniciada && in_array($r['fase_id'], [6], true)) {
-                $dashboard['aceito'] += $qtd;
-            }
-
-             if ($vigenciaNaoIniciada && in_array($r['fase_id'], [7], true)) {
-                $dashboard['recusado'] += $qtd;
-             }
 
              if ($vigenciaNaoIniciada && (int)$r['fase_id'] === 9) {
                 $dashboard['resultadoAprovado'] += $qtd;
@@ -296,6 +300,7 @@ class IndexController extends AppController
             $dashboard['resultadoAprovado'] +
             $dashboard['resultadoReprovado'] +
             $dashboard['resultadoReserva'];
+        $dashboard['resultadoReferenciaTotal'] = $dashboard['aceito'];
 
         $this->set(compact('dashboard'));
         

@@ -316,104 +316,29 @@ class AvaliadoresController extends AppController
 
     public function listaRaic()
     {
-        $this->request->allowMethod(['get']);
-
-        $unidades = $this->obterUnidadesDisponiveis();
-        $filtros = $this->obterFiltrosListaRaic($unidades);
-        $anosOptions = $this->obterAnosListaRaic();
-        if (!isset($anosOptions[$filtros['ano']])) {
-            $filtros['ano'] = (int)array_key_first($anosOptions);
-        }
-
-        $query = $this->montarQueryListaRaic($filtros);
-
-        if ((int)$this->request->getQuery('exportar', 0) === 1) {
-            return $this->exportarListaRaicCsv($query, $filtros);
-        }
-
-        $avaliadores = $this->paginate($query, ['limit' => 20]);
-
-        $this->set(compact('avaliadores', 'anosOptions', 'unidades', 'filtros'));
+        return $this->redirect([
+            'controller' => 'Listas',
+            'action' => 'listaAvaliadoresRaic',
+            '?' => $this->request->getQueryParams(),
+        ]);
     }
 
     public function listaNova()
     {
-        $this->request->allowMethod(['get']);
-
-        if (!$this->ehYoda()) {
-            $this->Flash->error('Área restrita à Gestão de Fomento.');
-            return $this->redirect(['controller' => 'Index', 'action' => 'dashboard']);
-        }
-
-        $filtros = $this->obterFiltrosListaNova();
-        $anosOptions = $this->obterAnosListaPorTipo('N');
-        if (!isset($anosOptions[$filtros['ano']])) {
-            $filtros['ano'] = (int)array_key_first($anosOptions);
-        }
-
-        $editais = $this->obterEditaisListaNova();
-        if ($filtros['editai_id'] !== 0 && !isset($editais[$filtros['editai_id']])) {
-            $filtros['editai_id'] = 0;
-        }
-
-        $grandesAreas = $this->obterGrandesAreasRestritas();
-        if ($filtros['grandes_area_id'] !== 0 && !isset($grandesAreas[$filtros['grandes_area_id']])) {
-            $filtros['grandes_area_id'] = 0;
-        }
-
-        $areas = $this->obterAreasPorGrandeArea((int)$filtros['grandes_area_id']);
-        if ($filtros['area_id'] !== 0 && !isset($areas[$filtros['area_id']])) {
-            $filtros['area_id'] = 0;
-        }
-
-        $query = $this->montarQueryListaNova($filtros);
-
-        if ((int)$this->request->getQuery('exportar', 0) === 1) {
-            return $this->exportarListaNovaCsv($query);
-        }
-
-        $avaliadores = $this->paginate($query, ['limit' => 20]);
-
-        $this->set(compact('avaliadores', 'anosOptions', 'editais', 'grandesAreas', 'areas', 'filtros'));
+        return $this->redirect([
+            'controller' => 'Listas',
+            'action' => 'listaAvaliadoresNova',
+            '?' => $this->request->getQueryParams(),
+        ]);
     }
 
     public function listaInscricoes()
     {
-        $this->request->allowMethod(['get']);
-
-        if (!$this->ehYoda()) {
-            $this->Flash->error('Área restrita à Gestão de Fomento.');
-            return $this->redirect(['controller' => 'Index', 'action' => 'dashboard']);
-        }
-
-        $filtros = $this->obterFiltrosListaInscricoes();
-        $editais = $this->obterEditaisAbertosInscricoes();
-        if ($filtros['editai_id'] !== 0 && !isset($editais[$filtros['editai_id']])) {
-            $filtros['editai_id'] = 0;
-        }
-
-        $grandesAreas = $this->obterGrandesAreasRestritas();
-        if ($filtros['grandes_area_id'] !== 0 && !isset($grandesAreas[$filtros['grandes_area_id']])) {
-            $filtros['grandes_area_id'] = 0;
-        }
-
-        $areas = $this->obterAreasPorGrandeArea((int)$filtros['grandes_area_id']);
-        if ($filtros['area_id'] !== 0 && !isset($areas[$filtros['area_id']])) {
-            $filtros['area_id'] = 0;
-        }
-
-        $statusOptions = [
-            'vinculado' => 'Vinculado (2 avaliadores)',
-            'nao_vinculado' => 'Não vinculado (0 avaliadores)',
-        ];
-        if ($filtros['status_vinculo'] !== '' && !isset($statusOptions[$filtros['status_vinculo']])) {
-            $filtros['status_vinculo'] = '';
-        }
-
-        $query = $this->montarQueryListaInscricoes($filtros);
-        $inscricoes = $this->paginate($query, ['limit' => 12]);
-
-        $this->set(compact('inscricoes', 'editais', 'grandesAreas', 'areas', 'filtros', 'statusOptions'));
+        return $this->redirect([
+            'controller' => 'Listas',
+            'action' => 'listaInscricoesAvaliadores',
+            '?' => $this->request->getQueryParams(),
+        ]);
     }
 
     public function vincularInscricao($id = null)
@@ -449,7 +374,7 @@ class AvaliadoresController extends AppController
 
         if (!$editalAberto) {
             $this->Flash->error('O edital desta inscrição não está com avaliação aberta para vinculação de avaliadores.');
-            return $this->redirect(['action' => 'listaInscricoes']);
+            return $this->redirect(['controller' => 'Listas', 'action' => 'listaInscricoesAvaliadores']);
         }
 
         $vinculosAtivos = $avaliadorBolsistasTable->find()
@@ -551,6 +476,13 @@ class AvaliadoresController extends AppController
             $dados = $this->request->getData();
             $avaliador1 = (int)($dados['avaliador_1'] ?? 0);
             $avaliador2 = (int)($dados['avaliador_2'] ?? 0);
+            $vinculoAtualPorOrdem = [];
+            foreach ($vinculosAtivos as $vinculoAtivo) {
+                $ordemAtual = (int)($vinculoAtivo->ordem ?? 0);
+                if (in_array($ordemAtual, [1, 2], true)) {
+                    $vinculoAtualPorOrdem[$ordemAtual] = $vinculoAtivo;
+                }
+            }
 
             if ($avaliador1 <= 0 || $avaliador2 <= 0) {
                 $this->Flash->error('Selecione os dois avaliadores.');
@@ -575,6 +507,30 @@ class AvaliadoresController extends AppController
             if (!empty($inscricao->bolsista) && in_array((int)$inscricao->bolsista, [$avaliador1, $avaliador2], true)) {
                 $this->Flash->error('O bolsista não pode ser vinculado como avaliador.');
                 return $this->redirect(['action' => 'vincularInscricao', $inscricao->id]);
+            }
+
+            if ($avaliador1Atual !== null && $avaliador2Atual !== null) {
+                if ((int)$avaliador1Atual === $avaliador1 && (int)$avaliador2Atual === $avaliador2) {
+                    $this->Flash->error('Nenhuma alteração foi realizada nos avaliadores vinculados.');
+                    return $this->redirect(['action' => 'vincularInscricao', $inscricao->id]);
+                }
+
+                if ((int)$avaliador1Atual === $avaliador2 && (int)$avaliador2Atual === $avaliador1) {
+                    $this->Flash->error('Não é permitido apenas inverter a ordem dos mesmos avaliadores.');
+                    return $this->redirect(['action' => 'vincularInscricao', $inscricao->id]);
+                }
+            }
+
+            foreach ([1 => $avaliador1, 2 => $avaliador2] as $ordem => $avaliadorSelecionado) {
+                $vinculoAtual = $vinculoAtualPorOrdem[$ordem] ?? null;
+                if (
+                    $vinculoAtual !== null
+                    && (string)($vinculoAtual->situacao ?? '') === 'F'
+                    && (int)($vinculoAtual->avaliador_id ?? 0) !== (int)$avaliadorSelecionado
+                ) {
+                    $this->Flash->error('Não é permitido substituir avaliador que já lançou nota.');
+                    return $this->redirect(['action' => 'vincularInscricao', $inscricao->id]);
+                }
             }
 
             $avaliadoresSelecionados = $avaliadorsTable->find()
@@ -632,26 +588,30 @@ class AvaliadoresController extends AppController
                     $avaliador1,
                     $avaliador2,
                     $avaliadoresSelecionados,
-                    $id
+                    $id,
+                    $vinculoAtualPorOrdem
                 ): void {
-                    $avaliadorBolsistasTable->updateAll(
-                        ['deleted' => 1],
-                        [
-                            'tipo' => 'N',
-                            'deleted' => 0,
-                            'OR' => [
-                                ['projeto_bolsista_id' => (int)$id],
-                                ['bolsista' => (int)$id],
-                            ],
-                        ]
-                    );
-
                     $dadosVinculo = [
                         ['avaliador_id' => $avaliador1, 'ordem' => 1],
                         ['avaliador_id' => $avaliador2, 'ordem' => 2],
                     ];
 
                     foreach ($dadosVinculo as $item) {
+                        $ordem = (int)$item['ordem'];
+                        $avaliadorId = (int)$item['avaliador_id'];
+                        $vinculoAtual = $vinculoAtualPorOrdem[$ordem] ?? null;
+
+                        if ($vinculoAtual !== null && (int)($vinculoAtual->avaliador_id ?? 0) === $avaliadorId) {
+                            continue;
+                        }
+
+                        if ($vinculoAtual !== null) {
+                            $vinculoAtual->deleted = 1;
+                            if (!$avaliadorBolsistasTable->save($vinculoAtual)) {
+                                throw new \RuntimeException('Erro ao inativar o vínculo anterior do avaliador.');
+                            }
+                        }
+
                         $novo = $avaliadorBolsistasTable->newEmptyEntity();
                         $novo->bolsista = (int)$inscricao->id;
                         $novo->projeto_bolsista_id = (int)$inscricao->id;
@@ -660,9 +620,9 @@ class AvaliadoresController extends AppController
                         $novo->editai_id = (int)$inscricao->editai_id;
                         $novo->ano = (string)date('Y');
                         $novo->coordenador = 0;
-                        $novo->avaliador_id = (int)$item['avaliador_id'];
-                        $novo->usuario_id = (int)($avaliadoresSelecionados[(int)$item['avaliador_id']]['usuario_id'] ?? 0);
-                        $novo->ordem = (int)$item['ordem'];
+                        $novo->avaliador_id = $avaliadorId;
+                        $novo->usuario_id = (int)($avaliadoresSelecionados[$avaliadorId]['usuario_id'] ?? 0);
+                        $novo->ordem = $ordem;
                         $novo->deleted = 0;
 
                         if (!$avaliadorBolsistasTable->save($novo)) {
@@ -676,7 +636,7 @@ class AvaliadoresController extends AppController
                         ? 'Avaliadores vinculados com sucesso.'
                         : 'Avaliadores substituídos com sucesso.'
                 );
-                return $this->redirect(['action' => 'listaInscricoes']);
+                return $this->redirect(['controller' => 'Listas', 'action' => 'listaInscricoesAvaliadores']);
             } catch (\Throwable $e) {
                 $this->Flash->error('Não foi possível salvar a vinculação dos avaliadores.');
                 return $this->redirect(['action' => 'vincularInscricao', $inscricao->id]);

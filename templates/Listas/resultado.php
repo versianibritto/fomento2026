@@ -7,6 +7,9 @@ if ($tipo === 'V') {
 } elseif ($tipo === 'T') {
     $tipoLabel = 'Todos';
 }
+$identity = $this->request->getAttribute('identity');
+$usuarioLogadoId = (int)($identity['id'] ?? 0);
+$ehTi = in_array($usuarioLogadoId, [1, 8088], true);
 ?>
 
 <div class="container mt-4">
@@ -27,6 +30,10 @@ if ($tipo === 'V') {
         $faseLabel = $faseSelecionada && isset($situacao[$faseSelecionada])
             ? $situacao[$faseSelecionada]
             : 'Todas';
+        $homologacaoSelecionada = strtoupper((string)($this->request->getQuery('homologado') ?? 'T'));
+        $homologacaoLabel = isset($homologacao[$homologacaoSelecionada])
+            ? $homologacao[$homologacaoSelecionada]
+            : 'Todas';
         $origemSelecionada = (string)($this->request->getQuery('origem') ?? '');
         $origemLabel = $origemSelecionada !== '' && isset($origem[$origemSelecionada])
             ? $origem[$origemSelecionada]
@@ -34,6 +41,10 @@ if ($tipo === 'V') {
         $cotaSelecionada = (string)($this->request->getQuery('cota') ?? '');
         $cotaLabel = $cotaSelecionada !== '' && isset($cotas[$cotaSelecionada])
             ? $cotas[$cotaSelecionada]
+            : 'Todas';
+        $herancaSelecionada = strtoupper((string)($this->request->getQuery('heranca') ?? 'T'));
+        $herancaLabel = isset($herancaOptions[$herancaSelecionada])
+            ? $herancaOptions[$herancaSelecionada]
             : 'Todas';
     ?>
 
@@ -45,10 +56,14 @@ if ($tipo === 'V') {
                 <?= h($programaLabel) ?>,
                 <strong>Fase</strong>
                 <?= h($faseLabel) ?>,
+                <strong>Homologação</strong>
+                <?= h($homologacaoLabel) ?>,
                 <strong>Origem</strong>
                 <?= h($origemLabel) ?>,
                 <strong>Cota</strong>
-                <?= h($cotaLabel) ?>
+                <?= h($cotaLabel) ?>,
+                <strong>Herança</strong>
+                <?= h($herancaLabel) ?>
             </div>
             <a class="btn btn-outline-success"
                href="<?= $this->Url->build([
@@ -58,8 +73,10 @@ if ($tipo === 'V') {
                    '?' => [
                        'programa' => $this->request->getQuery('programa') ?: null,
                        'fase_id' => $this->request->getQuery('fase_id') ?: null,
+                       'homologado' => $this->request->getQuery('homologado') ?: null,
                        'origem' => $this->request->getQuery('origem') ?: null,
                        'cota' => $this->request->getQuery('cota') ?: null,
+                       'heranca' => $this->request->getQuery('heranca') ?: null,
                        'acao' => 'excel',
                    ],
                ]) ?>">
@@ -82,7 +99,6 @@ if ($tipo === 'V') {
                         <th><?= $this->Paginator->sort('origem', 'Origem') ?></th>
                         <th><?= $this->Paginator->sort('cota', 'Cota') ?></th>
                         <th><?= $this->Paginator->sort('programa_nome', 'Programa') ?></th>
-                        <th><?= $this->Paginator->sort('editai_nome', 'Edital') ?></th>
                         <th class="text-end">Ações</th>
                     </tr>
                 </thead>
@@ -92,6 +108,10 @@ if ($tipo === 'V') {
                             <?php
                                 $nome = explode(' ', (string)($b->nome_bolsista ?? ''));
                                 $nome_o = explode(' ', (string)($b->nome_orientador ?? ''));
+                                $programaSigla = trim((string)($b->programa_nome ?? ''));
+                                $nomeEdital = trim((string)($b->editai_nome ?? ''));
+                                $rotuloPrincipal = $programaSigla !== '' ? $programaSigla : ($nomeEdital !== '' ? $nomeEdital : '-');
+                                $rotuloSecundario = ($ehTi && $nomeEdital !== '') ? $nomeEdital : '';
                             ?>
                             <tr>
                                 <td>
@@ -108,8 +128,13 @@ if ($tipo === 'V') {
                                 <td><?= h($b->fase_nome ?? ($b->fase_id ?? '-')) ?></td>
                                 <td><?= h(($origem[(string)($b->origem ?? '')] ?? ($b->origem ?? '-'))) ?></td>
                                 <td><?= h(($cotas[(string)($b->cota ?? '')] ?? ($b->cota ?? '-'))) ?></td>
-                                <td><?= h($b->programa_nome ?? '-') ?></td>
-                                <td><?= h($b->editai_nome ?? '-') ?></td>
+                                <td>
+                                    <?= h($rotuloPrincipal) ?>
+                                    <?php if ($rotuloSecundario !== ''): ?>
+                                        <br>
+                                        <small class="text-muted"><?= h($rotuloSecundario) ?></small>
+                                    <?php endif; ?>
+                                </td>
                                 <td class="text-end">
                                     <?php if (!empty($this->request->getAttribute('identity')['yoda'])): ?>
                                         <?php

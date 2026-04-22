@@ -300,7 +300,7 @@ class InscricoesController extends AppController
             ->where([
                 'ProjetoBolsistas.id' => (int)$inscricaoContext['inscricao']->id,
                 'ProjetoBolsistas.editai_id' => (int)$edital->id,
-                'ProjetoBolsistas.orientador' => (int)$identity->id,
+                //'ProjetoBolsistas.orientador' => (int)$identity->id,
                 'ProjetoBolsistas.deleted IS' => null,
 
             ])
@@ -2068,7 +2068,17 @@ class InscricoesController extends AppController
         }
 
         $errosAnexosProjeto = [];
-        if (empty($anexosPorTipo[5])) {
+        $temAnexoProjetoTipo5 = false;
+        if (!empty($inscricao->projeto_id)) {
+            $temAnexoProjetoTipo5 = $this->fetchTable('Anexos')->find()
+                ->where([
+                    'Anexos.projeto_id' => (int)$inscricao->projeto_id,
+                    'Anexos.anexos_tipo_id' => 5,
+                    'Anexos.deleted IS' => null,
+                ])
+                ->count() > 0;
+        }
+        if (!$temAnexoProjetoTipo5) {
             $nomeTipo5 = $this->fetchTable('AnexosTipos')->find()
                 ->select(['nome'])
                 ->where(['AnexosTipos.id' => 5])

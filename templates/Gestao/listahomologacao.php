@@ -1,6 +1,9 @@
 <?php
     $programaId = (int)($programaId ?? 0);
-    $faseId = (int)($faseId ?? 0);
+    $homologado = (string)($homologado ?? 'P');
+    $identity = $this->request->getAttribute('identity');
+    $usuarioLogadoId = (int)($identity['id'] ?? 0);
+    $ehTi = in_array($usuarioLogadoId, [1, 8088], true);
 ?>
 
 <div class="container mt-4">
@@ -25,11 +28,10 @@
                     ]) ?>
                 </div>
                 <div class="col-md-4">
-                    <?= $this->Form->control('fase_id', [
-                        'label' => 'Situação',
-                        'options' => $fases,
-                        'empty' => 'Todos',
-                        'value' => $faseId ?: '',
+                    <?= $this->Form->control('homologado', [
+                        'label' => 'Situação de homologação',
+                        'options' => $statusHomologacaoOptions,
+                        'value' => $homologado,
                         'class' => 'form-select',
                     ]) ?>
                 </div>
@@ -41,7 +43,7 @@
                            'action' => 'listahomologacao',
                            '?' => [
                                'programa_id' => $programaId > 0 ? $programaId : '',
-                               'fase_id' => $faseId > 0 ? $faseId : '',
+                               'homologado' => $homologado,
                                'acao' => 'excel',
                                'origem' => 'gestao',
                            ],
@@ -58,29 +60,54 @@
             <table class="table table-hover align-middle">
                 <thead class="table-light">
                     <tr>
-                        <th>Inscrição</th>
-                        <th>Edital</th>
+                        <th>ID</th>
                         <th>Programa</th>
-                        <th>Fase</th>
+                        <th>Status</th>
+                        <th>Homologação</th>
                         <th>Bolsista</th>
                         <th>Orientador</th>
                         <th>Unidade</th>
-                        <th>Data</th>
-                        <th></th>
+                        <th>Ação</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if (!empty($inscricoes)): ?>
                         <?php foreach ($inscricoes as $item): ?>
                             <tr>
+                                <?php
+                                    $programaSigla = trim((string)($item->editai->programa->sigla ?? ($item->editai->programa_id ?? '')));
+                                    $nomeEdital = trim((string)($item->editai->nome ?? '-'));
+                                    $rotuloPrincipal = $programaSigla;
+                                    $rotuloSecundario = '';
+                                    if ($ehTi && $nomeEdital !== '') {
+                                        $rotuloPrincipal = $nomeEdital;
+                                        $rotuloSecundario = $programaSigla;
+                                    } elseif ($rotuloPrincipal === '') {
+                                        $rotuloPrincipal = $nomeEdital !== '' ? $nomeEdital : '-';
+                                    }
+                                ?>
                                 <td>#<?= h($item->id) ?></td>
-                                <td><?= h($item->editai->nome ?? '-') ?></td>
-                                <td><?= h($item->editai->programa->sigla ?? ($item->editai->programa_id ?? '-')) ?></td>
+                                <td>
+                                    <?= h($rotuloPrincipal) ?>
+                                    <?php if ($rotuloSecundario !== ''): ?>
+                                        <br>
+                                        <small class="text-muted"><?= h($rotuloSecundario) ?></small>
+                                    <?php endif; ?>
+                                </td>
                                 <td><?= h($item->fase->nome ?? '-') ?></td>
+                                <td>
+                                    <?php
+                                        $statusHomologacao = match ((string)($item->homologado ?? '')) {
+                                            'S' => 'Homologada',
+                                            'N' => 'Não homologada',
+                                            default => 'Pendente',
+                                        };
+                                    ?>
+                                    <?= h($statusHomologacao) ?>
+                                </td>
                                 <td><?= h($item->bolsista_usuario->nome ?? '-') ?></td>
                                 <td><?= h($item->orientadore->nome ?? '-') ?></td>
                                 <td><?= h($item->orientadore->unidade->sigla ?? '-') ?></td>
-                                <td><?= !empty($item->created) ? h($item->created->i18nFormat('dd/MM/yyyy')) : '-' ?></td>
                                 <td class="text-end">
                                     <?= $this->Html->link('Homologar', [
                                         'controller' => 'Gestao',
@@ -92,13 +119,16 @@
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="9" class="text-center text-muted fw-bold">Nenhum registro encontrado.</td>
+                            <td colspan="8" class="text-center text-muted fw-bold">Nenhum registro encontrado.</td>
                         </tr>
                     <?php endif; ?>
                 </tbody>
             </table>
 
-            <div class="d-flex justify-content-between align-items-center">
+            
+        </div>
+    </div>
+    <div class="d-flex justify-content-between align-items-center">
                 <div class="text-muted small">
                     <?= $this->Paginator->counter('Página {{page}} de {{pages}}') ?>
                 </div>
@@ -112,6 +142,4 @@
                     </ul>
                 </nav>
             </div>
-        </div>
-    </div>
 </div>

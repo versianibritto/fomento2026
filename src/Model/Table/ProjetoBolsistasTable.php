@@ -68,6 +68,12 @@ class ProjetoBolsistasTable extends Table
             'foreignKey' => 'coorientador',
             'joinType' => 'LEFT',
         ]);
+        $this->belongsTo('Homologadores', [
+            'className' => 'Usuarios',
+            'foreignKey' => 'homologado_por',
+            'joinType' => 'LEFT',
+            'propertyName' => 'homologador',
+        ]);
         $this->belongsTo('Substitutos', [
             'className' => 'ProjetoBolsistas',
             'foreignKey' => 'bolsista_anterior',
@@ -344,6 +350,24 @@ class ProjetoBolsistasTable extends Table
             ->allowEmptyString('justificativa_bolsa');
 
         $validator
+            ->scalar('homologado')
+            ->maxLength('homologado', 1)
+            ->inList('homologado', ['S', 'N'])
+            ->allowEmptyString('homologado');
+
+        $validator
+            ->dateTime('homologado_data')
+            ->allowEmptyDateTime('homologado_data');
+
+        $validator
+            ->nonNegativeInteger('homologado_por')
+            ->allowEmptyString('homologado_por');
+
+        $validator
+            ->scalar('homologado_justificativa')
+            ->allowEmptyString('homologado_justificativa');
+
+        $validator
             ->boolean('vigente')
             ->notEmptyString('vigente');
 
@@ -478,6 +502,7 @@ class ProjetoBolsistasTable extends Table
         $rules->add($rules->existsIn('area_pdj', 'Areas'), ['errorField' => 'area_pdj']);
         $rules->add($rules->existsIn('matriz', 'Matrizes'), ['errorField' => 'matriz']);
         $rules->add($rules->existsIn('pdj_inscricoe_id', 'PdjInscricoes'), ['errorField' => 'pdj_inscricoe_id']);
+        $rules->add($rules->existsIn('homologado_por', 'Homologadores'), ['errorField' => 'homologado_por']);
      
 
         return $rules;

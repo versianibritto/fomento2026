@@ -112,9 +112,9 @@ class PadraoController extends AppController
         $inscricao = $this->fetchTable('ProjetoBolsistas')->find()
             ->contain([
                 'Editais' => ['Programas'],
-                'Bolsistas' => ['Instituicaos'],
+                'Bolsistas',
                 'Orientadores',
-                'Coorientadores' => ['Escolaridades', 'Vinculos', 'Instituicaos'],
+                'Coorientadores' => ['Escolaridades', 'Vinculos'],
                 'Projetos' => ['Areas' => ['GrandesAreas'], 'Linhas' => ['AreasFiocruz']],
                 'Fases',
                 'Anexos' => ['conditions' => 'Anexos.deleted IS NULL', 'AnexosTipos', 'Usuarios'],
@@ -125,6 +125,18 @@ class PadraoController extends AppController
         if (!$inscricao) {
             $this->Flash->error('Inscricao não localizada para visualizacao.');
             return $this->redirect(['controller' => 'Index', 'action' => 'index']);
+        }
+
+        $instituicoesTable = $this->fetchTable('Instituicaos');
+        if (!empty($inscricao->bolsista_usuario) && is_numeric((string)($inscricao->bolsista_usuario->instituicao_curso ?? ''))) {
+            $inscricao->bolsista_usuario->instituicao = $instituicoesTable->find()
+                ->where(['Instituicaos.id' => (int)$inscricao->bolsista_usuario->instituicao_curso])
+                ->first();
+        }
+        if (!empty($inscricao->coorientadore) && is_numeric((string)($inscricao->coorientadore->instituicao_curso ?? ''))) {
+            $inscricao->coorientadore->instituicao = $instituicoesTable->find()
+                ->where(['Instituicaos.id' => (int)$inscricao->coorientadore->instituicao_curso])
+                ->first();
         }
 
         $ehYoda = $this->ehYoda();
@@ -398,7 +410,6 @@ class PadraoController extends AppController
             ->contain(['Avaliadors' => ['Usuarios']])
             ->where([
                 'AvaliadorBolsistas.bolsista' => (int)$inscricao->id,
-                'AvaliadorBolsistas.deleted' => 0,
             ])
             ->orderBy([
                 'AvaliadorBolsistas.ordem' => 'ASC',
@@ -442,8 +453,8 @@ class PadraoController extends AppController
         $fontes = $this->fonte;
         $resultadoMap = $this->resultado;
         $statusAvaliacaoMap = [
-            'F' => 'Finalizada',
-            'E' => 'Excluida',
+            'F' => 'Finalizado',
+            'E' => 'Aguardando avaliação',
         ];
 
         $origemAtual = strtoupper((string)($inscricao->origem ?? ''));

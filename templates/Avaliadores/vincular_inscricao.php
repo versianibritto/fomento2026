@@ -7,12 +7,31 @@ if ($projetoTitulo === '') {
 if ($projetoTitulo === '') {
     $projetoTitulo = 'Não informado';
 }
+$statusNotaMap = [
+    'E' => 'Aguardando avaliação',
+    'F' => 'Finalizado',
+];
+$avaliador1Bloqueado = false;
+$avaliador2Bloqueado = false;
+foreach ($vinculosAtivos as $vinculoAtivo) {
+    $ordemVinculo = (int)($vinculoAtivo->ordem ?? 0);
+    $situacaoVinculo = (string)($vinculoAtivo->situacao ?? '');
+    if ($situacaoVinculo !== 'F') {
+        continue;
+    }
+    if ($ordemVinculo === 1) {
+        $avaliador1Bloqueado = true;
+    }
+    if ($ordemVinculo === 2) {
+        $avaliador2Bloqueado = true;
+    }
+}
 ?>
 
 <div class="container mt-4">
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
         <h4 class="mb-0"><?= $vinculoExistente ? 'Substituir' : 'Vincular' ?> Avaliadores da Inscrição #<?= (int)$inscricao->id ?></h4>
-        <?= $this->Html->link('Voltar', ['controller' => 'Avaliadores', 'action' => 'listaInscricoes'], ['class' => 'btn btn-sm btn-outline-secondary']) ?>
+        <?= $this->Html->link('Voltar', ['controller' => 'Listas', 'action' => 'listaInscricoesAvaliadores'], ['class' => 'btn btn-sm btn-outline-secondary']) ?>
     </div>
 
     <div class="card shadow-sm mb-3">
@@ -61,6 +80,19 @@ if ($projetoTitulo === '') {
                                         | <?= h((string)$vinculo->avaliador->area->nome) ?>
                                     <?php endif; ?>
                                 </span>
+                                <div class="small mt-2">
+                                    <strong>Status da nota:</strong>
+                                    <?php
+                                        $statusNota = '';
+                                        if ((int)($vinculo->deleted ?? 0) === 1) {
+                                            $statusNota = 'Desvinculado';
+                                        } else {
+                                            $statusNotaKey = (string)($vinculo->situacao ?? '');
+                                            $statusNota = $statusNotaMap[$statusNotaKey] ?? ($statusNotaKey !== '' ? $statusNotaKey : 'Não informado');
+                                        }
+                                    ?>
+                                    <?= h($statusNota) ?>
+                                </div>
                             </div>
                         </div>
                     <?php endforeach; ?>
@@ -90,6 +122,7 @@ if ($projetoTitulo === '') {
                                         'value' => $filtrosAvaliador1['grandes_area_id'] ?? 0,
                                         'class' => 'form-select js-grande-area',
                                         'data-bloco' => '1',
+                                        'disabled' => $avaliador1Bloqueado,
                                     ]) ?>
                                 </div>
                                 <div class="col-12">
@@ -101,6 +134,7 @@ if ($projetoTitulo === '') {
                                         'value' => $filtrosAvaliador1['area_id'] ?? 0,
                                         'class' => 'form-select js-area',
                                         'data-bloco' => '1',
+                                        'disabled' => $avaliador1Bloqueado,
                                     ]) ?>
                                 </div>
                                 <div class="col-12">
@@ -113,7 +147,11 @@ if ($projetoTitulo === '') {
                                         'required' => true,
                                         'class' => 'form-select js-avaliador',
                                         'data-bloco' => '1',
+                                        'disabled' => $avaliador1Bloqueado,
                                     ]) ?>
+                                    <?php if ($avaliador1Bloqueado): ?>
+                                        <div class="form-text text-muted">Bloqueado porque a nota deste avaliador já foi lançada.</div>
+                                    <?php endif; ?>
                                 </div>
                             </div>
                         </div>
@@ -131,6 +169,7 @@ if ($projetoTitulo === '') {
                                         'value' => $filtrosAvaliador2['grandes_area_id'] ?? 0,
                                         'class' => 'form-select js-grande-area',
                                         'data-bloco' => '2',
+                                        'disabled' => $avaliador2Bloqueado,
                                     ]) ?>
                                 </div>
                                 <div class="col-12">
@@ -142,6 +181,7 @@ if ($projetoTitulo === '') {
                                         'value' => $filtrosAvaliador2['area_id'] ?? 0,
                                         'class' => 'form-select js-area',
                                         'data-bloco' => '2',
+                                        'disabled' => $avaliador2Bloqueado,
                                     ]) ?>
                                 </div>
                                 <div class="col-12">
@@ -154,16 +194,27 @@ if ($projetoTitulo === '') {
                                         'required' => true,
                                         'class' => 'form-select js-avaliador',
                                         'data-bloco' => '2',
+                                        'disabled' => $avaliador2Bloqueado,
                                     ]) ?>
+                                    <?php if ($avaliador2Bloqueado): ?>
+                                        <div class="form-text text-muted">Bloqueado porque a nota deste avaliador já foi lançada.</div>
+                                    <?php endif; ?>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
+                <?php if ($avaliador1Bloqueado): ?>
+                    <?= $this->Form->hidden('avaliador_1', ['value' => $avaliador1Atual]) ?>
+                <?php endif; ?>
+                <?php if ($avaliador2Bloqueado): ?>
+                    <?= $this->Form->hidden('avaliador_2', ['value' => $avaliador2Atual]) ?>
+                <?php endif; ?>
+
                 <div class="mt-4 d-flex gap-2">
                     <?= $this->Form->button($vinculoExistente ? 'Salvar substituição' : 'Salvar vinculação', ['class' => 'btn btn-primary']) ?>
-                    <?= $this->Html->link('Cancelar', ['controller' => 'Avaliadores', 'action' => 'listaInscricoes'], ['class' => 'btn btn-outline-secondary']) ?>
+                    <?= $this->Html->link('Cancelar', ['controller' => 'Listas', 'action' => 'listaInscricoesAvaliadores'], ['class' => 'btn btn-outline-secondary']) ?>
                 </div>
             <?= $this->Form->end() ?>
         </div>

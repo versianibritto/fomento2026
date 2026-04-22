@@ -3,20 +3,29 @@
         <div class="col-12">
             <div class="card card-primary card-outline">
                 <div class="card-body">
-                    <h4 class="mb-2">Lista de Avaliadores por Edital</h4>
+                    <h4 class="mb-2">Lista de Avaliadores RAIC</h4>
                     <p class="text-muted mb-3">
-                        Listagem dos avaliadores do tipo N, com filtros por nome, edital, grande área e área.
+                        Listagem dos avaliadores RAIC por ano e unidade, respeitando o escopo de acesso da unidade.
                     </p>
 
                     <?= $this->Form->create(null, [
                         'type' => 'get',
                         'class' => 'row g-3 align-items-end mb-4',
                     ]) ?>
-                        <div class="col-md-2">
+                        <div class="col-md-3">
                             <?= $this->Form->control('ano', [
                                 'label' => 'Ano',
                                 'options' => $anosOptions,
                                 'default' => $filtros['ano'] ?? null,
+                                'class' => 'form-select',
+                            ]) ?>
+                        </div>
+                        <div class="col-md-4">
+                            <?= $this->Form->control('unidade_id', [
+                                'label' => 'Unidade',
+                                'options' => $unidades,
+                                'empty' => $this->request->getAttribute('identity')['yoda'] ? 'Todas' : 'Selecione',
+                                'default' => $filtros['unidade_id'] ?? 0,
                                 'class' => 'form-select',
                             ]) ?>
                         </div>
@@ -27,40 +36,11 @@
                                 'class' => 'form-control',
                             ]) ?>
                         </div>
-                        <div class="col-md-3">
-                            <?= $this->Form->control('editai_id', [
-                                'label' => 'Edital',
-                                'options' => $editais,
-                                'empty' => 'Todos',
-                                'default' => $filtros['editai_id'] ?? 0,
-                                'class' => 'form-select',
-                            ]) ?>
-                        </div>
-                        <div class="col-md-2">
-                            <?= $this->Form->control('grandes_area_id', [
-                                'label' => 'Grande área',
-                                'options' => $grandesAreas,
-                                'empty' => 'Todas',
-                                'default' => $filtros['grandes_area_id'] ?? 0,
-                                'class' => 'form-select',
-                                'id' => 'grandes-area-id',
-                            ]) ?>
-                        </div>
-                        <div class="col-md-2">
-                            <?= $this->Form->control('area_id', [
-                                'label' => 'Área',
-                                'options' => $areas,
-                                'empty' => 'Todas',
-                                'default' => $filtros['area_id'] ?? 0,
-                                'class' => 'form-select',
-                                'id' => 'area-id',
-                            ]) ?>
-                        </div>
-                        <div class="col-12 d-flex gap-2">
+                        <div class="col-md-2 d-flex gap-2">
                             <?= $this->Form->button('Filtrar', ['class' => 'btn btn-primary']) ?>
                             <?= $this->Html->link(
                                 'Limpar',
-                                ['controller' => 'Avaliadores', 'action' => 'listaNova'],
+                                ['controller' => 'Listas', 'action' => 'listaAvaliadoresRaic'],
                                 ['class' => 'btn btn-outline-secondary']
                             ) ?>
                         </div>
@@ -68,7 +48,7 @@
 
                     <?php if ($avaliadores->count() === 0): ?>
                         <div class="alert alert-info mb-0">
-                            Nenhum avaliador localizado com os filtros informados.
+                            Nenhum avaliador RAIC localizado com os filtros informados.
                         </div>
                     <?php else: ?>
                         <?php $this->Paginator->options(['url' => $this->request->getQueryParams()]); ?>
@@ -76,8 +56,8 @@
                             <?= $this->Html->link(
                                 'Exportar CSV',
                                 [
-                                    'controller' => 'Avaliadores',
-                                    'action' => 'listaNova',
+                                    'controller' => 'Listas',
+                                    'action' => 'listaAvaliadoresRaic',
                                     '?' => $this->request->getQueryParams() + ['exportar' => 1],
                                 ],
                                 ['class' => 'btn btn-success btn-sm']
@@ -93,6 +73,7 @@
                                         <th>Área</th>
                                         <th>Ano</th>
                                         <th>Edital</th>
+                                        <th>Unidade</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -104,6 +85,7 @@
                                             <td><?= h((string)($avaliador->area->nome ?? 'Não informada')) ?></td>
                                             <td><?= h((string)($avaliador->ano_convite ?? '-')) ?></td>
                                             <td><?= h((string)($avaliador->editai->nome ?? 'Não informado')) ?></td>
+                                            <td><?= h((string)($avaliador->unidade->sigla ?? 'Não informada')) ?></td>
                                         </tr>
                                     <?php endforeach; ?>
                                 </tbody>
@@ -128,35 +110,3 @@
         </div>
     </div>
 </div>
-
-<script>
-$(document).on('change', '#grandes-area-id', function () {
-    const grandeAreaId = $(this).val();
-
-    if (!grandeAreaId) {
-        $('#area-id').html("<option value=''>Todas</option>");
-        return;
-    }
-
-    $.ajax({
-        type: 'POST',
-        url: "<?= $this->Url->build(['controller' => 'Avaliadores', 'action' => 'buscaAreas']) ?>",
-        data: { id: grandeAreaId },
-        dataType: 'json',
-        beforeSend: function(xhr) {
-            xhr.setRequestHeader('X-CSRF-Token', <?= json_encode($this->request->getAttribute('csrfToken')) ?>);
-            $('#area-id').html("<option value=''>Carregando...</option>");
-        },
-        success: function(json) {
-            let html = "<option value=''>Todas</option>";
-            $.each(json, function(_, item) {
-                html += `<option value="${item.id}">${item.nome}</option>`;
-            });
-            $('#area-id').html(html);
-        },
-        error: function() {
-            $('#area-id').html("<option value=''>Erro ao carregar áreas</option>");
-        }
-    });
-});
-</script>

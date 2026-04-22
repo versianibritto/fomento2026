@@ -170,6 +170,29 @@ if (!$temDataInicio && !$temDataFim) {
     .visualizacao-tabela .table {
         margin-bottom: 0;
     }
+    .status-avaliacao-icone {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 0.85rem;
+        height: 0.85rem;
+        margin-right: 0.4rem;
+        vertical-align: -0.08rem;
+    }
+    .status-avaliacao-icone--finalizado {
+        background: #198754;
+        border-radius: 999px;
+    }
+    .status-avaliacao-icone--aguardando {
+        background: #f0ad4e;
+        border-radius: 999px;
+    }
+    .status-avaliacao-icone--desvinculado {
+        color: #dc3545;
+        font-size: 0.85rem;
+        font-weight: 700;
+        line-height: 1;
+    }
 </style>
 <div class="container mt-4">
     <h4 class="mb-2">
@@ -880,6 +903,14 @@ if (!$temDataInicio && !$temDataFim) {
                         <strong>Resultado final:</strong>
                         <?= !empty($resultadoMap[(string)($inscricao->resultado ?? '')]) ? h($resultadoMap[(string)$inscricao->resultado]) : $naoInformado ?>
                     </p>
+                    <?php if ($ehYoda): ?>
+                        <div class="alert alert-light border py-2 px-3 mb-3" style="font-size: 0.92rem; line-height: 1.4;">
+                            <strong>Informativo à Gestão de Fomento</strong><br>
+                            A tabela de avaliação está disponível para todos os perfis com acesso a esta visualização,<br>
+                            incluindo status e valor da nota.<br>
+                            O nome do avaliador é exibido apenas para a Gestão de Fomento.
+                        </div>
+                    <?php endif; ?>
                     <?php if (!empty($avaliacoes) && $avaliacoes->count() > 0): ?>
                         <div class="visualizacao-tabela">
                             <table class="table table-sm table-striped align-middle">
@@ -894,13 +925,54 @@ if (!$temDataInicio && !$temDataFim) {
                                     <?php foreach ($avaliacoes as $av): ?>
                                         <tr>
                                             <td>
-                                                <?= !empty($av->avaliador->usuario->nome) ? h($av->avaliador->usuario->nome) : 'Avaliador #' . (int)$av->avaliador_id ?>
+                                                <?php
+                                                    $ordemAvaliador = (int)($av->ordem ?? 0);
+                                                    if ($ehYoda) {
+                                                        echo !empty($av->avaliador->usuario->nome)
+                                                            ? h($av->avaliador->usuario->nome)
+                                                            : 'Avaliador #' . (int)$av->avaliador_id;
+                                                    } else {
+                                                        echo 'Avaliador';
+                                                        if ($ordemAvaliador > 0) {
+                                                            echo ' ' . h((string)$ordemAvaliador);
+                                                        }
+                                                    }
+                                                ?>
                                             </td>
                                             <td>
-                                                <?= !empty($statusAvaliacaoMap[(string)($av->situacao ?? '')]) ? h($statusAvaliacaoMap[(string)$av->situacao]) : (!empty($av->situacao) ? h((string)$av->situacao) : $naoInformado) ?>
+                                                <?php
+                                                    $statusAvaliacao = '';
+                                                    $statusAvaliacaoIcone = '';
+                                                    if ((int)($av->deleted ?? 0) === 1) {
+                                                        $statusAvaliacao = 'Desvinculado';
+                                                        $statusAvaliacaoIcone = '<span class="status-avaliacao-icone status-avaliacao-icone--desvinculado">×</span>';
+                                                    } else {
+                                                        $statusAvaliacaoKey = (string)($av->situacao ?? '');
+                                                        $statusAvaliacao = $statusAvaliacaoMap[$statusAvaliacaoKey] ?? ($statusAvaliacaoKey !== '' ? $statusAvaliacaoKey : '');
+                                                        if ($statusAvaliacaoKey === 'F') {
+                                                            $statusAvaliacaoIcone = '<span class="status-avaliacao-icone status-avaliacao-icone--finalizado"></span>';
+                                                        } elseif ($statusAvaliacaoKey === 'E') {
+                                                            $statusAvaliacaoIcone = '<span class="status-avaliacao-icone status-avaliacao-icone--aguardando"></span>';
+                                                        }
+                                                    }
+                                                ?>
+                                                <?php if ($statusAvaliacao !== ''): ?>
+                                                    <?= $statusAvaliacaoIcone ?><?= h($statusAvaliacao) ?>
+                                                <?php else: ?>
+                                                    <?= $naoInformado ?>
+                                                <?php endif; ?>
                                             </td>
                                             <td>
-                                                <?= $av->nota !== null ? h((string)$av->nota) : $naoInformado ?>
+                                                <?php
+                                                    $situacaoAvaliacao = (string)($av->situacao ?? '');
+                                                    if ($situacaoAvaliacao === 'F') {
+                                                        echo $av->nota !== null ? h((string)$av->nota) : $naoInformado;
+                                                    } elseif ($situacaoAvaliacao === 'E') {
+                                                        echo 'Não lançada';
+                                                    } else {
+                                                        echo $naoInformado;
+                                                    }
+                                                ?>
                                             </td>
                                         </tr>
                                     <?php endforeach; ?>
@@ -1010,6 +1082,21 @@ if (!$temDataInicio && !$temDataFim) {
                                     <div class="col-md-8">
                                         <p class="mb-0 text-muted">
                                             Tela administrativa para incluir/alterar anexos da inscrição, com download e edição por tipo de anexo.
+                                        </p>
+                                    </div>
+                                </div>
+                                <hr class="my-3">
+                                <div class="row g-3 align-items-center">
+                                    <div class="col-md-4">
+                                        <?= $this->Html->link(
+                                            'Gerenciar Avaliadores',
+                                            ['controller' => 'Avaliadores', 'action' => 'vincularInscricao', (int)$inscricao->id],
+                                            ['class' => 'btn btn-outline-dark w-100']
+                                        ) ?>
+                                    </div>
+                                    <div class="col-md-8">
+                                        <p class="mb-0 text-muted">
+                                            Acesse a tela de vinculação para definir, substituir ou revisar os avaliadores associados a esta inscrição.
                                         </p>
                                     </div>
                                 </div>

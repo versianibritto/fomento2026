@@ -701,20 +701,21 @@ class GestaoController extends AppController
     public function listahomologacao()
     {
         $programaId = (int)($this->request->getQuery('programa_id') ?? 0);
-        $faseIdParam = $this->request->getQuery('fase_id');
-        $faseId = $faseIdParam === null ? 4 : (int)$faseIdParam;
+        $homologadoParam = trim((string)($this->request->getQuery('homologado') ?? 'P'));
+        $homologado = in_array($homologadoParam, ['', 'P', 'S', 'N'], true) ? $homologadoParam : 'P';
         $agora = FrozenTime::now();
-
-        $fasesFiltro = [4, 6, 7];
         $conditions = [
             'ProjetoBolsistas.deleted IS' => null,
+            'ProjetoBolsistas.fase_id IN' => [4, 15],
             'Editais.inicio_vigencia >' => $agora,
         ];
 
-        if ($faseId > 0) {
-            $conditions['ProjetoBolsistas.fase_id'] = $faseId;
-        } else {
-            $conditions['ProjetoBolsistas.fase_id IN'] = $fasesFiltro;
+        if ($homologado === 'S') {
+            $conditions['ProjetoBolsistas.homologado'] = 'S';
+        } elseif ($homologado === 'N') {
+            $conditions['ProjetoBolsistas.homologado'] = 'N';
+        } elseif ($homologado === 'P') {
+            $conditions['ProjetoBolsistas.homologado IS'] = null;
         }
 
         if ($programaId > 0) {
@@ -726,6 +727,7 @@ class GestaoController extends AppController
             ->contain([
                 'Editais' => ['Programas'],
                 'Bolsistas',
+                'Homologadores',
                 'Orientadores' => ['Unidades'],
                 'Coorientadores',
                 'Fases',
@@ -734,73 +736,53 @@ class GestaoController extends AppController
             ->orderBy(['ProjetoBolsistas.id' => 'DESC']);
 
         $programas = $this->fetchTable('Programas')->find('list', ['limit' => 200])->toArray();
-        $fases = $this->fetchTable('Fases')->find('list', [
-            'keyField' => 'id',
-            'valueField' => 'nome',
-        ])->where(['Fases.id IN' => $fasesFiltro])->toArray();
 
         if ($this->request->getQuery('acao') === 'excel') {
             $origemExportacao = (string)$this->request->getQuery('origem');
             if ($origemExportacao === 'dashyoda') {
                 $excelConditions = [
                     'ProjetoBolsistas.deleted IS' => null,
+                    'ProjetoBolsistas.fase_id IN' => [4, 15],
                     'Editais.inicio_vigencia >' => $agora,
-                    'ProjetoBolsistas.fase_id IN' => [4, 6, 7],
                 ];
             } else {
                 $excelConditions = $conditions;
             }
 
-            $excelQuery = $tblProjetoBolsistas->find()
-                ->contain([
-                    'Editais' => ['Programas'],
-                    'Bolsistas',
-                    'Orientadores' => ['Unidades'],
-                    'Coorientadores',
-                    'Fases',
-                ])
-                ->where($excelConditions)
-                ->orderBy(['ProjetoBolsistas.id' => 'DESC']);
+            if ($origemExportacao === 'dashyoda') {
+                $excelQuery = $tblProjetoBolsistas->find()
+                    ->contain([
+                        'Editais' => ['Programas'],
+                        'Bolsistas',
+                        'Homologadores',
+                        'Orientadores' => ['Unidades'],
+                        'Coorientadores',
+                        'Fases',
+                    ])
+                    ->where($excelConditions)
+                    ->orderBy(['ProjetoBolsistas.id' => 'DESC']);
+            } else {
+                $excelQuery = $tblProjetoBolsistas->find()
+                    ->contain([
+                        'Editais' => ['Programas'],
+                        'Bolsistas',
+                        'Homologadores',
+                        'Orientadores' => ['Unidades'],
+                        'Coorientadores',
+                        'Fases',
+                    ])
+                    ->where($excelConditions)
+                    ->orderBy(['ProjetoBolsistas.id' => 'DESC']);
+            }
 
             $rows = $excelQuery->all();
-            $idsInscricao = [];
-            foreach ($rows as $item) {
-                $idInscricao = (int)($item->id ?? 0);
-                if ($idInscricao > 0) {
-                    $idsInscricao[] = $idInscricao;
-                }
-            }
-            $idsInscricao = array_values(array_unique($idsInscricao));
-
-            $justificativaNaoHomologacaoMap = [];
-            if (!empty($idsInscricao)) {
-                $historicos = $this->fetchTable('SituacaoHistoricos')->find()
-                    ->select(['id', 'projeto_bolsista_id', 'justificativa'])
-                    ->where([
-                        'SituacaoHistoricos.projeto_bolsista_id IN' => $idsInscricao,
-                        'SituacaoHistoricos.fase_atual' => 7,
-                    ])
-                    ->orderBy([
-                        'SituacaoHistoricos.projeto_bolsista_id' => 'ASC',
-                        'SituacaoHistoricos.id' => 'DESC',
-                    ])
-                    ->enableHydration(false)
-                    ->all();
-
-                foreach ($historicos as $historico) {
-                    $idInscricao = (int)($historico['projeto_bolsista_id'] ?? 0);
-                    if ($idInscricao <= 0 || isset($justificativaNaoHomologacaoMap[$idInscricao])) {
-                        continue;
-                    }
-                    $justificativaNaoHomologacaoMap[$idInscricao] = (string)($historico['justificativa'] ?? '');
-                }
-            }
 
             $header = [
                 'id',
                 'edital',
                 'programa',
                 'fase',
+                'homologacao',
                 'bolsista',
                 'orientador',
                 'unidade',
@@ -812,17 +794,25 @@ class GestaoController extends AppController
                 'email',
                 'email_alternativo',
                 'email_contato',
-                'justificativa_ultima_nao_homologacao',
+                'data_homologacao',
+                'usuario_homologacao',
+                'justificativa_homologacao',
             ];
 
             $exportRows = [];
             foreach ($rows as $item) {
-                $faseAtualId = (int)($item->fase_id ?? 0);
+                $statusHomologacao = match ((string)($item->homologado ?? '')) {
+                    'S' => 'Homologada',
+                    'N' => 'Não homologada',
+                    default => 'Pendente',
+                };
+
                 $exportRows[] = [
                     $item->id ?? '',
                     $item->editai->nome ?? '',
                     $item->editai->programa->sigla ?? ($item->editai->programa_id ?? ''),
                     $item->fase->nome ?? '',
+                    $statusHomologacao,
                     $item->bolsista_usuario->nome ?? '',
                     $item->orientadore->nome ?? '',
                     $item->orientadore->unidade->sigla ?? '',
@@ -834,9 +824,9 @@ class GestaoController extends AppController
                     $item->orientadore->email ?? '',
                     $item->orientadore->email_alternativo ?? '',
                     $item->orientadore->email_contato ?? '',
-                    $faseAtualId === 7
-                        ? ($justificativaNaoHomologacaoMap[(int)($item->id ?? 0)] ?? '')
-                        : '',
+                    $item->homologado_data ? $item->homologado_data->format('d/m/Y H:i:s') : '',
+                    $item->homologador->nome ?? '',
+                    (string)($item->homologado_justificativa ?? ''),
                 ];
             }
 
@@ -848,7 +838,13 @@ class GestaoController extends AppController
         }
 
         $inscricoes = $this->paginate($query, ['limit' => 20]);
-        $this->set(compact('inscricoes', 'programas', 'fases', 'programaId', 'faseId'));
+        $statusHomologacaoOptions = [
+            '' => 'Todos',
+            'P' => 'Não verificadas',
+            'S' => 'Homologadas',
+            'N' => 'Não homologadas',
+        ];
+        $this->set(compact('inscricoes', 'programas', 'programaId', 'homologado', 'statusHomologacaoOptions'));
     }
 
     public function telahomologacao($id)
@@ -871,10 +867,18 @@ class GestaoController extends AppController
             return $this->redirect(['controller' => 'Gestao', 'action' => 'listahomologacao']);
         }
         $faseOriginal = (int)$inscricao->fase_id;
-        $fasesPermitidasHomologacao = [4, 6, 7];
+        $fasesPermitidasHomologacao = [4, 15];
         $homologacaoPermitida = in_array($faseOriginal, $fasesPermitidasHomologacao, true);
-        $exigeConfirmacaoReavaliacao = in_array($faseOriginal, [6, 7], true);
+        $statusHomologacaoAtual = trim((string)($inscricao->homologado ?? ''));
+        $exigeConfirmacaoReavaliacao = $statusHomologacaoAtual !== '';
         $motivoNaoHomologacao = trim((string)($this->request->getData('motivo_nao_homologacao') ?? ''));
+        $identity = $this->getIdentityAtual();
+        $usuarioLogadoId = 0;
+        if (is_array($identity)) {
+            $usuarioLogadoId = (int)($identity['id'] ?? 0);
+        } elseif ($identity !== null) {
+            $usuarioLogadoId = (int)($identity->id ?? 0);
+        }
 
         if ($this->request->is(['post', 'put', 'patch'])) {
             $acaoRapidaAnexo = (string)($this->request->getData('anexo_acao') ?? '');
@@ -910,24 +914,27 @@ class GestaoController extends AppController
                 return $this->redirect(['controller' => 'Gestao', 'action' => 'listahomologacao']);
             }
             if (!$homologacaoPermitida) {
-                $this->Flash->error('Somente inscrições nas fases Finalizada, Homologada ou Não homologada podem ser homologadas ou não homologadas.');
+                $this->Flash->error('Somente inscrições aptas a este fluxo podem ser homologadas ou não homologadas.');
                 return $this->redirect(['controller' => 'Gestao', 'action' => 'telahomologacao', (int)$inscricao->id]);
             }
             $acaoHomologacao = strtolower(trim((string)($this->request->getData('acao_homologacao') ?? '')));
             $confirmouReavaliacao = (int)$this->request->getData('confirmou_reavaliacao') === 1;
             if ($exigeConfirmacaoReavaliacao && !$confirmouReavaliacao) {
-                $this->Flash->error('Esta inscrição já havia sido verificada. Confirme que deseja alterar a avaliação.');
+                $this->Flash->error('Esta inscrição já possui homologação registrada. Se continuar, o resultado será sobrescrito.');
                 return $this->redirect(['controller' => 'Gestao', 'action' => 'telahomologacao', (int)$inscricao->id]);
             }
             if ($acaoHomologacao === 'homologar') {
                 try {
-                    $tblProjetoBolsistas->getConnection()->transactional(function () use ($tblProjetoBolsistas, $inscricao, $faseOriginal) {
-                        $inscricao->fase_id = 6;
+                    $tblProjetoBolsistas->getConnection()->transactional(function () use ($tblProjetoBolsistas, $inscricao, $faseOriginal, $usuarioLogadoId) {
+                        $inscricao->homologado = 'S';
+                        $inscricao->homologado_data = FrozenTime::now();
+                        $inscricao->homologado_por = $usuarioLogadoId > 0 ? $usuarioLogadoId : null;
+                        $inscricao->homologado_justificativa = null;
                         $tblProjetoBolsistas->saveOrFail($inscricao);
                         $this->historico(
                             (int)$inscricao->id,
                             $faseOriginal,
-                            6,
+                            $faseOriginal,
                             'Inscrição homologada após verificação dos anexos e dados'
                         );
                     });
@@ -945,19 +952,22 @@ class GestaoController extends AppController
                     $this->Flash->error('Informe o motivo da não homologação com pelo menos 20 caracteres.');
                 } else {
                     try {
-                        $tblProjetoBolsistas->getConnection()->transactional(function () use ($tblProjetoBolsistas, $inscricao, $faseOriginal, $motivoNaoHomologacao) {
-                            $inscricao->fase_id = 7;
+                        $tblProjetoBolsistas->getConnection()->transactional(function () use ($tblProjetoBolsistas, $inscricao, $faseOriginal, $motivoNaoHomologacao, $usuarioLogadoId) {
+                            $inscricao->homologado = 'N';
+                            $inscricao->homologado_data = FrozenTime::now();
+                            $inscricao->homologado_por = $usuarioLogadoId > 0 ? $usuarioLogadoId : null;
+                            $inscricao->homologado_justificativa = $motivoNaoHomologacao;
                             $tblProjetoBolsistas->saveOrFail($inscricao);
                             $this->historico(
                                 (int)$inscricao->id,
                                 $faseOriginal,
-                                7,
+                                $faseOriginal,
                                 'Inscrição não homologada devido a: ' . $motivoNaoHomologacao
-                            );
-                        });
-                        $this->Flash->success('Inscrição marcada como não homologada com sucesso.');
-                        return $this->redirect(['controller' => 'Gestao', 'action' => 'listahomologacao']);
-                    } catch (\Throwable $e) {
+                        );
+                    });
+                    $this->Flash->success('Não homologação registrada com sucesso.');
+                    return $this->redirect(['controller' => 'Gestao', 'action' => 'listahomologacao']);
+                } catch (\Throwable $e) {
                         $this->flashFriendlyException(
                             $e,
                             'Erro no Sistema - não homologar inscrição',
@@ -1664,7 +1674,7 @@ class GestaoController extends AppController
     {
         $tblProjetoBolsistas = $this->fetchTable('ProjetoBolsistas');
         $rows = $tblProjetoBolsistas->find()
-            ->select(['id', 'fase_id', 'resultado', 'origem', 'deleted'])
+            ->select(['id', 'fase_id', 'resultado', 'origem', 'deleted', 'homologado'])
             ->where(['ProjetoBolsistas.id IN' => $ids])
             ->all();
 
@@ -1692,7 +1702,7 @@ class GestaoController extends AppController
                 continue;
             }
 
-            if ((int)$item->fase_id !== 6) {
+            if ((string)($item->homologado ?? '') !== 'S') {
                 $recusadas[] = ['id' => $id, 'motivo' => 'Inscrição não homologada.'];
                 continue;
             }

@@ -88,6 +88,14 @@ $titulo = 'Filtros - ' . $tipoLabel;
                     ]) ?>
                 </div>
                 <div class="col-md-6">
+                    <?= $this->Form->control('homologado', [
+                        'label' => 'Homologação',
+                        'options' => $homologacao ?? [],
+                        'default' => 'T',
+                        'class' => 'form-select',
+                    ]) ?>
+                </div>
+                <div class="col-md-6">
                     <?= $this->Form->control('origem', [
                         'label' => 'Origem',
                         'options' => $origem ?? [],
@@ -100,6 +108,14 @@ $titulo = 'Filtros - ' . $tipoLabel;
                         'label' => 'Cota',
                         'options' => $cotas ?? [],
                         'empty' => 'Todas',
+                        'class' => 'form-select',
+                    ]) ?>
+                </div>
+                <div class="col-md-6">
+                    <?= $this->Form->control('heranca', [
+                        'label' => 'Herança',
+                        'options' => $herancaOptions ?? [],
+                        'default' => 'T',
                         'class' => 'form-select',
                     ]) ?>
                 </div>

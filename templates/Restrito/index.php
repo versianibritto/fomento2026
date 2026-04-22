@@ -129,6 +129,28 @@
 
                     <div class="card border">
                         <div class="card-body">
+                            <h5 class="card-title mb-2">Migrar Homologação Histórica</h5>
+                            <p class="text-muted mb-3">
+                                Busca inscrições em fase 6 ou 7 e preenche homologado, homologado_data, homologado_por
+                                e homologado_justificativa a partir do registro mais recente em situacao_historicos.
+                            </p>
+                            <div class="d-flex flex-wrap gap-2">
+                                <?= $this->Form->postLink(
+                                    'Executar migração de homologação',
+                                    ['controller' => 'Restrito', 'action' => 'migrarHomologacaoHistoricaProjetoBolsistas'],
+                                    [
+                                        'class' => 'btn btn-outline-primary',
+                                        'confirm' => 'Confirma a migração de homologação histórica para projeto_bolsistas?',
+                                    ]
+                                ) ?>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <div class="card border">
+                        <div class="card-body">
                             <h5 class="card-title mb-2">Deleção Sistêmica de Inscrições Expiradas</h5>
                             <p class="text-muted mb-3">
                                 Deleta logicamente inscrições não finalizadas em tempo de inscrição do edital, garantindo vigente = 0 e gravando histórico.

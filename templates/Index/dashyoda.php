@@ -254,14 +254,12 @@ document.addEventListener('DOMContentLoaded', function () {
                             <h3 class="fw-bold text-warning mb-1">
                                 <a href="<?= $this->Url->build(['controller' => 'Gestao', 'action' => 'listahomologacao']) ?>"
                                 class="text-warning text-decoration-none">
-                                    <?= ($dashboard['total']
-                                        - $dashboard['aceito']
-                                        - $dashboard['recusado']) ?? 0 ?>
+                                    <?= $dashboard['homologacaoPendente'] ?? 0 ?>
                                     /
-                                    <?= $dashboard['total'] ?? 0 ?>
+                                    <?= $dashboard['homologacaoTotal'] ?? 0 ?>
                                 </a>
                             </h3>
-                            <small class="text-muted">Falta homologar</small>
+                            <small class="text-muted">Falta verificar</small>
                         </div>
 
                         <div>
@@ -299,8 +297,10 @@ document.addEventListener('DOMContentLoaded', function () {
                         <div>
                             <h3 class="fw-bold text-primary mb-1">
                                 <?= $dashboard['resultadoTotal'] ?? 0 ?>
+                                /
+                                <?= $dashboard['resultadoReferenciaTotal'] ?? 0 ?>
                             </h3>
-                            <small class="text-muted">Total</small>
+                            <small class="text-muted">Total de resultados lançados</small>
                         </div>
 
                         <div>

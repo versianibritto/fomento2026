@@ -27,6 +27,10 @@ class ListasController extends AppController
     private const PADRAO_INSCRICAO_LABELS = [
         'data_inicio' => 'data_inicio',
         'primeira_bolsa' => 'data de inicio da primeira bolsa',
+        'homologado' => 'homologado',
+        'homologado_data' => 'data_homologacao',
+        'homologado_por' => 'usuario_homologacao',
+        'homologado_justificativa' => 'justificativa_homologacao',
     ];
 
     public function beforeFilter(\Cake\Event\EventInterface $event)
@@ -60,11 +64,25 @@ class ListasController extends AppController
         $situacao = $this->fetchTable('Fases')->find('list', [
             'keyField' => 'id',
             'valueField' => 'nome',
-        ])->orderBy(['Fases.nome' => 'ASC'])->toArray();
+        ])
+            ->where(['Fases.deleted' => 0])
+            ->orderBy(['Fases.nome' => 'ASC'])
+            ->toArray();
+        $homologacao = [
+            'T' => 'Todas',
+            'P' => 'Não verificadas',
+            'S' => 'Homologadas',
+            'N' => 'Não homologadas',
+        ];
+        $herancaOptions = [
+            'T' => 'Todas',
+            'S' => 'Sim',
+            'N' => 'Não',
+        ];
         $programa = [];
         $origem = $this->origem ?? [];
         $cotas = $this->cota ?? [];
-        $this->set(compact('situacao', 'programa', 'origem', 'cotas', 'tipo', 'prog'));
+        $this->set(compact('situacao', 'programa', 'origem', 'cotas', 'tipo', 'prog', 'homologacao', 'herancaOptions'));
     }
 
     public function buscaRaic()
@@ -377,6 +395,799 @@ class ListasController extends AppController
         $this->set(compact('listas', 'filtros', 'unidades', 'anos', 'tipoBolsa', 'isTi', 'isYoda', 'isJedi'));
     }
 
+    public function listaAvaliadoresRaic()
+    {
+        $this->request->allowMethod(['get']);
+
+        $identity = $this->getIdentityAtual();
+        $jedi = '';
+        if (is_array($identity)) {
+            $jedi = (string)($identity['jedi'] ?? '');
+        } elseif ($identity !== null) {
+            $jedi = (string)($identity->jedi ?? '');
+        }
+        if ($jedi === '') {
+            $jedi = (string)($this->request->getAttribute('identity')['jedi'] ?? '');
+        }
+
+        if (!$this->ehYoda() && $jedi === '') {
+            $this->Flash->error('Área restrita à Coordenação da Unidade e à Gestão de Fomento.');
+            return $this->redirect(['controller' => 'Index', 'action' => 'dashboard']);
+        }
+
+        $unidades = $this->obterUnidadesDisponiveisAvaliadores();
+        $filtros = $this->obterFiltrosListaAvaliadoresRaic($unidades);
+        $anosOptions = $this->obterAnosListaAvaliadoresPorTipo('R');
+        if (!isset($anosOptions[$filtros['ano']])) {
+            $filtros['ano'] = (int)array_key_first($anosOptions);
+        }
+
+        $query = $this->montarQueryListaAvaliadoresRaic($filtros);
+
+        if ((int)$this->request->getQuery('exportar', 0) === 1) {
+            return $this->exportarListaAvaliadoresRaicCsv($query);
+        }
+
+        $avaliadores = $this->paginate($query, ['limit' => 20]);
+
+        $this->set(compact('avaliadores', 'anosOptions', 'unidades', 'filtros'));
+    }
+
+    public function listaAvaliadoresNova()
+    {
+        $this->request->allowMethod(['get']);
+
+        if (!$this->ehYoda()) {
+            $this->Flash->error('Área restrita à Gestão de Fomento.');
+            return $this->redirect(['controller' => 'Index', 'action' => 'dashboard']);
+        }
+
+        $filtros = $this->obterFiltrosListaAvaliadoresNova();
+        $anosOptions = $this->obterAnosListaAvaliadoresPorTipo('N');
+        if (!isset($anosOptions[$filtros['ano']])) {
+            $filtros['ano'] = (int)array_key_first($anosOptions);
+        }
+
+        $editais = $this->obterEditaisListaAvaliadoresNova();
+        if ($filtros['editai_id'] !== 0 && !isset($editais[$filtros['editai_id']])) {
+            $filtros['editai_id'] = 0;
+        }
+
+        $grandesAreas = $this->obterGrandesAreasRestritasAvaliadores();
+        if ($filtros['grandes_area_id'] !== 0 && !isset($grandesAreas[$filtros['grandes_area_id']])) {
+            $filtros['grandes_area_id'] = 0;
+        }
+
+        $areas = $this->obterAreasPorGrandeAreaAvaliadores((int)$filtros['grandes_area_id']);
+        if ($filtros['area_id'] !== 0 && !isset($areas[$filtros['area_id']])) {
+            $filtros['area_id'] = 0;
+        }
+
+        $query = $this->montarQueryListaAvaliadoresNova($filtros);
+
+        if ((int)$this->request->getQuery('exportar', 0) === 1) {
+            return $this->exportarListaAvaliadoresNovaCsv($query);
+        }
+
+        $avaliadores = $this->paginate($query, ['limit' => 20]);
+
+        $this->set(compact('avaliadores', 'anosOptions', 'editais', 'grandesAreas', 'areas', 'filtros'));
+    }
+
+    public function listaInscricoesAvaliadores()
+    {
+        $this->request->allowMethod(['get']);
+
+        if (!$this->ehYoda()) {
+            $this->Flash->error('Área restrita à Gestão de Fomento.');
+            return $this->redirect(['controller' => 'Index', 'action' => 'dashboard']);
+        }
+
+        $filtros = $this->obterFiltrosListaInscricoesAvaliadores();
+        $editais = $this->obterEditaisAbertosInscricoesAvaliadores();
+        if ($filtros['editai_id'] !== 0 && !isset($editais[$filtros['editai_id']])) {
+            $filtros['editai_id'] = 0;
+        }
+
+        $grandesAreas = $this->obterGrandesAreasRestritasAvaliadores();
+        if ($filtros['grandes_area_id'] !== 0 && !isset($grandesAreas[$filtros['grandes_area_id']])) {
+            $filtros['grandes_area_id'] = 0;
+        }
+
+        $areas = $this->obterAreasPorGrandeAreaAvaliadores((int)$filtros['grandes_area_id']);
+        if ($filtros['area_id'] !== 0 && !isset($areas[$filtros['area_id']])) {
+            $filtros['area_id'] = 0;
+        }
+
+        $statusOptions = [
+            'vinculado' => 'Vinculado (2 avaliadores)',
+            'nao_vinculado' => 'Não vinculado (0 avaliadores)',
+        ];
+        if ($filtros['status_vinculo'] !== '' && !isset($statusOptions[$filtros['status_vinculo']])) {
+            $filtros['status_vinculo'] = '';
+        }
+
+        $query = $this->montarQueryListaInscricoesAvaliadores($filtros);
+        $inscricoes = $this->paginate($query, ['limit' => 12]);
+
+        $this->set(compact('inscricoes', 'editais', 'grandesAreas', 'areas', 'filtros', 'statusOptions'));
+    }
+
+    public function dashcountavaliadores()
+    {
+        $this->request->allowMethod(['get']);
+
+        if (!$this->ehYoda()) {
+            $this->Flash->error('Área restrita à Gestão de Fomento.');
+            return $this->redirect(['controller' => 'Index', 'action' => 'dashboard']);
+        }
+
+        $dashcountavaliadoresTable = $this->fetchTable('Dashcountavaliadores');
+        $anosOptions = $this->obterAnosListaAvaliadoresPorTipo('N');
+
+        $ano = trim((string)$this->request->getQuery('ano', ''));
+        $ordenacao = trim((string)$this->request->getQuery('ordenacao', 'nome'));
+        $totalMinimo = trim((string)$this->request->getQuery('total_minimo', ''));
+        $totalMaximo = trim((string)$this->request->getQuery('total_maximo', ''));
+        $buscaSolicitada = $ano !== '';
+        $registros = null;
+
+        $ordenacoesValidas = [
+            'nome',
+            'total',
+        ];
+        if (!in_array($ordenacao, $ordenacoesValidas, true)) {
+            $ordenacao = 'nome';
+        }
+        if ($totalMinimo !== '' && !ctype_digit($totalMinimo)) {
+            $totalMinimo = '';
+        }
+        if ($totalMaximo !== '' && !ctype_digit($totalMaximo)) {
+            $totalMaximo = '';
+        }
+
+        if ($buscaSolicitada) {
+            if (!isset($anosOptions[$ano])) {
+                $this->Flash->error('Selecione um ano válido para realizar a consulta.');
+                return $this->redirect(['controller' => 'Listas', 'action' => 'dashcountavaliadores']);
+            }
+
+            $avaliadoresBase = $this->fetchTable('Avaliadors')->find()
+                ->select([
+                    'usuario_id' => 'Avaliadors.usuario_id',
+                    'usuario_nome' => 'Usuarios.nome',
+                    'ano' => 'Avaliadors.ano_convite',
+                ])
+                ->leftJoinWith('Usuarios')
+                ->where([
+                    'Avaliadors.deleted' => 0,
+                    'Avaliadors.tipo_avaliador' => 'N',
+                    'Avaliadors.ano_convite' => $ano,
+                ])
+                ->groupBy([
+                    'Avaliadors.usuario_id',
+                    'Usuarios.nome',
+                    'Avaliadors.ano_convite',
+                ])
+                ->orderBy([
+                    'Usuarios.nome' => 'ASC',
+                ])
+                ->enableHydration(false)
+                ->toArray();
+
+            $cargas = $dashcountavaliadoresTable->find()
+                ->where(['Dashcountavaliadores.ano' => $ano])
+                ->enableHydration(false)
+                ->toArray();
+
+            $resumoPorUsuario = [];
+            foreach ($avaliadoresBase as $avaliador) {
+                $usuarioId = (int)($avaliador['usuario_id'] ?? 0);
+                $chave = $usuarioId . '|' . (string)$ano;
+                $resumoPorUsuario[$chave] = [
+                    'usuario_id' => $usuarioId,
+                    'usuario_nome' => (string)($avaliador['usuario_nome'] ?? 'Não informado'),
+                    'ano' => (string)$ano,
+                    'finalizadas' => 0,
+                    'aguardando' => 0,
+                    'deletadas' => 0,
+                    'total' => 0,
+                ];
+            }
+
+            foreach ($cargas as $carga) {
+                $usuarioId = (int)($carga['usuario_id'] ?? 0);
+                $chave = $usuarioId . '|' . (string)$ano;
+                if (!isset($resumoPorUsuario[$chave])) {
+                    $resumoPorUsuario[$chave] = [
+                        'usuario_id' => $usuarioId,
+                        'usuario_nome' => (string)($carga['usuario_nome'] ?? 'Não informado'),
+                        'ano' => (string)$ano,
+                        'finalizadas' => 0,
+                        'aguardando' => 0,
+                        'deletadas' => 0,
+                        'total' => 0,
+                    ];
+                }
+
+                $situacao = (string)($carga['situacao'] ?? '');
+                $deleted = (int)($carga['deleted'] ?? 0);
+                $qtd = (int)($carga['qtd_inscricoes'] ?? 0);
+
+                if ($deleted === 1) {
+                    $resumoPorUsuario[$chave]['deletadas'] += $qtd;
+                    continue;
+                }
+
+                if ($situacao === 'F') {
+                    $resumoPorUsuario[$chave]['finalizadas'] += $qtd;
+                } elseif ($situacao === 'E') {
+                    $resumoPorUsuario[$chave]['aguardando'] += $qtd;
+                }
+                $resumoPorUsuario[$chave]['total'] += $qtd;
+            }
+
+            $registros = array_values($resumoPorUsuario);
+            if ($totalMinimo !== '' || $totalMaximo !== '') {
+                $minimo = $totalMinimo !== '' ? (int)$totalMinimo : null;
+                $maximo = $totalMaximo !== '' ? (int)$totalMaximo : null;
+                $registros = array_values(array_filter($registros, function (array $registro) use ($minimo, $maximo): bool {
+                    $total = (int)($registro['total'] ?? 0);
+                    if ($minimo !== null && $total < $minimo) {
+                        return false;
+                    }
+                    if ($maximo !== null && $total > $maximo) {
+                        return false;
+                    }
+                    return true;
+                }));
+            }
+            usort($registros, function (array $a, array $b) use ($ordenacao): int {
+                if ($ordenacao === 'total') {
+                    $comparacaoTotal = ((int)$b['total']) <=> ((int)$a['total']);
+                    if ($comparacaoTotal !== 0) {
+                        return $comparacaoTotal;
+                    }
+                }
+
+                return strcasecmp((string)$a['usuario_nome'], (string)$b['usuario_nome']);
+            });
+        }
+
+        $filtros = [
+            'ano' => $ano,
+            'ordenacao' => $ordenacao,
+            'total_minimo' => $totalMinimo,
+            'total_maximo' => $totalMaximo,
+        ];
+        $ordenacaoOptions = [
+            'nome' => 'Nome',
+            'total' => 'Maior total',
+        ];
+        $this->set(compact('anosOptions', 'filtros', 'buscaSolicitada', 'registros', 'ordenacaoOptions'));
+    }
+
+    protected function montarQueryListaAvaliadoresRaic(array $filtros)
+    {
+        $query = $this->fetchTable('Avaliadors')->find()
+            ->contain([
+                'Usuarios' => ['Unidades', 'Vinculos'],
+                'GrandesAreas',
+                'Areas',
+                'Editais',
+                'Unidades',
+            ])
+            ->leftJoinWith('Usuarios')
+            ->leftJoinWith('Editais')
+            ->leftJoinWith('Unidades')
+            ->where([
+                'Avaliadors.deleted' => 0,
+                'Avaliadors.tipo_avaliador' => 'R',
+                'Avaliadors.ano_convite' => (string)$filtros['ano'],
+            ])
+            ->orderBy([
+                'Usuarios.nome' => 'ASC',
+                'Editais.nome' => 'ASC',
+                'Unidades.sigla' => 'ASC',
+            ]);
+
+        if ((int)$filtros['unidade_id'] > 0) {
+            $query->where(['Avaliadors.unidade_id' => (int)$filtros['unidade_id']]);
+        } elseif (!$this->ehYoda()) {
+            $idsJedi = $this->obterIdsJediAvaliadores();
+            if ($idsJedi === []) {
+                $query->where(['1 = 0']);
+            } else {
+                $query->where(['Avaliadors.unidade_id IN' => $idsJedi]);
+            }
+        }
+
+        if ((string)$filtros['nome'] !== '') {
+            $query->where([
+                'Usuarios.nome LIKE' => '%' . (string)$filtros['nome'] . '%',
+            ]);
+        }
+
+        return $query;
+    }
+
+    protected function montarQueryListaAvaliadoresNova(array $filtros)
+    {
+        $query = $this->fetchTable('Avaliadors')->find()
+            ->contain([
+                'Usuarios' => ['Unidades', 'Vinculos'],
+                'GrandesAreas',
+                'Areas',
+                'Editais',
+            ])
+            ->leftJoinWith('Usuarios')
+            ->leftJoinWith('Editais')
+            ->leftJoinWith('GrandesAreas')
+            ->leftJoinWith('Areas')
+            ->where([
+                'Avaliadors.deleted' => 0,
+                'Avaliadors.tipo_avaliador' => 'N',
+                'Avaliadors.ano_convite' => (string)$filtros['ano'],
+            ])
+            ->orderBy([
+                'Usuarios.nome' => 'ASC',
+                'Editais.nome' => 'ASC',
+            ]);
+
+        if ((string)$filtros['nome'] !== '') {
+            $query->where([
+                'Usuarios.nome LIKE' => '%' . (string)$filtros['nome'] . '%',
+            ]);
+        }
+
+        if ((int)$filtros['editai_id'] > 0) {
+            $query->where(['Avaliadors.editai_id' => (int)$filtros['editai_id']]);
+        }
+
+        if ((int)$filtros['grandes_area_id'] > 0) {
+            $query->where(['Avaliadors.grandes_area_id' => (int)$filtros['grandes_area_id']]);
+        }
+
+        if ((int)$filtros['area_id'] > 0) {
+            $query->where(['Avaliadors.area_id' => (int)$filtros['area_id']]);
+        }
+
+        return $query;
+    }
+
+    protected function obterFiltrosListaAvaliadoresRaic(array $unidades): array
+    {
+        $anoAtual = (int)date('Y');
+        $filtros = [
+            'ano' => (int)$this->request->getQuery('ano', $anoAtual),
+            'unidade_id' => (int)$this->request->getQuery('unidade_id', 0),
+            'nome' => trim((string)$this->request->getQuery('nome', '')),
+        ];
+
+        if ($filtros['unidade_id'] !== 0 && !isset($unidades[$filtros['unidade_id']])) {
+            $filtros['unidade_id'] = 0;
+        }
+
+        return $filtros;
+    }
+
+    protected function obterFiltrosListaAvaliadoresNova(): array
+    {
+        $anoAtual = (int)date('Y');
+
+        return [
+            'ano' => (int)$this->request->getQuery('ano', $anoAtual),
+            'nome' => trim((string)$this->request->getQuery('nome', '')),
+            'editai_id' => (int)$this->request->getQuery('editai_id', 0),
+            'grandes_area_id' => (int)$this->request->getQuery('grandes_area_id', 0),
+            'area_id' => (int)$this->request->getQuery('area_id', 0),
+        ];
+    }
+
+    protected function obterFiltrosListaInscricoesAvaliadores(): array
+    {
+        $statusVinculo = $this->request->getQuery('status_vinculo');
+        if ($statusVinculo === null) {
+            $statusVinculo = 'nao_vinculado';
+        }
+
+        return [
+            'editai_id' => (int)$this->request->getQuery('editai_id', 0),
+            'status_vinculo' => trim((string)$statusVinculo),
+            'grandes_area_id' => (int)$this->request->getQuery('grandes_area_id', 0),
+            'area_id' => (int)$this->request->getQuery('area_id', 0),
+        ];
+    }
+
+    protected function obterAnosListaAvaliadoresPorTipo(string $tipoAvaliador): array
+    {
+        $anoAtual = (int)date('Y');
+        $anos = $this->fetchTable('Avaliadors')->find()
+            ->select(['ano_convite'])
+            ->where([
+                'Avaliadors.deleted' => 0,
+                'Avaliadors.tipo_avaliador' => $tipoAvaliador,
+                'Avaliadors.ano_convite IS NOT' => null,
+                'Avaliadors.ano_convite <>' => '',
+            ])
+            ->distinct(['ano_convite'])
+            ->orderBy(['Avaliadors.ano_convite' => 'DESC'])
+            ->enableHydration(false)
+            ->all()
+            ->extract('ano_convite')
+            ->toList();
+
+        $anosOptions = [];
+        foreach ($anos as $ano) {
+            $anoInt = (int)$ano;
+            if ($anoInt > 0) {
+                $anosOptions[$anoInt] = (string)$anoInt;
+            }
+        }
+        if ($anosOptions === []) {
+            $anosOptions[$anoAtual] = (string)$anoAtual;
+        }
+
+        return $anosOptions;
+    }
+
+    protected function exportarListaAvaliadoresRaicCsv($query)
+    {
+        $avaliadores = $query->all();
+        $header = [
+            'nome_avaliador',
+            'cpf',
+            'grande_area',
+            'area',
+            'ano',
+            'edital',
+            'unidade_avaliacao',
+            'vinculo_usuario',
+            'unidade_cadastro_usuario',
+            'telefone',
+            'telefone_contato',
+            'celular',
+            'whatsapp',
+            'email',
+            'email_alternativo',
+            'email_contato',
+        ];
+
+        $fh = fopen('php://temp', 'r+');
+        fwrite($fh, "\xEF\xBB\xBF");
+        fputcsv($fh, $header, ';');
+
+        foreach ($avaliadores as $avaliador) {
+            $cpf = (string)($avaliador->usuario->cpf ?? '');
+            if ($cpf !== '') {
+                $cpf = "\t" . $cpf;
+            }
+
+            $row = [
+                $avaliador->usuario->nome ?? '',
+                $cpf,
+                $avaliador->grandes_area->nome ?? '',
+                $avaliador->area->nome ?? '',
+                $avaliador->ano_convite ?? '',
+                $avaliador->editai->nome ?? '',
+                $avaliador->unidade->sigla ?? '',
+                $avaliador->usuario->vinculo->nome ?? '',
+                $avaliador->usuario->unidade->sigla ?? '',
+                $avaliador->usuario->telefone ?? '',
+                $avaliador->usuario->telefone_contato ?? '',
+                $avaliador->usuario->celular ?? '',
+                $avaliador->usuario->whatsapp ?? '',
+                $avaliador->usuario->email ?? '',
+                $avaliador->usuario->email_alternativo ?? '',
+                $avaliador->usuario->email_contato ?? '',
+            ];
+            $row = array_map(function ($value): string {
+                $text = (string)$value;
+                $text = str_replace(["\r\n", "\n", "\r", "\0"], ' ', $text);
+                return $text;
+            }, $row);
+            fputcsv($fh, $row, ';');
+        }
+
+        rewind($fh);
+        $csv = (string)stream_get_contents($fh);
+        fclose($fh);
+
+        return $this->response
+            ->withType('csv')
+            ->withCharset('UTF-8')
+            ->withStringBody($csv)
+            ->withDownload('avaliadores_raic_' . date('Ymd_His') . '.csv');
+    }
+
+    protected function exportarListaAvaliadoresNovaCsv($query)
+    {
+        $avaliadores = $query->all();
+        $header = [
+            'nome_avaliador',
+            'cpf',
+            'grande_area',
+            'area',
+            'ano',
+            'edital',
+            'vinculo_usuario',
+            'unidade_cadastro_usuario',
+            'telefone',
+            'telefone_contato',
+            'celular',
+            'whatsapp',
+            'email',
+            'email_alternativo',
+            'email_contato',
+        ];
+
+        $fh = fopen('php://temp', 'r+');
+        fwrite($fh, "\xEF\xBB\xBF");
+        fputcsv($fh, $header, ';');
+
+        foreach ($avaliadores as $avaliador) {
+            $cpf = (string)($avaliador->usuario->cpf ?? '');
+            if ($cpf !== '') {
+                $cpf = "\t" . $cpf;
+            }
+
+            $row = [
+                $avaliador->usuario->nome ?? '',
+                $cpf,
+                $avaliador->grandes_area->nome ?? '',
+                $avaliador->area->nome ?? '',
+                $avaliador->ano_convite ?? '',
+                $avaliador->editai->nome ?? '',
+                $avaliador->usuario->vinculo->nome ?? '',
+                $avaliador->usuario->unidade->sigla ?? '',
+                $avaliador->usuario->telefone ?? '',
+                $avaliador->usuario->telefone_contato ?? '',
+                $avaliador->usuario->celular ?? '',
+                $avaliador->usuario->whatsapp ?? '',
+                $avaliador->usuario->email ?? '',
+                $avaliador->usuario->email_alternativo ?? '',
+                $avaliador->usuario->email_contato ?? '',
+            ];
+            $row = array_map(function ($value): string {
+                $text = (string)$value;
+                $text = str_replace(["\r\n", "\n", "\r", "\0"], ' ', $text);
+                return $text;
+            }, $row);
+            fputcsv($fh, $row, ';');
+        }
+
+        rewind($fh);
+        $csv = (string)stream_get_contents($fh);
+        fclose($fh);
+
+        return $this->response
+            ->withType('csv')
+            ->withCharset('UTF-8')
+            ->withStringBody($csv)
+            ->withDownload('avaliadores_nova_' . date('Ymd_His') . '.csv');
+    }
+
+    protected function obterEditaisListaAvaliadoresNova(): array
+    {
+        return $this->fetchTable('Editais')->find('list', [
+            'keyField' => 'id',
+            'valueField' => 'nome',
+        ])
+            ->where([
+                'Editais.deleted' => 0,
+                'Editais.origem IN' => ['N', 'R', 'J', 'W'],
+            ])
+            ->orderBy(['Editais.nome' => 'ASC'])
+            ->toArray();
+    }
+
+    protected function obterEditaisAbertosInscricoesAvaliadores(): array
+    {
+        return $this->fetchTable('Editais')->find('list', [
+            'keyField' => 'id',
+            'valueField' => 'nome',
+        ])
+            ->where([
+                'Editais.deleted' => 0,
+                'Editais.origem IN' => ['N', 'R'],
+                'Editais.inicio_avaliar < NOW()',
+                'Editais.fim_avaliar > NOW()',
+            ])
+            ->orderBy(['Editais.nome' => 'ASC'])
+            ->toArray();
+    }
+
+    protected function obterGrandesAreasRestritasAvaliadores(): array
+    {
+        return $this->fetchTable('GrandesAreas')->find('list', [
+            'keyField' => 'id',
+            'valueField' => 'nome',
+        ])
+            ->where(['GrandesAreas.id <' => 10])
+            ->orderBy(['GrandesAreas.nome' => 'ASC'])
+            ->toArray();
+    }
+
+    protected function obterAreasPorGrandeAreaAvaliadores(int $grandeAreaId): array
+    {
+        if ($grandeAreaId <= 0) {
+            return [];
+        }
+
+        return $this->fetchTable('Areas')->find('list', [
+            'keyField' => 'id',
+            'valueField' => 'nome',
+        ])
+            ->where(['Areas.grandes_area_id' => $grandeAreaId])
+            ->orderBy(['Areas.nome' => 'ASC'])
+            ->toArray();
+    }
+
+    protected function montarQueryListaInscricoesAvaliadores(array $filtros)
+    {
+        $projetoBolsistas = $this->fetchTable('ProjetoBolsistas');
+        $query = $projetoBolsistas->find()
+            ->select([
+                'ProjetoBolsistas.id',
+                'ProjetoBolsistas.editai_id',
+                'ProjetoBolsistas.projeto_id',
+                'ProjetoBolsistas.bolsista',
+                'ProjetoBolsistas.orientador',
+                'ProjetoBolsistas.origem',
+                'ProjetoBolsistas.sp_titulo',
+                'ProjetoBolsistas.created',
+                'projeto_titulo' => 'Projetos.titulo',
+                'area_nome' => 'Areas.nome',
+                'grande_area_nome' => 'GrandesAreas.nome',
+                'total_avaliadores' => $projetoBolsistas->find()->newExpr('COALESCE(av_vinculos.total_avaliadores, 0)'),
+                'avaliadores_nomes' => $projetoBolsistas->find()->newExpr('av_vinculos.avaliadores_nomes'),
+                'avaliadores_status' => $projetoBolsistas->find()->newExpr('av_vinculos.avaliadores_status'),
+            ])
+            ->contain([
+                'Editais' => function ($q) {
+                    return $q->select(['Editais.id', 'Editais.nome', 'Editais.origem']);
+                },
+                'Bolsistas' => function ($q) {
+                    return $q->select(['Bolsistas.id', 'Bolsistas.nome', 'Bolsistas.cpf', 'Bolsistas.unidade_id', 'Bolsistas.vinculo_id'])
+                        ->contain([
+                            'Unidades' => function ($qu) {
+                                return $qu->select(['Unidades.id', 'Unidades.sigla']);
+                            },
+                            'Vinculos' => function ($qu) {
+                                return $qu->select(['Vinculos.id', 'Vinculos.nome']);
+                            },
+                        ]);
+                },
+                'Coorientadores' => function ($q) {
+                    return $q->select(['Coorientadores.id', 'Coorientadores.nome']);
+                },
+                'Orientadores' => function ($q) {
+                    return $q->select(['Orientadores.id', 'Orientadores.nome', 'Orientadores.cpf', 'Orientadores.unidade_id', 'Orientadores.vinculo_id'])
+                        ->contain([
+                            'Unidades' => function ($qu) {
+                                return $qu->select(['Unidades.id', 'Unidades.sigla']);
+                            },
+                            'Vinculos' => function ($qu) {
+                                return $qu->select(['Vinculos.id', 'Vinculos.nome']);
+                            },
+                        ]);
+                },
+                'Projetos' => function ($q) {
+                    return $q->select(['Projetos.id', 'Projetos.titulo', 'Projetos.area_id'])
+                        ->contain([
+                            'Areas' => function ($qu) {
+                                return $qu->select(['Areas.id', 'Areas.nome', 'Areas.grandes_area_id'])
+                                    ->contain([
+                                        'GrandesAreas' => function ($qg) {
+                                            return $qg->select(['GrandesAreas.id', 'GrandesAreas.nome']);
+                                        },
+                                    ]);
+                            },
+                        ]);
+                },
+            ])
+            ->innerJoinWith('Editais')
+            ->leftJoinWith('Bolsistas')
+            ->leftJoinWith('Orientadores')
+            ->leftJoinWith('Projetos.Areas.GrandesAreas')
+            ->leftJoin(
+                [
+                    'av_vinculos' => '(
+                        SELECT
+                            ab.projeto_bolsista_id,
+                            COUNT(*) AS total_avaliadores,
+                            GROUP_CONCAT(DISTINCT u.nome ORDER BY ab.ordem, u.nome SEPARATOR " | ") AS avaliadores_nomes,
+                            GROUP_CONCAT(
+                                DISTINCT CONCAT(
+                                    COALESCE(u.nome, ""),
+                                    "||",
+                                    COALESCE(ab.situacao, "")
+                                )
+                                ORDER BY ab.ordem, u.nome
+                                SEPARATOR " | "
+                            ) AS avaliadores_status
+                        FROM avaliador_bolsistas ab
+                        LEFT JOIN usuarios u ON u.id = ab.usuario_id
+                        WHERE ab.projeto_bolsista_id IS NOT NULL
+                          AND ab.deleted = 0
+                        GROUP BY ab.projeto_bolsista_id
+                    )',
+                ],
+                'av_vinculos.projeto_bolsista_id = ProjetoBolsistas.id'
+            )
+            ->where([
+                'ProjetoBolsistas.deleted IS' => null,
+                'ProjetoBolsistas.homologado' => 'S',
+                'ProjetoBolsistas.fase_id' => 4,
+                'Editais.deleted' => 0,
+                'Editais.origem IN' => ['N', 'R'],
+                'Editais.inicio_avaliar < NOW()',
+                'Editais.fim_avaliar > NOW()',
+            ])
+            ->orderBy([
+                'Editais.nome' => 'ASC',
+                'Bolsistas.nome' => 'ASC',
+                'ProjetoBolsistas.id' => 'DESC',
+            ]);
+
+        if ((int)$filtros['editai_id'] > 0) {
+            $query->where(['ProjetoBolsistas.editai_id' => (int)$filtros['editai_id']]);
+        }
+
+        if ((int)$filtros['grandes_area_id'] > 0) {
+            $query->where(['Areas.grandes_area_id' => (int)$filtros['grandes_area_id']]);
+        }
+
+        if ((int)$filtros['area_id'] > 0) {
+            $query->where(['Projetos.area_id' => (int)$filtros['area_id']]);
+        }
+
+        if ($filtros['status_vinculo'] === 'vinculado') {
+            $query->where(['COALESCE(av_vinculos.total_avaliadores, 0) = 2']);
+        } elseif ($filtros['status_vinculo'] === 'nao_vinculado') {
+            $query->where(['COALESCE(av_vinculos.total_avaliadores, 0) = 0']);
+        }
+
+        return $query;
+    }
+
+    protected function obterUnidadesDisponiveisAvaliadores(): array
+    {
+        $query = $this->fetchTable('Unidades')->find('list', [
+            'keyField' => 'id',
+            'valueField' => 'sigla',
+        ])
+            ->where(['Unidades.deleted' => 0])
+            ->orderBy(['Unidades.sigla' => 'ASC']);
+
+        if ($this->ehYoda()) {
+            return $query->toArray();
+        }
+
+        $idsJedi = $this->obterIdsJediAvaliadores();
+        if ($idsJedi === []) {
+            return [];
+        }
+
+        return $query->where(['Unidades.id IN' => $idsJedi])->toArray();
+    }
+
+    protected function obterIdsJediAvaliadores(): array
+    {
+        $identity = $this->getIdentityAtual();
+        $jedi = '';
+        if (is_array($identity)) {
+            $jedi = (string)($identity['jedi'] ?? '');
+        } elseif ($identity !== null) {
+            $jedi = (string)($identity->jedi ?? '');
+        }
+        if ($jedi === '') {
+            $jedi = (string)($this->request->getAttribute('identity')['jedi'] ?? '');
+        }
+
+        return array_values(array_filter(array_map('intval', array_map('trim', explode(',', $jedi)))));
+    }
+
     public function resultado($tipo = null)
     {
         $tipo = strtoupper((string)$tipo);
@@ -442,6 +1253,13 @@ class ListasController extends AppController
                     } elseif ($col === 'cota') {
                         $key = strtoupper((string)$val);
                         $val = $cotaMap[$key] ?? $val;
+                    } elseif ($col === 'homologado') {
+                        $key = strtoupper((string)$val);
+                        $val = match ($key) {
+                            'S' => 'Homologada',
+                            'N' => 'Não homologada',
+                            default => 'Não verificada',
+                        };
                     } elseif (in_array($col, ['heranca', 'troca_projeto', 'vigente', 'autorizacao', 'prorrogacao'], true)) {
                         $val = ($val === '' || $val === null) ? '' : (((int)$val === 1) ? 'Sim' : 'Não');
                     } elseif ($col === 'primeiro_periodo') {
@@ -462,7 +1280,21 @@ class ListasController extends AppController
         $situacao = $this->fetchTable('Fases')->find('list', [
             'keyField' => 'id',
             'valueField' => 'nome',
-        ])->orderBy(['Fases.nome' => 'ASC'])->toArray();
+        ])
+            ->where(['Fases.deleted' => 0])
+            ->orderBy(['Fases.nome' => 'ASC'])
+            ->toArray();
+        $homologacao = [
+            'T' => 'Todas',
+            'P' => 'Não verificadas',
+            'S' => 'Homologadas',
+            'N' => 'Não homologadas',
+        ];
+        $herancaOptions = [
+            'T' => 'Todas',
+            'S' => 'Sim',
+            'N' => 'Não',
+        ];
 
         $this->set([
             'listas' => $listas,
@@ -472,6 +1304,8 @@ class ListasController extends AppController
             'cotas' => $this->cota ?? [],
             'tipo' => $tipo,
             'prog' => $prog,
+            'homologacao' => $homologacao,
+            'herancaOptions' => $herancaOptions,
         ]);
     }
 
@@ -553,9 +1387,23 @@ class ListasController extends AppController
             $columns = $first ? array_keys($first->toArray()) : [];
         }
 
-        return array_values(array_filter($columns, static function ($col) {
+        $columns = array_values(array_filter($columns, static function ($col) {
             return !in_array($col, self::PADRAO_INSCRICAO_EXCLUIR, true);
         }));
+
+        $colunasHomologacao = [
+            'homologado',
+            'homologado_data',
+            'homologado_por',
+            'homologado_justificativa',
+        ];
+        foreach ($colunasHomologacao as $colunaHomologacao) {
+            if (!in_array($colunaHomologacao, $columns, true)) {
+                $columns[] = $colunaHomologacao;
+            }
+        }
+
+        return $columns;
     }
 
     private function validarAcessoListas()
@@ -605,12 +1453,33 @@ class ListasController extends AppController
             $conditions[] = ['Geral.fase_id' => (int)$dados['fase_id']];
         }
 
+        $homologado = strtoupper(trim((string)($dados['homologado'] ?? 'T')));
+        if ($homologado === 'S') {
+            $conditions[] = ['Geral.homologado' => 'S'];
+        } elseif ($homologado === 'N') {
+            $conditions[] = ['Geral.homologado' => 'N'];
+        } elseif ($homologado === 'P') {
+            $conditions[] = ['Geral.homologado IS' => null];
+        }
+
         if (!empty($dados['origem'])) {
             $conditions[] = ['Geral.origem' => (string)$dados['origem']];
         }
 
         if (!empty($dados['cota'])) {
             $conditions[] = ['Geral.cota' => (string)$dados['cota']];
+        }
+
+        $heranca = strtoupper(trim((string)($dados['heranca'] ?? 'T')));
+        if ($heranca === 'S') {
+            $conditions[] = ['Geral.heranca' => 1];
+        } elseif ($heranca === 'N') {
+            $conditions[] = [
+                'OR' => [
+                    ['Geral.heranca' => 0],
+                    ['Geral.heranca IS' => null],
+                ],
+            ];
         }
 
         if ($tipo === 'V') {

@@ -5,23 +5,24 @@
         gap: 1rem;
     }
     .avaliadores-inscricao-card {
-        border: 1px solid #dfe5ec;
+        border: 1px solid #9fb0c3;
         border-radius: 0.9rem;
         background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
-        box-shadow: 0 6px 18px rgba(15, 23, 42, 0.05);
+        box-shadow: 0 10px 22px rgba(15, 23, 42, 0.09);
     }
     .avaliadores-inscricao-card .card-body {
         padding: 1rem 1rem 0.9rem;
     }
     .avaliadores-inscricao-layout {
         display: grid;
-        grid-template-columns: minmax(210px, 0.95fr) minmax(220px, 1fr) minmax(240px, 1.15fr) minmax(210px, 0.8fr);
+        grid-template-columns: minmax(280px, 1.2fr) minmax(220px, 0.9fr) minmax(280px, 1.15fr);
         gap: 1rem;
         align-items: start;
     }
     .avaliadores-inscricao-topo {
         display: flex;
         justify-content: space-between;
+        align-items: flex-start;
         gap: 0.75rem;
         margin-bottom: 0.75rem;
     }
@@ -29,32 +30,108 @@
         color: #667085;
         font-size: 0.92rem;
     }
+    .avaliadores-inscricao-topo-acoes {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+    }
     .avaliadores-inscricao-bloco {
-        border-top: 1px solid #eef2f6;
-        padding-top: 0.75rem;
-        margin-top: 0.75rem;
+        border: 1px solid #e7edf4;
+        border-radius: 0.8rem;
+        background: rgba(255, 255, 255, 0.85);
+        padding: 0.85rem 0.9rem;
+        min-height: 100%;
+    }
+    .avaliadores-inscricao-bloco-titulo {
+        font-size: 0.78rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: #667085;
+        margin-bottom: 0.55rem;
     }
     .avaliadores-inscricao-bloco strong {
         color: #344054;
     }
-    .avaliadores-inscricao-nomes {
-        white-space: pre-line;
-        line-height: 1.45;
+    .avaliadores-inscricao-linha {
+        margin-bottom: 0.55rem;
+        line-height: 1.35;
+    }
+    .avaliadores-inscricao-linha:last-child {
+        margin-bottom: 0;
+    }
+    .avaliadores-inscricao-linha-label {
+        display: block;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        color: #667085;
+        margin-bottom: 0.15rem;
+    }
+    .avaliadores-inscricao-linha-valor {
+        color: #101828;
+        font-weight: 500;
+    }
+    .avaliadores-inscricao-avaliadores {
+        display: flex;
+        flex-direction: column;
+        gap: 0.45rem;
+    }
+    .avaliadores-inscricao-avaliador-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.6rem;
+        padding: 0.45rem 0.55rem;
+        border: 1px solid #e9eef5;
+        border-radius: 0.65rem;
+        background: #fff;
+    }
+    .avaliadores-inscricao-avaliador-nome {
+        color: #101828;
+        font-weight: 500;
+    }
+    .avaliadores-inscricao-avaliador-status {
+        display: inline-flex;
+        align-items: center;
+        white-space: nowrap;
+    }
+    .avaliadores-inscricao-status-bolinha {
+        width: 0.8rem;
+        height: 0.8rem;
+        border-radius: 999px;
+        display: inline-block;
+    }
+    .avaliadores-inscricao-status-bolinha--finalizado {
+        background: #198754;
+    }
+    .avaliadores-inscricao-status-bolinha--aguardando {
+        background: #f0ad4e;
+    }
+    .avaliadores-inscricao-status-bolinha--desvinculado {
+        background: #dc3545;
     }
     .avaliadores-inscricao-acoes {
         display: flex;
-        flex-direction: column;
         gap: 0.5rem;
-        align-items: flex-start;
+        align-items: center;
+        flex-wrap: wrap;
     }
     @media (max-width: 1200px) {
         .avaliadores-inscricao-layout {
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: 1fr;
         }
     }
     @media (max-width: 768px) {
-        .avaliadores-inscricao-layout {
-            grid-template-columns: 1fr;
+        .avaliadores-inscricao-topo {
+            flex-direction: column;
+        }
+        .avaliadores-inscricao-topo-acoes {
+            width: 100%;
+            justify-content: flex-start;
         }
     }
 </style>
@@ -66,7 +143,7 @@
                 <div class="card-body">
                     <h4 class="mb-2">Inscrições para Vinculação de Avaliadores</h4>
                     <p class="text-muted mb-3">
-                        Listagem de inscrições dos editais de nova e renovação com avaliação aberta, indicando se já possuem avaliadores vinculados.
+                        Listagem de inscrições dos editais de nova e renovação com avaliação aberta, trazendo apenas inscrições no status finalizado e com homologação aceita, indicando se já possuem avaliadores vinculados.
                     </p>
 
                     <?= $this->Form->create(null, [
@@ -115,7 +192,7 @@
                             <?= $this->Form->button('Filtrar', ['class' => 'btn btn-primary']) ?>
                             <?= $this->Html->link(
                                 'Limpar',
-                                ['controller' => 'Avaliadores', 'action' => 'listaInscricoes'],
+                                ['controller' => 'Listas', 'action' => 'listaInscricoesAvaliadores'],
                                 ['class' => 'btn btn-outline-secondary']
                             ) ?>
                         </div>
@@ -145,6 +222,9 @@
                                     $grandeAreaNome = 'Grande área não informada';
                                 }
                                 $areaNome = trim((string)($inscricao->area_nome ?? ''));
+                                if ($areaNome === '') {
+                                    $areaNome = 'Área não informada';
+                                }
                                 $statusClasse = 'secondary';
                                 $statusTexto = 'Não vinculado';
                                 if ($totalAvaliadores === 2) {
@@ -155,6 +235,30 @@
                                     $statusTexto = 'Vinculação parcial';
                                 }
                                 $origemTexto = strtoupper((string)($inscricao->origem ?? '')) === 'R' ? 'Renovação' : 'Nova';
+                                $avaliadoresLista = [];
+                                $avaliadoresStatusBruto = trim((string)($inscricao->avaliadores_status ?? ''));
+                                if ($avaliadoresStatusBruto !== '') {
+                                    $itensAvaliadores = array_values(array_filter(array_map('trim', explode(' | ', $avaliadoresStatusBruto))));
+                                    foreach ($itensAvaliadores as $itemAvaliador) {
+                                        $partesAvaliador = array_map('trim', explode('||', $itemAvaliador));
+                                        $nomeAvaliador = (string)($partesAvaliador[0] ?? '');
+                                        $situacaoAvaliador = (string)($partesAvaliador[1] ?? '');
+
+                                        if ($nomeAvaliador === '') {
+                                            continue;
+                                        }
+
+                                        $statusClasseAvaliador = 'aguardando';
+                                        if ($situacaoAvaliador === 'F') {
+                                            $statusClasseAvaliador = 'finalizado';
+                                        }
+
+                                        $avaliadoresLista[] = [
+                                            'nome' => $nomeAvaliador,
+                                            'status_classe' => $statusClasseAvaliador,
+                                        ];
+                                    }
+                                }
                                 ?>
                                 <div class="avaliadores-inscricao-card card h-100">
                                     <div class="card-body">
@@ -166,84 +270,81 @@
                                                 <div class="avaliadores-inscricao-meta">
                                                     <?= h((string)($inscricao->editai->nome ?? 'Edital não informado')) ?>
                                                 </div>
-                                            </div>
-                                            <div class="text-end">
-                                                <span class="badge bg-<?= h($statusClasse) ?>"><?= h($statusTexto) ?></span>
                                                 <div class="small text-muted mt-1">
-                                                    <?= h($origemTexto) ?> | <?= $totalAvaliadores ?> avaliador(es)
+                                                    <?= h($origemTexto) ?> | <?= h($statusTexto) ?>
                                                 </div>
+                                            </div>
+                                            <div class="avaliadores-inscricao-topo-acoes">
+                                                <span class="badge bg-<?= h($statusClasse) ?>"><?= h($statusTexto) ?></span>
+                                                <?= $this->Html->link(
+                                                    'Abrir inscrição',
+                                                    ['controller' => 'Padrao', 'action' => 'visualizar', $inscricao->id],
+                                                    ['class' => 'btn btn-sm btn-outline-primary']
+                                                ) ?>
+                                                <?= $this->Html->link(
+                                                    $totalAvaliadores === 0 ? 'Vincular avaliadores' : 'Gerenciar avaliadores',
+                                                    ['controller' => 'Avaliadores', 'action' => 'vincularInscricao', $inscricao->id],
+                                                    ['class' => 'btn btn-sm btn-outline-secondary']
+                                                ) ?>
                                             </div>
                                         </div>
 
                                         <div class="avaliadores-inscricao-layout">
-                                            <div>
-                                                <strong>Bolsista:</strong>
-                                                <div><?= h((string)($inscricao->bolsista_usuario->nome ?? 'Não informado')) ?></div>
-                                                <div class="small text-muted">
-                                                    CPF: <?= h((string)($inscricao->bolsista_usuario->cpf ?? 'Não informado')) ?>
+                                            <div class="avaliadores-inscricao-bloco">
+                                                <div class="avaliadores-inscricao-bloco-titulo">Pessoas</div>
+                                                <div class="avaliadores-inscricao-linha">
+                                                    <span class="avaliadores-inscricao-linha-label">Orientador</span>
+                                                    <div class="avaliadores-inscricao-linha-valor">
+                                                        <?= h((string)($inscricao->orientadore->nome ?? 'Não informado')) ?>
+                                                    </div>
                                                 </div>
-                                                <div class="small text-muted">
-                                                    <?php if (!empty($inscricao->bolsista_usuario->unidade->sigla)): ?>
-                                                        Unidade: <?= h((string)$inscricao->bolsista_usuario->unidade->sigla) ?>
-                                                    <?php else: ?>
-                                                        Unidade não informada
-                                                    <?php endif; ?>
+                                                <div class="avaliadores-inscricao-linha">
+                                                    <span class="avaliadores-inscricao-linha-label">Bolsista</span>
+                                                    <div class="avaliadores-inscricao-linha-valor">
+                                                        <?= h((string)($inscricao->bolsista_usuario->nome ?? 'Não informado')) ?>
+                                                    </div>
                                                 </div>
-                                            </div>
-
-                                            <div>
-                                                <strong>Orientador:</strong>
-                                                <div><?= h((string)($inscricao->orientadore->nome ?? 'Não informado')) ?></div>
-                                                <div class="small text-muted">
-                                                    <?php if (!empty($inscricao->orientadore->vinculo->nome)): ?>
-                                                        <?= h((string)$inscricao->orientadore->vinculo->nome) ?>
-                                                    <?php else: ?>
-                                                        Vínculo não informado
-                                                    <?php endif; ?>
-                                                </div>
-                                                <div class="small text-muted">
-                                                    <?php if (!empty($inscricao->orientadore->unidade->sigla)): ?>
-                                                        <?= h((string)$inscricao->orientadore->unidade->sigla) ?>
-                                                    <?php else: ?>
-                                                        Unidade não informada
-                                                    <?php endif; ?>
+                                                <div class="avaliadores-inscricao-linha">
+                                                    <span class="avaliadores-inscricao-linha-label">Coorientador</span>
+                                                    <div class="avaliadores-inscricao-linha-valor">
+                                                        <?= h((string)($inscricao->coorientadore->nome ?? 'Não informado')) ?>
+                                                    </div>
                                                 </div>
                                             </div>
 
-                                            <div>
-                                                <strong>Projeto / Área:</strong>
-                                                <div><?= h($projetoTitulo) ?></div>
-                                                <div class="small text-muted">
-                                                    <?= h($grandeAreaNome) ?>
-                                                    <?php if ($areaNome !== ''): ?>
-                                                        | <?= h($areaNome) ?>
-                                                    <?php endif; ?>
+                                            <div class="avaliadores-inscricao-bloco">
+                                                <div class="avaliadores-inscricao-bloco-titulo">Áreas</div>
+                                                <div class="avaliadores-inscricao-linha">
+                                                    <span class="avaliadores-inscricao-linha-label">Grande área</span>
+                                                    <div class="avaliadores-inscricao-linha-valor"><?= h($grandeAreaNome) ?></div>
+                                                </div>
+                                                <div class="avaliadores-inscricao-linha">
+                                                    <span class="avaliadores-inscricao-linha-label">Área</span>
+                                                    <div class="avaliadores-inscricao-linha-valor"><?= h($areaNome) ?></div>
+                                                </div>
+                                                <div class="avaliadores-inscricao-linha">
+                                                    <span class="avaliadores-inscricao-linha-label">Projeto</span>
+                                                    <div class="avaliadores-inscricao-linha-valor"><?= h($projetoTitulo) ?></div>
                                                 </div>
                                             </div>
 
-                                            <div>
-                                                <strong>Avaliadores vinculados:</strong>
-                                                <?php if ($avaliadoresNomes !== ''): ?>
-                                                    <div class="avaliadores-inscricao-nomes">
-                                                        <?= h(str_replace(' | ', "\n", $avaliadoresNomes)) ?>
+                                            <div class="avaliadores-inscricao-bloco">
+                                                <div class="avaliadores-inscricao-bloco-titulo">Avaliadores vinculados</div>
+                                                <?php if (!empty($avaliadoresLista)): ?>
+                                                    <div class="avaliadores-inscricao-avaliadores">
+                                                        <?php foreach ($avaliadoresLista as $avaliadorNome): ?>
+                                                            <div class="avaliadores-inscricao-avaliador-item">
+                                                                <span class="avaliadores-inscricao-avaliador-nome"><?= h((string)$avaliadorNome['nome']) ?></span>
+                                                                <span class="avaliadores-inscricao-avaliador-status">
+                                                                    <span class="avaliadores-inscricao-status-bolinha avaliadores-inscricao-status-bolinha--<?= h((string)$avaliadorNome['status_classe']) ?>"></span>
+                                                                </span>
+                                                            </div>
+                                                        <?php endforeach; ?>
                                                     </div>
                                                 <?php else: ?>
                                                     <div class="text-muted">Nenhum avaliador vinculado até o momento.</div>
                                                 <?php endif; ?>
                                             </div>
-                                        </div>
-
-                                        <div class="avaliadores-inscricao-bloco avaliadores-inscricao-acoes">
-                                            <?= $this->Html->link(
-                                                'Abrir inscrição',
-                                                ['controller' => 'Padrao', 'action' => 'visualizar', $inscricao->id],
-                                                ['class' => 'btn btn-sm btn-outline-primary']
-                                            ) ?>
-                                            <?= $this->Html->link(
-                                                $totalAvaliadores === 0 ? 'Vincular avaliadores' : 'Substituir avaliadores',
-                                                ['controller' => 'Avaliadores', 'action' => 'vincularInscricao', $inscricao->id],
-                                                ['class' => 'btn btn-sm btn-outline-secondary']
-                                            ) ?>
                                         </div>
                                     </div>
                                 </div>
