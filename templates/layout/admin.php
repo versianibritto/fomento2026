@@ -215,16 +215,19 @@
                         </a>
                     </li>
                   
-                    <!-- aqui
                     <li class="sidebar-item">
                         <a href="/avaliadores/cadastro-raic" class="sidebar-link <?=(($this->request->getParam('controller') == 'Avaliadores' && $this->request->getParam('action') == 'cadastroRaic') ? 'active' : '')?>">
                            * Cadastro Massivo Avaliadores RAIC
                         </a>
                     </li>
-                            -->
                     <li class="sidebar-item">
                         <a href="/listas/lista-avaliadores-raic" class="sidebar-link <?=(($this->request->getParam('controller') == 'Listas' && $this->request->getParam('action') == 'listaAvaliadoresRaic') ? 'active' : '')?>">
                            * Lista de Avaliadores RAIC
+                        </a>
+                    </li>
+                    <li class="sidebar-item">
+                        <a href="/raic-new/voluntarias" class="sidebar-link <?=(($this->request->getParam('controller') == 'RaicNew' && $this->request->getParam('action') == 'voluntarias') ? 'active' : '')?>">
+                           * Cadastro da Raic
                         </a>
                     </li>
                         
@@ -310,13 +313,11 @@
                             * Lançar resultados
                             </a>
                         </li>
-                        <!-- aqui
                         <li class="sidebar-item">
                             <a href="/avaliadores/cadastro-nova" class="sidebar-link <?=(($this->request->getParam('controller') == 'Avaliadores' && $this->request->getParam('action') == 'cadastroNova') ? 'active' : '')?>">
                                * Cadastro Massivo Avaliadores Editais
                             </a>
                         </li>
-                        aqui -->
                         <li class="sidebar-item">
                             <a href="/listas/lista-avaliadores-nova" class="sidebar-link <?=(($this->request->getParam('controller') == 'Listas' && $this->request->getParam('action') == 'listaAvaliadoresNova') ? 'active' : '')?>">
                                * Lista de Avaliadores Editais
@@ -327,13 +328,11 @@
                                * Carga por Avaliador/Edital
                             </a>
                         </li>
-                        <!-- aqui
                         <li class="sidebar-item">
                             <a href="/listas/lista-inscricoes-avaliadores" class="sidebar-link <?=(($this->request->getParam('controller') == 'Listas' && $this->request->getParam('action') == 'listaInscricoesAvaliadores') ? 'active' : '')?>">
                                * Vinculação de Avaliadores IC
                             </a>
                         </li>
-                        -->
                         
                       
                         <?php if ((int)($usuario_logado['yoda'] ?? 0) === 1) { ?>

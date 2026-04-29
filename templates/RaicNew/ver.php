@@ -215,6 +215,7 @@ if ($tipoBolsaCodigo === 'R') {
                     </div>
 
                     <?php if ($raic->tipo_bolsa == 'R'): ?>
+                        <?php /*
                         <div class="mb-3">
                             <button
                                 class="btn btn-sm btn-outline-secondary raic-collapse-toggle"
@@ -231,7 +232,9 @@ if ($tipoBolsaCodigo === 'R') {
                                 </div>
                             </div>
                         </div>
+                        */ ?>
 
+                        <?php /*
                         <div class="raic-card-muted mb-3">
                             <div class="mb-3">
                                 <strong>Apresentação na RAIC?</strong><br>
@@ -262,6 +265,7 @@ if ($tipoBolsaCodigo === 'R') {
                                 </div>
                             <?php endif; ?>
                         </div>
+                        */ ?>
 
                         <div class="mb-3">
                             <?= $this->Html->link(

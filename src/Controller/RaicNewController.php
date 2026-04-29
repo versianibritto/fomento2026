@@ -389,10 +389,22 @@ class RaicNewController extends AppController
             $jediArray = array_filter(array_map('trim', explode(',', (string)$identity['jedi'])));
         }
 
+        $usuarioId = (int)($identity['id'] ?? 0);
         $ehYoda = !empty($identity['yoda']);
+        $ehTi = in_array($usuarioId, [1, 8088], true);
+        $ehJediDaUnidade = in_array((string)$raic->unidade_id, $jediArray, true);
+        $ehBolsista = $usuarioId > 0 && $usuarioId === (int)($raic->usuario_id ?? 0);
+        $ehOrientador = $usuarioId > 0 && $usuarioId === (int)($raic->orientador ?? 0);
 
-        if (!$ehYoda) {
-            $this->Flash->error('Somente a Gestão de Fomento pode editar a RAIC.');
+        /*
+        if (!$ehYoda && !$ehTi && !$ehJediDaUnidade && !$ehBolsista && !$ehOrientador) {
+            $this->Flash->error('Somente a Gestão de Fomento, TI, Coordenação da Unidade, orientador ou bolsista podem editar a RAIC.');
+            return $this->redirect(['controller' => 'Index', 'action' => 'index']);
+        }
+            */
+
+        if (!$ehYoda && !$ehTi && !$ehJediDaUnidade) {
+            $this->Flash->error('Somente a Gestão de Fomento, Coordenação da Unidade podem editar a RAIC.');
             return $this->redirect(['controller' => 'Index', 'action' => 'index']);
         }
 
@@ -404,7 +416,7 @@ class RaicNewController extends AppController
         if (!empty($raic->data_apresentacao)) {
             $hoje = FrozenTime::now()->format('Y-m-d');
             $dataApresentacao = $raic->data_apresentacao->format('Y-m-d');
-            if ($dataApresentacao <= $hoje) {
+            if ($dataApresentacao <= $hoje && !$ehTi) {
                 $dataApresentacaoTela = $raic->data_apresentacao->i18nFormat('dd/MM/YYYY');
                 $dataLimiteEdicao = $raic->data_apresentacao->modify('-1 day')->i18nFormat('dd/MM/YYYY');
                 $this->Flash->error(
@@ -425,6 +437,15 @@ class RaicNewController extends AppController
             ->first();
 
         $unidades = [];
+        if ($ehTi) {
+            $unidades = $this->fetchTable('Unidades')->find('list', [
+                'keyField' => 'id',
+                'valueField' => 'sigla',
+            ])
+                ->where(['Unidades.deleted' => 0])
+                ->orderBy(['Unidades.sigla' => 'ASC'])
+                ->toArray();
+        }
 
         if ($this->request->is(['post', 'put', 'patch'])) {
             $dados = $this->request->getData();
@@ -483,7 +504,7 @@ class RaicNewController extends AppController
             }
         }
 
-        $this->set(compact('raic', 'anexoRelatorio', 'unidades'));
+        $this->set(compact('raic', 'anexoRelatorio', 'unidades', 'ehTi'));
     }
 
     public function liberacertificado($id = null)
@@ -611,25 +632,177 @@ class RaicNewController extends AppController
 
 
     public function voluntarias($ed = null)
-    {   
+    {
+        $perfil = $this->perfilVoluntarias();
+        if (!$perfil['permitido']) {
+            $this->Flash->error('As inscrições não são permitidas para seu perfil ou alguma condição não foi atendida');
+            return $this->redirect(['controller' => 'Index', 'action' => 'index']);
+        }
+
+        $editaisAbertos = $this->editaisAbertosVoluntarias();
+        if (empty($editaisAbertos)) {
+            $this->Flash->error('Não existe Raic em período de inscrição atualmente');
+            return $this->redirect(['controller' => 'Index', 'action' => 'index']);
+        }
+
+        $unidadesBase = $this->unidadesBaseVoluntarias($perfil);
+        if (empty($unidadesBase)) {
+            $this->Flash->error('Unidades restritas para o seu perfil');
+            return $this->redirect(['controller' => 'Index', 'action' => 'index']);
+        }
+
+        [$editais, $mapaUnidadesPorEdital] = $this->opcoesEditaisVoluntarias($editaisAbertos, $unidadesBase);
+        if (empty($editais)) {
+            $this->Flash->error('Não existe edital RAIC disponível para o seu perfil e unidades habilitadas.');
+            return $this->redirect(['controller' => 'Index', 'action' => 'index']);
+        }
+
+        $raicTabela = $this->fetchTable('Raics');
+        $raic = $raicTabela->newEmptyEntity();
+
+        if ($this->request->is(['post', 'put', 'patch'])) {
+            $dados = $this->request->getData();
+
+            try {
+                $editalSelecionadoId = $this->validarEditalVoluntarias($dados, $editais);
+                $unidadesPermitidasEdital = $mapaUnidadesPorEdital[$editalSelecionadoId] ?? [];
+                [$orientadorPreSelecionado, $unidadeSelecionadaId] = $this->resolverUnidadeVoluntarias($dados, $perfil, $unidadesPermitidasEdital);
+
+                $raicCriada = null;
+                $bolsistaNome = '';
+                $raicTabela->getConnection()->transactional(function () use ($dados, $perfil, $editalSelecionadoId, $unidadeSelecionadaId, $orientadorPreSelecionado, $raicTabela, &$raicCriada, &$bolsistaNome): void {
+                    $bolsista = $this->resolverBolsistaVoluntarias($dados, $perfil, $editalSelecionadoId);
+                    $orientador = $this->resolverOrientadorVoluntarias($dados, $perfil, $bolsista, $orientadorPreSelecionado);
+                    $bolsistaNome = (string)($bolsista->nome ?? '');
+
+                    $raic = $raicTabela->newEmptyEntity();
+                    $raic->usuario_id = (int)$bolsista->id;
+                    $raic->orientador = (int)$orientador->id;
+                    $raic->deleted = 0;
+                    $raic->unidade_id = $unidadeSelecionadaId;
+                    $raic->titulo = $dados['titulo'];
+                    $raic->editai_id = $editalSelecionadoId;
+                    $raic->tipo_bolsa = 'Z';
+                    $raic->usuario_cadastro = (int)$perfil['usuario_id'];
+
+                    if (!$raicTabela->save($raic)) {
+                        throw new \RuntimeException('Erro ao salvar a Raic. A RAIC não foi gravada');
+                    }
+
+                    $anexosRelatorio = [];
+                    if (!empty($dados['anexos'][13])) {
+                        $anexosRelatorio[13] = $dados['anexos'][13];
+                    }
+                    if (!$this->anexarInscricao($anexosRelatorio, null, null, (int)$raic->id, true)) {
+                        throw new \RuntimeException('Erro ao fazer o upload do relatório. A RAIC não foi gravada');
+                    }
+                    if (!$this->historico((int)$raic->id, 'criação', 'criação', 'cadastro manual da Raic')) {
+                        throw new \RuntimeException('Erro ao gravar o histórico da RAIC manual.');
+                    }
+
+                    $raicCriada = $raic;
+                });
+
+                $this->Flash->success('RAIC CADASTRADA COM SUCESSO PARA O ALUNO ' . $bolsistaNome . ', sob numero #' . $raicCriada->id);
+                return $this->redirect(['action' => 'voluntarias']);
+            } catch (\DomainException $e) {
+                $this->Flash->error($e->getMessage());
+                return $this->redirect(['action' => 'voluntarias']);
+            } catch (\Throwable $e) {
+                $this->flashFriendlyException(
+                    $e,
+                    'Erro no Sistema - Gravação de RAIC voluntária',
+                    'Houve um erro na gravação. Tente novamente.'
+                );
+                return $this->redirect(['action' => 'voluntarias']);
+            }
+        }
+
+        $unidades = $unidadesBase;
+        $ehOrientadorSemCoordenacao = $perfil['orientador_sem_coordenacao'];
+        $ehAlunoSemCoordenacao = $perfil['aluno_sem_coordenacao'];
+        $mostrarBlocoBolsista = !$ehAlunoSemCoordenacao;
+        $mostrarBlocoOrientador = !$ehOrientadorSemCoordenacao;
+        $mostrarCampoUnidade = !$ehAlunoSemCoordenacao;
+
+        $this->set(compact(
+            'unidades',
+            'raic',
+            'editais',
+            'mapaUnidadesPorEdital',
+            'ehOrientadorSemCoordenacao',
+            'ehAlunoSemCoordenacao',
+            'mostrarBlocoBolsista',
+            'mostrarBlocoOrientador',
+            'mostrarCampoUnidade'
+        ));
+    }
+
+    protected function perfilVoluntarias(): array
+    {
         $identity = $this->request->getAttribute('identity');
-        $ehYoda = !empty($identity['yoda']);
-        $jediIds = array_values(array_filter(array_map(
-            'intval',
-            explode(',', (string)($identity['jedi'] ?? ''))
-        )));
+        $valor = static function (string $campo) use ($identity) {
+            if (is_array($identity) || $identity instanceof \ArrayAccess) {
+                return $identity[$campo] ?? null;
+            }
 
-        if((!$ehYoda) && ($identity['jedi']==null)){
-            $this->Flash->error('Restrito a administradores');
-            return $this->redirect(['controller'=>'Index', 'action'=>'index']);
+            return $identity->{$campo} ?? null;
+        };
+
+        $usuarioId = (int)($valor('id') ?? 0);
+        $jediRaw = trim((string)($valor('jedi') ?? ''));
+        $padauanRaw = trim((string)($valor('padauan') ?? ''));
+        $ehYoda = !empty($valor('yoda'));
+        $ehTi = in_array($usuarioId, [1, 8088], true);
+        $ehJedi = !$ehYoda && !$ehTi && !in_array($jediRaw, ['', '0', '-0'], true);
+        $padauanVazio = in_array($padauanRaw, ['', '0', '-0'], true);
+        $escolaridadeId = (int)($valor('escolaridade_id') ?? 0);
+        $vinculoId = (int)($valor('vinculo_id') ?? 0);
+        $unidadeUsuarioId = (int)($valor('unidade_id') ?? 0);
+
+        $orientadorSemCoordenacao = !$ehYoda
+            && !$ehTi
+            && !$ehJedi
+            && $padauanVazio
+            && $escolaridadeId === 10
+            && $vinculoId !== 7;
+        $alunoSemCoordenacao = !$ehYoda
+            && !$ehTi
+            && !$ehJedi
+            && $padauanVazio
+            && $escolaridadeId === 7;
+        $grupo = null;
+        if ($ehYoda) {
+            $grupo = 'yoda';
+        } elseif ($ehTi) {
+            $grupo = 'ti';
+        } elseif ($ehJedi) {
+            $grupo = 'jedi';
+        } elseif ($orientadorSemCoordenacao) {
+            $grupo = 'orientador';
+        } elseif ($alunoSemCoordenacao) {
+            $grupo = 'bolsista';
         }
+        $permitido = $grupo !== null;
 
-        if(($identity['jedi']===0)){
-            $this->Flash->error('Restrito a administradores');
-            return $this->redirect(['controller'=>'Index', 'action'=>'index']);
-        }
+        return [
+            'usuario_id' => $usuarioId,
+            'grupo' => $grupo,
+            'yoda' => $ehYoda,
+            'ti' => $ehTi,
+            'jedi' => $ehJedi,
+            'coordenacao' => $ehJedi,
+            'orientador_sem_coordenacao' => $orientadorSemCoordenacao,
+            'aluno_sem_coordenacao' => $alunoSemCoordenacao,
+            'permitido' => $permitido,
+            'jedi_ids' => array_values(array_filter(array_map('intval', explode(',', $jediRaw)))),
+            'unidade_id' => $unidadeUsuarioId,
+        ];
+    }
 
-        $editaisAbertos = TableRegistry::getTableLocator()->get('Editais')->find()
+    protected function editaisAbertosVoluntarias()
+    {
+        return $this->fetchTable('Editais')->find()
             ->select(['id', 'nome', 'unidades_permitidas'])
             ->where([
                 'inicio_inscricao < NOW()',
@@ -637,53 +810,48 @@ class RaicNewController extends AppController
                 'origem' => 'V',
             ])
             ->orderBy(['nome' => 'ASC'])
-            ->all();
+            ->all()
+            ->toArray();
+    }
 
-        if (count($editaisAbertos->toArray()) === 0) {
-            $this->Flash->error('Não existe Raic em período de inscrição atualmente');
-            return $this->redirect(['controller'=>'Index', 'action'=>'index']);
+    protected function unidadesBaseVoluntarias(array $perfil): array
+    {
+        $query = $this->fetchTable('Unidades')->find('list', [
+            'keyField' => 'id',
+            'valueField' => 'sigla',
+            'limit' => 220,
+        ])
+            ->where(['Unidades.deleted' => 0])
+            ->orderBy(['Unidades.sigla' => 'ASC']);
+
+        if ($perfil['orientador_sem_coordenacao']) {
+            if ((int)$perfil['unidade_id'] <= 0) {
+                return [];
+            }
+            $query->where(['Unidades.id' => (int)$perfil['unidade_id']]);
+        } elseif ($perfil['coordenacao']) {
+            if (empty($perfil['jedi_ids'])) {
+                return [];
+            }
+            $query->where(['Unidades.id IN' => $perfil['jedi_ids']]);
         }
 
-        if($ehYoda){
-            $unidadesBase = TableRegistry::getTableLocator()->get('Unidades')->find('list', [
-                'keyField' => 'id',
-                'valueField' => 'sigla',
-                'limit' => 220,
-            ])
-                ->where(['Unidades.deleted' => 0])
-                ->orderBy(['Unidades.sigla'=>'ASC'])
-                ->toArray();
-        } else {
-            $unidadesBase = TableRegistry::getTableLocator()->get('Unidades')
-                ->find('list', [
-                    'keyField' => 'id',
-                    'valueField' => 'sigla',
-                    'limit' => 220,
-                ])
-                ->where([
-                    'Unidades.id IN' => $jediIds,
-                    'Unidades.deleted' => 0,
-                ])
-                ->orderBy(['Unidades.sigla'=>'ASC'])
-                ->toArray();
-        }
+        return $query->toArray();
+    }
 
+    protected function opcoesEditaisVoluntarias($editaisAbertos, array $unidadesBase): array
+    {
         $editais = [];
         $mapaUnidadesPorEdital = [];
+
         foreach ($editaisAbertos as $editalAberto) {
             $permitidas = array_values(array_filter(array_map(
                 'intval',
                 explode(',', (string)($editalAberto->unidades_permitidas ?? ''))
             )));
-
-            $unidadesPermitidasEdital = $unidadesBase;
-            if (!empty($permitidas)) {
-                $unidadesPermitidasEdital = array_intersect_key($unidadesBase, array_flip($permitidas));
-
-                if (!$ehYoda && empty($unidadesPermitidasEdital)) {
-                    continue;
-                }
-            }
+            $unidadesPermitidasEdital = !empty($permitidas)
+                ? array_intersect_key($unidadesBase, array_flip($permitidas))
+                : $unidadesBase;
 
             if (empty($unidadesPermitidasEdital)) {
                 continue;
@@ -693,171 +861,141 @@ class RaicNewController extends AppController
             $mapaUnidadesPorEdital[(int)$editalAberto->id] = $unidadesPermitidasEdital;
         }
 
-        if (count($editais) === 0) {
-            $this->Flash->error('Não existe edital RAIC disponível para o seu perfil e unidades habilitadas.');
-            return $this->redirect(['controller'=>'Index', 'action'=>'index']);
-        }
-        
-        $raicTabela = TableRegistry::getTableLocator()->get('Raics');
-        $raic = $raicTabela->newEmptyEntity();
+        return [$editais, $mapaUnidadesPorEdital];
+    }
 
-
-        if($this->request->is(['post', 'put', 'patch'])) {
-            $dados = $this->request->getData();
-
-            try {
-
-                $editalSelecionadoId = (int)($dados['editai_id'] ?? 0);
-                if ($editalSelecionadoId <= 0 || !isset($editais[$editalSelecionadoId])) {
-                    $this->Flash->error('Selecione um edital RAIC válido.');
-                    return $this->redirect(['action' => 'voluntarias']);
-                }
-
-                $unidadesPermitidasEdital = $mapaUnidadesPorEdital[$editalSelecionadoId] ?? [];
-                $unidadeSelecionadaId = (int)($dados['unidade_id'] ?? 0);
-                if ($unidadeSelecionadaId <= 0 || !isset($unidadesPermitidasEdital[$unidadeSelecionadaId])) {
-                    $this->Flash->error('Selecione uma unidade válida para o edital informado.');
-                    return $this->redirect(['action' => 'voluntarias']);
-                }
-
-                $connection = $raicTabela->getConnection();
-                $connection->transactional(function () use ($dados, $editalSelecionadoId) {
-
-                    // Verifica se o CPF bolsista é válido
-                        $cpf = preg_replace('/[^0-9]/', '', $dados['cpf']);
-                        if(parent::validaCPF($cpf)) {
-                            // Verifica se o usuário existe no Banco
-                                $usuario = TableRegistry::getTableLocator()->get('Usuarios')
-                                ->find()->where(['cpf' => $dados['cpf']])->first();
-
-                                if($usuario) {
-                                    // Verifica se o bolsista tem raic nesse ano
-                                    //$ano=date("Y", strtotime($dados['data_apresentacao']));
-                                    $raic = TableRegistry::getTableLocator()->get('Raics')
-                                    ->find()->where([
-                                        'usuario_id' => $usuario->id,
-                                        'editai_id' => $editalSelecionadoId,
-                                        'deleted'=>0
-                                        ])->first();
-
-                                    if($raic !=null){
-                                        $erro = true;
-                                        $this->Flash->error('RAIC NÃO CADASTRADA: O aluno '.$usuario->nome.' já possui Raic cadastrada para este evento, sob numero #'.$raic->id);
-                                        return $this->redirect(['action' => 'voluntarias']);
-
-                                    }
-                                }else{
-                                    //se nao existe grava
-                                        $tblUsuario = TableRegistry::getTableLocator()->get("Usuarios");
-                                        $usuario = $tblUsuario->newEmptyEntity();
-                                        $usuario->cpf = $cpf;
-                                        $usuario->nome = $dados['nome'];
-                                        $usuario->email = $dados['email'];
-
-                                        $nb = $tblUsuario->save($usuario);
-                                        if(!$nb) {
-                                            throw new \Exception('Erro ao salvar os dados do bolsista.');
-                                            return $this->redirect(['action' => 'voluntarias']);
-                                        }
-                                    //
-                                }
-                            //
-                        }else{
-                            $this->Flash->error('O formato do CPF do bolsista é inválido');
-                            return $this->redirect(['action' => 'voluntarias']);
-                        }
-                    //
-
-                    //VERIFICA ORIENTADOR
-                        if($dados['cpf_orientador']!=null){
-                            // Verifica se o CPF coorientador é válido
-                                $cpfor = preg_replace('/[^0-9]/', '', $dados['cpf_orientador']);
-                                if(parent::validaCPF($cpfor)) {
-                                    // Verifica se o usuário existe no Banco
-                                        $orientador = TableRegistry::getTableLocator()->get('Usuarios')
-                                        ->find()->where(['cpf' => $dados['cpf_orientador']])->first();
-
-                                        if($orientador) {
-                                            if($orientador->cpf == $usuario->cpf){
-                                                $this->Flash->error('RAIC NÃO CADASTRADA: O orientador nao pode ser o mesmo que o bolsista.');
-                                                return $this->redirect(['action' => 'voluntarias']);
-                                            }
-                                        }else{
-                                            //se nao existe grava
-                                            $tblUsuario = TableRegistry::getTableLocator()->get("Usuarios");
-                                            $orientador = $tblUsuario->newEmptyEntity();
-                                            $orientador->cpf = $cpfor;
-                                            $orientador->nome = $dados['nome2'];
-                                            $orientador->email = $dados['email2'];
-
-                                            $nb2 = $tblUsuario->save($orientador);
-                                            if(!$nb2) {
-                                                $erro = true;
-                                                throw new \Exception('Erro ao salvar os dados do orientador.');
-                                            }
-                                        }
-                                    //
-                                }else{
-                                    $this->Flash->error('O formato do CPF do orientador é inválido');
-                                    return $this->redirect($this->request->referer());
-                                }
-                            //
-                        }
-                    //
-
-                    //GRAVAÇÃO  DA RAIC
-                        $raicTabela = TableRegistry::getTableLocator()->get('Raics');
-                        $raic = $raicTabela->newEmptyEntity();
-
-                        $raic->usuario_id=$usuario->id;
-                        $raic->orientador=$orientador->id;
-                        $raic->deleted=0;
-                        $raic->unidade_id=$dados['unidade_id'];	
-                        $raic->titulo=$dados['titulo'];	
-                        //$raic->data_apresentacao=$dados['data_apresentacao'];	
-                        $raic->editai_id=$editalSelecionadoId;
-
-                        // colocar o antigo como V se for o caso$raic->tipo_bolsa='V'; //v=voluntario
-                        $raic->tipo_bolsa='Z';
-                        $raic->usuario_cadastro =  $this->Authentication->getIdentity()['id'];
-
-                        if($raicTabela->save($raic)){
-                            $anexosRelatorio = [];
-                            if (!empty($dados['anexos'][13])) {
-                                $anexosRelatorio[13] = $dados['anexos'][13];
-                            }
-                            if (!$this->anexarInscricao($anexosRelatorio, null, null, $raic->id, true)) {
-                                throw new \Exception('Erro ao fazer o upload do relatório. A RAIC não foi gravada');
-                            }
-                            if (!$this->historico($raic->id, 'criação', 'criação', 'cadastro manual da Raic')) {
-                                throw new \Exception('Erro ao gravar o histórico da RAIC manual.');
-                            }
-                        }else{
-                            throw new \Exception('Erro ao salvar a Raic. A RAIC não foi gravada');
-                            return $this->redirect(['action' => 'voluntarias']);
-                        }
-
-                        
-
-                    // FIM GRAVAÇÃO  DA RAIC
-            
-                    $this->Flash->success('RAIC CADASTRADA COM SUCESSO PARA O ALUNO '.$usuario->nome.', sob numero #'.$raic->id);
-                    return $this->redirect(['action' => 'voluntarias']);
-                });
-            
-            } catch (\Throwable $e) {
-                $this->flashFriendlyException(
-                    $e,
-                    'Erro no Sistema - Gravação de RAIC voluntária',
-                    'Houve um erro na gravação. Tente novamente.'
-                );
-                return $this->redirect(['action' => 'voluntarias']);
-            }   
-
+    protected function validarEditalVoluntarias(array $dados, array $editais): int
+    {
+        $editalId = (int)($dados['editai_id'] ?? 0);
+        if ($editalId <= 0 || !isset($editais[$editalId])) {
+            throw new \DomainException('Selecione um edital RAIC válido.');
         }
 
-        $unidades = $unidadesBase;
+        return $editalId;
+    }
 
-        $this->set(compact('unidades', 'raic', 'editais', 'mapaUnidadesPorEdital'));
+    protected function resolverUnidadeVoluntarias(array $dados, array $perfil, array $unidadesPermitidasEdital): array
+    {
+        if ($perfil['aluno_sem_coordenacao']) {
+            $orientador = $this->buscarOrientadorAlunoVoluntarias($dados);
+            $unidadeId = (int)($orientador->unidade_id ?? 0);
+            if ($unidadeId <= 0 || !isset($unidadesPermitidasEdital[$unidadeId])) {
+                throw new \DomainException('RAIC NÃO CADASTRADA: A unidade do orientador não está habilitada para este edital RAIC.');
+            }
+
+            return [$orientador, $unidadeId];
+        }
+
+        $unidadeId = (int)($dados['unidade_id'] ?? 0);
+        if ($unidadeId <= 0 || !isset($unidadesPermitidasEdital[$unidadeId])) {
+            throw new \DomainException('Selecione uma unidade válida para o edital informado.');
+        }
+
+        return [null, $unidadeId];
+    }
+
+    protected function buscarOrientadorAlunoVoluntarias(array $dados)
+    {
+        $cpf = preg_replace('/[^0-9]/', '', (string)($dados['cpf_orientador'] ?? ''));
+        if (!parent::validaCPF($cpf)) {
+            throw new \DomainException('O formato do CPF do orientador é inválido');
+        }
+
+        $orientador = $this->fetchTable('Usuarios')->find()->where(['cpf' => $cpf])->first();
+        if (!$orientador) {
+            throw new \DomainException('RAIC NÃO CADASTRADA: O CPF do orientador não foi localizado.');
+        }
+
+        return $orientador;
+    }
+
+    protected function resolverBolsistaVoluntarias(array $dados, array $perfil, int $editalId)
+    {
+        if ($perfil['aluno_sem_coordenacao']) {
+            $usuario = $this->fetchTable('Usuarios')->get((int)$perfil['usuario_id']);
+            $this->garantirSemRaicVoluntarias((int)$usuario->id, $editalId, 'você já possui Raic cadastrada para este evento');
+
+            return $usuario;
+        }
+
+        $cpf = preg_replace('/[^0-9]/', '', (string)($dados['cpf'] ?? ''));
+        if (!parent::validaCPF($cpf)) {
+            throw new \DomainException('O formato do CPF do bolsista é inválido');
+        }
+
+        $usuario = $this->fetchTable('Usuarios')->find()->where(['cpf' => $cpf])->first();
+        if ($usuario) {
+            $this->garantirSemRaicVoluntarias((int)$usuario->id, $editalId, 'O aluno ' . $usuario->nome . ' já possui Raic cadastrada para este evento');
+            return $usuario;
+        }
+
+        $usuarios = $this->fetchTable('Usuarios');
+        $usuario = $usuarios->newEmptyEntity();
+        $usuario->cpf = $cpf;
+        $usuario->nome = $dados['nome'];
+        $usuario->email = $dados['email'];
+
+        if (!$usuarios->save($usuario)) {
+            throw new \RuntimeException('Erro ao salvar os dados do bolsista.');
+        }
+
+        return $usuario;
+    }
+
+    protected function resolverOrientadorVoluntarias(array $dados, array $perfil, $bolsista, $orientadorPreSelecionado = null)
+    {
+        if ($perfil['aluno_sem_coordenacao']) {
+            $orientador = $orientadorPreSelecionado;
+        } elseif ($perfil['orientador_sem_coordenacao']) {
+            $orientador = $this->fetchTable('Usuarios')->get((int)$perfil['usuario_id']);
+        } else {
+            $orientador = $this->buscarOuCriarOrientadorVoluntarias($dados);
+        }
+
+        if (!$orientador || (int)$orientador->id === (int)$bolsista->id) {
+            throw new \DomainException('RAIC NÃO CADASTRADA: O orientador nao pode ser o mesmo que o bolsista.');
+        }
+
+        return $orientador;
+    }
+
+    protected function buscarOuCriarOrientadorVoluntarias(array $dados)
+    {
+        $cpf = preg_replace('/[^0-9]/', '', (string)($dados['cpf_orientador'] ?? ''));
+        if (!parent::validaCPF($cpf)) {
+            throw new \DomainException('O formato do CPF do orientador é inválido');
+        }
+
+        $usuarios = $this->fetchTable('Usuarios');
+        $orientador = $usuarios->find()->where(['cpf' => $cpf])->first();
+        if ($orientador) {
+            return $orientador;
+        }
+
+        $orientador = $usuarios->newEmptyEntity();
+        $orientador->cpf = $cpf;
+        $orientador->nome = $dados['nome2'];
+        $orientador->email = $dados['email2'];
+
+        if (!$usuarios->save($orientador)) {
+            throw new \RuntimeException('Erro ao salvar os dados do orientador.');
+        }
+
+        return $orientador;
+    }
+
+    protected function garantirSemRaicVoluntarias(int $usuarioId, int $editalId, string $mensagemBase): void
+    {
+        $raic = $this->fetchTable('Raics')->find()
+            ->where([
+                'usuario_id' => $usuarioId,
+                'editai_id' => $editalId,
+                'deleted' => 0,
+            ])
+            ->first();
+
+        if ($raic) {
+            throw new \DomainException('RAIC NÃO CADASTRADA: ' . $mensagemBase . ', sob numero #' . $raic->id);
+        }
     }
 }

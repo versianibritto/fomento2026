@@ -364,6 +364,16 @@ class AvaliadoresController extends AppController
             ],
         ]);
 
+        if ($inscricao->deleted !== null) {
+            $this->Flash->error('Não é permitido vincular avaliadores a uma inscrição deletada.');
+            return $this->redirect(['controller' => 'Listas', 'action' => 'listaInscricoesAvaliadores']);
+        }
+
+        if ($inscricao->homologado === null) {
+            $this->Flash->error('Não é permitido vincular avaliadores a uma inscrição sem homologação definida.');
+            return $this->redirect(['controller' => 'Listas', 'action' => 'listaInscricoesAvaliadores']);
+        }
+
         $editalAberto = !empty($inscricao->editai)
             && empty($inscricao->editai->deleted)
             && in_array((string)($inscricao->editai->origem ?? ''), ['N', 'R'], true)

@@ -11,6 +11,7 @@ $agendadaLabel = ($filtros['agendada'] ?? '') === 'S' ? 'Sim' : (($filtros['agen
 $certificadoLabel = ($filtros['certificado'] ?? '') === 'S' ? 'Sim' : (($filtros['certificado'] ?? '') === 'N' ? 'Não' : 'Todos');
 $unidadeLabel = (($filtros['unidade_id'] ?? '') !== '' && isset($unidades[$filtros['unidade_id']])) ? $unidades[$filtros['unidade_id']] : 'Todas';
 $tipoBolsaLabel = (($filtros['tipo_bolsa'] ?? '') !== '' && isset($tipoBolsa[$filtros['tipo_bolsa']])) ? $tipoBolsa[$filtros['tipo_bolsa']] : 'Todos';
+$temRelatorioLabel = ($filtros['tem_relatorio'] ?? '') === 'S' ? 'Sim' : (($filtros['tem_relatorio'] ?? '') === 'N' ? 'Não' : 'Todos');
 ?>
 
 <div class="container mt-4">
@@ -30,7 +31,8 @@ $tipoBolsaLabel = (($filtros['tipo_bolsa'] ?? '') !== '' && isset($tipoBolsa[$fi
                 <strong>Agendada</strong> <?= h($agendadaLabel) ?>,
                 <strong>Unidade</strong> <?= h($unidadeLabel) ?>,
                 <strong>Certificado</strong> <?= h($certificadoLabel) ?>,
-                <strong>Tipo</strong> <?= h($tipoBolsaLabel) ?>
+                <strong>Tipo</strong> <?= h($tipoBolsaLabel) ?>,
+                <strong>Relatório</strong> <?= h($temRelatorioLabel) ?>
             </div>
             <a class="btn btn-outline-success"
                href="<?= $this->Url->build([
@@ -42,6 +44,7 @@ $tipoBolsaLabel = (($filtros['tipo_bolsa'] ?? '') !== '' && isset($tipoBolsa[$fi
                        'unidade_id' => $filtros['unidade_id'] ?: null,
                        'certificado' => $filtros['certificado'] ?: null,
                        'tipo_bolsa' => $filtros['tipo_bolsa'] ?: null,
+                       'tem_relatorio' => $filtros['tem_relatorio'] ?: null,
                        'acao' => 'excel',
                    ],
                ]) ?>">
@@ -60,6 +63,7 @@ $tipoBolsaLabel = (($filtros['tipo_bolsa'] ?? '') !== '' && isset($tipoBolsa[$fi
                         <th>Orientador</th>
                         <th><?= $this->Paginator->sort('Raics.unidade_id', 'Unidade') ?></th>
                         <th><?= $this->Paginator->sort('Raics.tipo_bolsa', 'Tipo') ?></th>
+                        <th title="Relatório">Rel.</th>
                         <th><?= $this->Paginator->sort('Raics.data_apresentacao', 'Agendada') ?></th>
                         <th><?= $this->Paginator->sort('Raics.presenca', 'Certificado') ?></th>
                         <th><?= $this->Paginator->sort('Raics.deleted', 'Status') ?></th>
@@ -92,6 +96,13 @@ $tipoBolsaLabel = (($filtros['tipo_bolsa'] ?? '') !== '' && isset($tipoBolsa[$fi
                                 <td><?= h($raic->orientadore->nome ?? 'Não informado') ?></td>
                                 <td><?= h($raic->unidade->sigla ?? 'Não informado') ?></td>
                                 <td><?= h($tiposTabela[strtoupper((string)($raic->tipo_bolsa ?? ''))] ?? ($raic->tipo_bolsa ?? 'Não informado')) ?></td>
+                                <td>
+                                    <?php if (trim((string)($raic->relatorio ?? '')) !== ''): ?>
+                                        <span class="badge bg-success" title="Tem relatório">S</span>
+                                    <?php else: ?>
+                                        <span class="badge bg-secondary" title="Sem relatório">N</span>
+                                    <?php endif; ?>
+                                </td>
                                 <td>
                                     <?php if (!empty($raic->data_apresentacao)): ?>
                                         <span class="badge bg-success">Sim</span>
@@ -152,7 +163,11 @@ $tipoBolsaLabel = (($filtros['tipo_bolsa'] ?? '') !== '' && isset($tipoBolsa[$fi
                                                     ['class' => 'btn btn-sm btn-outline-secondary']
                                                 ) ?>
                                             <?php endif; ?>
-
+                                            <?= $this->Html->link(
+                                                'Editar',
+                                                ['controller' => 'RaicNew', 'action' => 'editar', $raic->id],
+                                                ['class' => 'btn btn-sm btn-outline-warning']
+                                            ) ?>
                                         </div>
                                     <?php endif; ?>
                                 </td>
@@ -160,7 +175,7 @@ $tipoBolsaLabel = (($filtros['tipo_bolsa'] ?? '') !== '' && isset($tipoBolsa[$fi
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="9" class="text-center text-muted fw-bold">Nenhum registro encontrado.</td>
+                            <td colspan="10" class="text-center text-muted fw-bold">Nenhum registro encontrado.</td>
                         </tr>
                     <?php endif; ?>
                 </tbody>

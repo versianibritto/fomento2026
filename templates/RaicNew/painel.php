@@ -1,5 +1,6 @@
 <?php
-$usuarioId = (int)($this->request->getAttribute('identity')->id ?? 0);
+$identityRaicPainel = $this->request->getAttribute('identity');
+$usuarioId = (int)($identityRaicPainel->id ?? 0);
 $tiposBolsa = [
     'R' => 'Renovação',
     'V' => '**Raics de Outras Agencias',
@@ -87,17 +88,19 @@ $tiposBolsa = [
                                         <?php endif; ?>
                                     </td>
                                     <td class="text-end">
-                                        <?php if (strtoupper((string)($bol->presenca ?? '')) === 'S' && (int)($bol->usuario_id ?? 0) === $usuarioId): ?>
-                                            <?= $this->Html->link(
-                                                '<i class="fas fa-file"></i> Certificado',
-                                                ['controller' => 'Certificados', 'action' => 'ver', $bol->id, 'R', $anoCertificado],
-                                                ['class' => 'btn btn-info btn-xs', 'target' => '_blank', 'escape' => false]
-                                            ) ?>
-                                        <?php elseif (strtoupper((string)($bol->presenca ?? '')) === 'S'): ?>
-                                            <span class="text-success small">Certificado liberado</span>
-                                        <?php else: ?>
-                                            <span class="text-muted small">Certificado não liberado</span>
-                                        <?php endif; ?>
+                                        <div class="d-flex flex-wrap gap-2 justify-content-end align-items-center">
+                                            <?php if (strtoupper((string)($bol->presenca ?? '')) === 'S' && (int)($bol->usuario_id ?? 0) === $usuarioId): ?>
+                                                <?= $this->Html->link(
+                                                    '<i class="fas fa-file"></i> Certificado',
+                                                    ['controller' => 'Certificados', 'action' => 'ver', $bol->id, 'R', $anoCertificado],
+                                                    ['class' => 'btn btn-info btn-xs', 'target' => '_blank', 'escape' => false]
+                                                ) ?>
+                                            <?php elseif (strtoupper((string)($bol->presenca ?? '')) === 'S'): ?>
+                                                <span class="text-success small">Certificado liberado</span>
+                                            <?php else: ?>
+                                                <span class="text-muted small">Certificado não liberado</span>
+                                            <?php endif; ?>
+                                        </div>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>

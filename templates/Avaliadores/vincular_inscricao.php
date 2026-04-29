@@ -7,6 +7,17 @@ if ($projetoTitulo === '') {
 if ($projetoTitulo === '') {
     $projetoTitulo = 'Não informado';
 }
+$homologadoValor = strtoupper((string)($inscricao->homologado ?? ''));
+if ($homologadoValor === 'S') {
+    $homologadoTexto = 'Homologada';
+    $homologadoClasse = 'success';
+} elseif ($homologadoValor === 'N') {
+    $homologadoTexto = 'Não homologada';
+    $homologadoClasse = 'danger';
+} else {
+    $homologadoTexto = 'Não verificada';
+    $homologadoClasse = 'warning text-dark';
+}
 $statusNotaMap = [
     'E' => 'Aguardando avaliação',
     'F' => 'Finalizado',
@@ -30,7 +41,10 @@ foreach ($vinculosAtivos as $vinculoAtivo) {
 
 <div class="container mt-4">
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-        <h4 class="mb-0"><?= $vinculoExistente ? 'Substituir' : 'Vincular' ?> Avaliadores da Inscrição #<?= (int)$inscricao->id ?></h4>
+        <div class="d-flex flex-wrap align-items-center gap-2">
+            <h4 class="mb-0"><?= $vinculoExistente ? 'Substituir' : 'Vincular' ?> Avaliadores da Inscrição #<?= (int)$inscricao->id ?></h4>
+            <span class="badge bg-<?= h($homologadoClasse) ?>"><?= h($homologadoTexto) ?></span>
+        </div>
         <?= $this->Html->link('Voltar', ['controller' => 'Listas', 'action' => 'listaInscricoesAvaliadores'], ['class' => 'btn btn-sm btn-outline-secondary']) ?>
     </div>
 

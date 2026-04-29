@@ -80,17 +80,24 @@
                         'class' => 'form-select',
                     ]) ?>
                 </div>
-                <div class="col-md-6">
+                <div class="col-md-4">
                     <?= $this->Form->control('unidade_id', [
                         'label' => 'Unidade',
                         'options' => ['' => 'Todas'] + ($unidades ?? []),
                         'class' => 'form-select',
                     ]) ?>
                 </div>
-                <div class="col-md-6">
+                <div class="col-md-4">
                     <?= $this->Form->control('tipo_bolsa', [
                         'label' => 'Tipo bolsa',
                         'options' => ['' => 'Todos'] + ($tipoBolsa ?? []),
+                        'class' => 'form-select',
+                    ]) ?>
+                </div>
+                <div class="col-md-4">
+                    <?= $this->Form->control('tem_relatorio', [
+                        'label' => 'Tem relatório',
+                        'options' => ['' => 'Todos', 'S' => 'Sim', 'N' => 'Não'],
                         'class' => 'form-select',
                     ]) ?>
                 </div>

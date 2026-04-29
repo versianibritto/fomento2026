@@ -167,6 +167,7 @@ class ListasController extends AppController
             'unidade_id' => (string)$this->request->getQuery('unidade_id', ''),
             'certificado' => (string)$this->request->getQuery('certificado', ''),
             'tipo_bolsa' => (string)$this->request->getQuery('tipo_bolsa', ''),
+            'tem_relatorio' => (string)$this->request->getQuery('tem_relatorio', ''),
         ];
 
         if ($filtros['ano'] === '' || !ctype_digit($filtros['ano'])) {
@@ -185,6 +186,7 @@ class ListasController extends AppController
                 'Raics.tipo_apresentacao',
                 'Raics.data_apresentacao',
                 'Raics.presenca',
+                'Raics.relatorio',
                 'Raics.deleted',
                 'Raics.editai_id',
                 'Raics.created',
@@ -298,6 +300,19 @@ class ListasController extends AppController
                 $query->where(['Raics.tipo_bolsa' => $filtros['tipo_bolsa']]);
             }
         }
+        if ($filtros['tem_relatorio'] === 'S') {
+            $query->where([
+                'Raics.relatorio IS NOT' => null,
+                'Raics.relatorio <>' => '',
+            ]);
+        } elseif ($filtros['tem_relatorio'] === 'N') {
+            $query->where(function ($exp) {
+                return $exp->or([
+                    'Raics.relatorio IS' => null,
+                    'Raics.relatorio' => '',
+                ]);
+            });
+        }
 
         if ($this->request->getQuery('acao') === 'excel') {
             $rows = $query->all();
@@ -328,6 +343,7 @@ class ListasController extends AppController
                 'created',
                 'tipo_bolsa',
                 'projeto_bolsista_id',
+                'tem_relatorio',
             ];
             $exportRows = [];
             foreach ($rows as $raic) {
@@ -366,6 +382,7 @@ class ListasController extends AppController
                         default => (string)($raic->tipo_bolsa ?? ''),
                     },
                     $raic->projeto_bolsista_id ?? '',
+                    trim((string)($raic->relatorio ?? '')) !== '' ? 'Sim' : 'Não',
                 ];
             }
 
@@ -507,10 +524,19 @@ class ListasController extends AppController
             $filtros['status_vinculo'] = '';
         }
 
+        $homologadoOptions = [
+            'P' => 'Não verificada',
+            'S' => 'Homologada',
+            'N' => 'Não homologada',
+        ];
+        if ($filtros['homologado'] !== '' && !isset($homologadoOptions[$filtros['homologado']])) {
+            $filtros['homologado'] = '';
+        }
+
         $query = $this->montarQueryListaInscricoesAvaliadores($filtros);
         $inscricoes = $this->paginate($query, ['limit' => 12]);
 
-        $this->set(compact('inscricoes', 'editais', 'grandesAreas', 'areas', 'filtros', 'statusOptions'));
+        $this->set(compact('inscricoes', 'editais', 'grandesAreas', 'areas', 'filtros', 'statusOptions', 'homologadoOptions'));
     }
 
     public function dashcountavaliadores()
@@ -794,6 +820,7 @@ class ListasController extends AppController
         return [
             'editai_id' => (int)$this->request->getQuery('editai_id', 0),
             'status_vinculo' => trim((string)$statusVinculo),
+            'homologado' => strtoupper(trim((string)$this->request->getQuery('homologado', ''))),
             'grandes_area_id' => (int)$this->request->getQuery('grandes_area_id', 0),
             'area_id' => (int)$this->request->getQuery('area_id', 0),
         ];
@@ -1035,6 +1062,7 @@ class ListasController extends AppController
                 'ProjetoBolsistas.orientador',
                 'ProjetoBolsistas.origem',
                 'ProjetoBolsistas.sp_titulo',
+                'ProjetoBolsistas.homologado',
                 'ProjetoBolsistas.created',
                 'projeto_titulo' => 'Projetos.titulo',
                 'area_nome' => 'Areas.nome',
@@ -1117,7 +1145,6 @@ class ListasController extends AppController
             )
             ->where([
                 'ProjetoBolsistas.deleted IS' => null,
-                'ProjetoBolsistas.homologado' => 'S',
                 'ProjetoBolsistas.fase_id' => 4,
                 'Editais.deleted' => 0,
                 'Editais.origem IN' => ['N', 'R'],
@@ -1126,9 +1153,15 @@ class ListasController extends AppController
             ])
             ->orderBy([
                 'Editais.nome' => 'ASC',
-                'Bolsistas.nome' => 'ASC',
-                'ProjetoBolsistas.id' => 'DESC',
-            ]);
+            'Bolsistas.nome' => 'ASC',
+            'ProjetoBolsistas.id' => 'DESC',
+        ]);
+
+        if (in_array($filtros['homologado'] ?? '', ['S', 'N'], true)) {
+            $query->where(['ProjetoBolsistas.homologado' => $filtros['homologado']]);
+        } elseif (($filtros['homologado'] ?? '') === 'P') {
+            $query->where(['ProjetoBolsistas.homologado IS' => null]);
+        }
 
         if ((int)$filtros['editai_id'] > 0) {
             $query->where(['ProjetoBolsistas.editai_id' => (int)$filtros['editai_id']]);

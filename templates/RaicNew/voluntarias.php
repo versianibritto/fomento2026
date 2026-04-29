@@ -8,73 +8,77 @@
                 <div class="text-muted mt-1">Informe bolsista, orientador e dados da RAIC para concluir o cadastro manual.</div>
             </div>
 
-            <div class="card bg-light border-0 mb-3">
-                <div class="card-body">
-                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
-                        <h4 class="mb-0">Dados do(a) bolsista</h4>
-                    </div>
+            <?php if (!empty($mostrarBlocoBolsista)): ?>
+                <div class="card bg-light border-0 mb-3">
+                    <div class="card-body">
+                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+                            <h4 class="mb-0">Dados do(a) bolsista</h4>
+                        </div>
 
-                    <div class="row g-3">
-                        <div class="col-md-3">
-                            <?= $this->Form->control('cpf', [
-                                'label' => 'CPF do(a) bolsista (apenas números)',
-                                'class' => 'form-control',
-                                'required',
-                                'SIZE' => 11,
-                                'MAXLENGTH' => 11,
-                            ]); ?>
-                            <?= $this->Form->control('bolsista', ['type' => 'hidden']); ?>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="input text">
-                                <label for="nome">Nome do(a) bolsista</label>
-                                <input type="text" name="nome" class="form-control" id="nome">
-                                <small class="text-danger" id="errobolsista" style="display: none;">Error message</small>
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <?= $this->Form->control('cpf', [
+                                    'label' => 'CPF do(a) bolsista (apenas números)',
+                                    'class' => 'form-control',
+                                    'required',
+                                    'SIZE' => 11,
+                                    'MAXLENGTH' => 11,
+                                ]); ?>
+                                <?= $this->Form->control('bolsista', ['type' => 'hidden']); ?>
                             </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="input text">
-                                <label for="email">E-mail do(a) bolsista</label>
-                                <input type="text" name="email" class="form-control" id="email">
+                            <div class="col-md-6">
+                                <div class="input text">
+                                    <label for="nome">Nome do(a) bolsista</label>
+                                    <input type="text" name="nome" class="form-control" id="nome">
+                                    <small class="text-danger" id="errobolsista" style="display: none;">Error message</small>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="input text">
+                                    <label for="email">E-mail do(a) bolsista</label>
+                                    <input type="text" name="email" class="form-control" id="email">
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
+            <?php endif; ?>
 
-            <div class="card bg-light border-0 mb-3">
-                <div class="card-body">
-                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
-                        <h4 class="mb-0">Dados do(a) orientador(a)</h4>
-                    </div>
-
-                    <div class="row g-3">
-                        <div class="col-md-3">
-                            <?= $this->Form->control('cpf_orientador', [
-                                'label' => 'CPF do(a) orientador(a) (apenas números)',
-                                'class' => 'form-control',
-                                'required',
-                                'SIZE' => 11,
-                                'MAXLENGTH' => 11,
-                            ]); ?>
-                            <?= $this->Form->control('orientador', ['type' => 'hidden']); ?>
+            <?php if (!empty($mostrarBlocoOrientador)): ?>
+                <div class="card bg-light border-0 mb-3">
+                    <div class="card-body">
+                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+                            <h4 class="mb-0">Dados do(a) orientador(a)</h4>
                         </div>
-                        <div class="col-md-6">
-                            <div class="input text">
-                                <label for="nome2">Nome do(a) orientador(a)</label>
-                                <input type="text" name="nome2" class="form-control" id="nome2">
-                                <small class="text-danger" id="erroorientador" style="display: none;">Error message</small>
+
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <?= $this->Form->control('cpf_orientador', [
+                                    'label' => 'CPF do(a) orientador(a) (apenas números)',
+                                    'class' => 'form-control',
+                                    'required',
+                                    'SIZE' => 11,
+                                    'MAXLENGTH' => 11,
+                                ]); ?>
+                                <?= $this->Form->control('orientador', ['type' => 'hidden']); ?>
                             </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="input text">
-                                <label for="email2">E-mail do(a) orientador(a)</label>
-                                <input type="text" name="email2" class="form-control" id="email2">
+                            <div class="col-md-6">
+                                <div class="input text">
+                                    <label for="nome2">Nome do(a) orientador(a)</label>
+                                    <input type="text" name="nome2" class="form-control" id="nome2">
+                                    <small class="text-danger" id="erroorientador" style="display: none;">Error message</small>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="input text">
+                                    <label for="email2">E-mail do(a) orientador(a)</label>
+                                    <input type="text" name="email2" class="form-control" id="email2">
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
+            <?php endif; ?>
 
             <div class="card bg-light border-0 mb-3">
                 <div class="card-body">
@@ -92,15 +96,17 @@
                                 'required',
                             ]) ?>
                         </div>
-                        <div class="col-md-6">
-                            <?= $this->Form->control('unidade_id', [
-                                'label' => 'Unidade',
-                                'class' => 'form-control',
-                                'options' => $unidades,
-                                'empty' => 'Selecione',
-                                'required',
-                            ]) ?>
-                        </div>
+                        <?php if (!empty($mostrarCampoUnidade)): ?>
+                            <div class="col-md-6">
+                                <?= $this->Form->control('unidade_id', [
+                                    'label' => 'Unidade',
+                                    'class' => 'form-control',
+                                    'options' => $unidades,
+                                    'empty' => 'Selecione',
+                                    'required',
+                                ]) ?>
+                            </div>
+                        <?php endif; ?>
                         <div class="col-12">
                             <?= $this->Form->control('titulo', [
                                 'label' => 'Título do subprojeto',

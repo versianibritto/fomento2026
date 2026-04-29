@@ -10,6 +10,11 @@
         background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
         box-shadow: 0 10px 22px rgba(15, 23, 42, 0.09);
     }
+    .avaliadores-inscricao-card--pendente-homologacao {
+        border-color: #dc3545;
+        background: linear-gradient(180deg, #fff5f5 0%, #fffafa 100%);
+        box-shadow: 0 10px 22px rgba(220, 53, 69, 0.12);
+    }
     .avaliadores-inscricao-card .card-body {
         padding: 1rem 1rem 0.9rem;
     }
@@ -143,7 +148,10 @@
                 <div class="card-body">
                     <h4 class="mb-2">Inscrições para Vinculação de Avaliadores</h4>
                     <p class="text-muted mb-3">
-                        Listagem de inscrições dos editais de nova e renovação com avaliação aberta, trazendo apenas inscrições no status finalizado e com homologação aceita, indicando se já possuem avaliadores vinculados.
+                        Listagem de inscrições dos editais de nova e renovação com avaliação aberta.<br>
+                        Listadas apenas inscrições finalizadas.<br>
+                        Podem ser listadas inscrições homologadas, não homologadas e não verificadas.<br>
+                        <strong class="text-danger">Inscrições não verificadas não poderão ser vinculadas.</strong>
                     </p>
 
                     <?= $this->Form->create(null, [
@@ -159,7 +167,16 @@
                                 'class' => 'form-select',
                             ]) ?>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-4">
+                            <?= $this->Form->control('homologado', [
+                                'label' => 'Homologação',
+                                'options' => $homologadoOptions,
+                                'empty' => 'Todos',
+                                'default' => $filtros['homologado'] ?? '',
+                                'class' => 'form-select',
+                            ]) ?>
+                        </div>
+                        <div class="col-md-4">
                             <?= $this->Form->control('status_vinculo', [
                                 'label' => 'Situação de vínculo',
                                 'options' => $statusOptions,
@@ -168,7 +185,8 @@
                                 'class' => 'form-select',
                             ]) ?>
                         </div>
-                        <div class="col-md-2">
+                        <div class="w-100"></div>
+                        <div class="col-md-4">
                             <?= $this->Form->control('grandes_area_id', [
                                 'label' => 'Grande área',
                                 'options' => $grandesAreas,
@@ -178,7 +196,7 @@
                                 'id' => 'grandes-area-id',
                             ]) ?>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-4">
                             <?= $this->Form->control('area_id', [
                                 'label' => 'Área do projeto',
                                 'options' => $areas,
@@ -235,6 +253,18 @@
                                     $statusTexto = 'Vinculação parcial';
                                 }
                                 $origemTexto = strtoupper((string)($inscricao->origem ?? '')) === 'R' ? 'Renovação' : 'Nova';
+                                $homologadoValor = strtoupper((string)($inscricao->homologado ?? ''));
+                                $homologadoPendente = $homologadoValor === '';
+                                if ($homologadoValor === 'S') {
+                                    $homologadoTexto = 'Homologado: Sim (S)';
+                                    $homologadoClasse = 'success';
+                                } elseif ($homologadoValor === 'N') {
+                                    $homologadoTexto = 'Homologado: Não (N)';
+                                    $homologadoClasse = 'danger';
+                                } else {
+                                    $homologadoTexto = 'Homologado: ainda não olhado';
+                                    $homologadoClasse = 'danger';
+                                }
                                 $avaliadoresLista = [];
                                 $avaliadoresStatusBruto = trim((string)($inscricao->avaliadores_status ?? ''));
                                 if ($avaliadoresStatusBruto !== '') {
@@ -260,7 +290,7 @@
                                     }
                                 }
                                 ?>
-                                <div class="avaliadores-inscricao-card card h-100">
+                                <div class="avaliadores-inscricao-card card h-100<?= $homologadoPendente ? ' avaliadores-inscricao-card--pendente-homologacao' : '' ?>">
                                     <div class="card-body">
                                         <div class="avaliadores-inscricao-topo">
                                             <div>
@@ -275,6 +305,7 @@
                                                 </div>
                                             </div>
                                             <div class="avaliadores-inscricao-topo-acoes">
+                                                <span class="badge bg-<?= h($homologadoClasse) ?>"><?= h($homologadoTexto) ?></span>
                                                 <span class="badge bg-<?= h($statusClasse) ?>"><?= h($statusTexto) ?></span>
                                                 <?= $this->Html->link(
                                                     'Abrir inscrição',
