@@ -1,4 +1,8 @@
 <?php
+/**
+ * @var \App\View\AppView $this
+ * @var int $id
+ */
 print $this->Form->create(); ?>
     <div class="text-center p-5">
         <fieldset class="form-certificado">

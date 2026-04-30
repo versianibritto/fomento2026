@@ -101,7 +101,221 @@ class PadraoController extends AppController
         $this->set(compact('projeto', 'bol', 'teste_idade'));
     }
 
-    public function visualizar($inscricaoId = null)
+    public function termopdj(int|string|null $id = null)
+    {
+        $this->viewBuilder()->setLayout('ajax');
+        if (empty($id)) {
+            $this->Flash->error('Inscrição não informada.');
+            return $this->redirect(['controller' => 'Index', 'action' => 'index']);
+        }
+
+        $tblInscricao = TableRegistry::getTableLocator()->get('ProjetoBolsistas');
+        $inscricao = $tblInscricao->find()
+            ->contain([
+                'Orientadores' => [
+                    'Unidades',
+                    'Streets' => [
+                        'Districts' => 'Cities',
+                    ],
+                    'Vinculos',
+                ],
+                'Bolsistas' => [
+                    'Escolaridades',
+                ],
+                'Projetos',
+                'Editais',
+                'Areas',
+            ])
+            ->where(['ProjetoBolsistas.id' => (int)$id])
+            ->first();
+
+        if (!$inscricao) {
+            $this->Flash->error('Inscrição não localizada.');
+            return $this->redirect(['controller' => 'Index', 'action' => 'index']);
+        }
+
+        if ($inscricao->programa_id>1) {
+            return $this->redirect(['action' => 'imprimirSolicitacao', $id]);
+        }
+
+        $inscricao->usuario = $inscricao->orientadore;
+        $inscricao->candidato = $inscricao->bolsista_usuario;
+        $inscricao->edital_id = $inscricao->editai_id;
+        $inscricao->area_id = $inscricao->area_pdj;
+
+        foreach (['usuario', 'candidato', 'edital_id', 'area_id'] as $campoTemporario) {
+            $inscricao->setDirty($campoTemporario, false);
+        }
+
+        if (empty($inscricao->usuario) || empty($inscricao->candidato)) {
+            $this->Flash->error('Inscrição sem orientador ou bolsista vinculado.');
+            return $this->redirect(['action' => 'visualizar', $inscricao->id]);
+        }
+
+        $doc_bolsista = TableRegistry::getTableLocator()->get('Anexos')->find()->contain(['AnexosTipos', 'Usuarios'])->where([
+            'projeto_bolsista_id' => $inscricao->id,
+            'deleted IS' => null,
+        ]);
+        
+        if(!in_array($this->request->getAttribute('identity')['id'], [1,8088, $inscricao->orientador])){
+            $this->Flash->error('Somente o orientador pode realizar esta ação');
+            return $this->redirect(['action' => 'visualizar',$inscricao->id ]);
+        }
+
+        if($inscricao->deleted!=null) {
+            $this->Flash->error('A inscrição foi deletada');
+            return $this->redirect(['action' => 'visualizar',$inscricao->id ]);
+        }
+        if($inscricao->usuario->unidade_id == null) {
+            $this->Flash->error('O Orientador deve informar sua unidade');
+            return $this->redirect(['action' => 'visualizar',$inscricao->id ]);
+        }
+        if($inscricao->usuario->matricula_siape == null) {
+            $this->Flash->error('O Orientador deve informar sua matrícula Siape');
+            return $this->redirect(['action' => 'visualizar',$inscricao->id ]);
+        }
+        if($inscricao->usuario->departamento == null) {
+            $this->Flash->error('O Orientador deve informar seu departamento');
+            return $this->redirect(['action' => 'visualizar',$inscricao->id ]);
+        }
+
+        /*
+        if($inscricao->usuario->street_id == null) {
+            $this->Flash->error('O Orientador deve informar seu endereço');
+            return $this->redirect(['action' => 'detalhepdj',$inscricao->id ]);
+        }
+            */
+
+        
+        if($inscricao->candidato->escolaridade_id == null) {
+            $this->Flash->error('O bolsista deve confirmar o doutourado em seu cadastro');
+            return $this->redirect(['action' => 'visualizar',$inscricao->id ]);
+        }
+
+        if($inscricao->candidato->escolaridade_id !=10) {
+            $this->Flash->error('O bolsista deve ser doutor');
+            return $this->redirect(['action' => 'visualizar',$inscricao->id ]);
+        }
+
+        if($inscricao->candidato->ano_conclusao==null) {
+            $this->Flash->error('O candidato deve informar o ano de conclusão do doutorado no seu cadastro');
+            return $this->redirect(['action' => 'visualizar',$inscricao->id ]);
+        }
+
+        if($inscricao->candidato->ano_conclusao > 2026) {
+            $this->Flash->error('O candidato deve ter concluído o doutorado até a implantação da bolsa');
+            return $this->redirect(['action' => 'visualizar',$inscricao->id ]);
+        }
+
+        $pb =  $tblInscricao->find()->where([
+            'bolsista' => $inscricao->bolsista, 
+            'fase_id IN' => [4, 5],
+            'editai_id'=>$inscricao->editai_id,
+            'id <>'=>$inscricao->id,
+            '(deleted IS NULL)'
+        ])->count();
+
+        if($pb>0) {
+            $this->Flash->error('O bolsista informado possui outra inscrição em finalizada. Indique outro bolsista para continuar o processo!');
+            return $this->redirect(['action' => 'visualizar',$inscricao->id ]);
+        }
+
+        $orientab =  $tblInscricao->find()->where([
+            'orientador' => $inscricao->orientador, 
+            'fase_id IN' => [4, 5],
+            'editai_id'=>$inscricao->editai_id,
+            'id <>'=>$inscricao->id,
+            '(deleted IS NULL)'
+        ])->count();
+
+        if($orientab>0) {
+            $this->Flash->error('O orientador tem outra inscrição finalizada.');
+            return $this->redirect(['action' => 'visualizar',$inscricao->id ]);
+        }
+        
+        $existe_anexo = TableRegistry::getTableLocator()->get('Anexos')->find()->where([
+            'projeto_id' => $inscricao->projeto_id,
+            'projeto_bolsista_id' => $inscricao->id,
+            'anexos_tipo_id' => 10,
+            'deleted IS' => null,
+        ])->first();
+        
+
+        if(!$existe_anexo) {
+            $this->Flash->error('O bolsista precisa anexar o comprovante de escolaridade antes de finalizar a inscrição!');
+            return $this->redirect(['action' => 'visualizar',$inscricao->id ]);
+        }
+
+        if(in_array($inscricao->cota, ['N', 'I','D', 'T'])){
+            $existe_cota = TableRegistry::getTableLocator()->get('Anexos')->find()->where([
+                'projeto_id' => $inscricao->projeto_id,
+                'projeto_bolsista_id' => $inscricao->id,
+                'anexos_tipo_id' => 21,
+                'deleted IS' => null,
+            ])->first();
+            
+            if(!$existe_cota) {
+                $this->Flash->error('O bolsista se increveu em cotas e precisa anexar a autodeclaração;');
+                return $this->redirect(['action' => 'visualizar',$inscricao->id ]);
+            }
+        }
+        //bloco colocado para abrir anexar fora do periodo de inscrição
+            $ed = TableRegistry::getTableLocator()->get('Editais')->find()->where(['id' => $inscricao->editai_id])->first();
+            
+            // Vinculos       
+            if($ed->vinculos_permitidos != null) {
+            if(!in_array($this->Authentication->getIdentity()['vinculo_id'], explode(",", str_replace(" ", "", $ed->vinculos_permitidos)))) {
+                    $vinculos = TableRegistry::getTableLocator()->get('Vinculos')->find()->where('id IN (' . $ed->vinculos_permitidos . ')');
+                    $vinc = "";
+                    $vp = "Não informado";
+                    foreach($vinculos as $esc){
+                        $vinc .= "<li>" . $esc->nome . "</li>";
+                    }
+                    $this->Flash->error("Este edital é restrito aos seguintes vínculos funcionais: <ul>" . $vinc . "</ul>" , ['escape' => false]);
+                    return $this->redirect($this->referer());
+                }
+            }
+            
+            // Escolaridades
+            if($ed->escolaridades_permitidas != null) {
+                if(!in_array($this->Authentication->getIdentity()['escolaridade_id'], explode(",", str_replace(" ", "", $ed->escolaridades_permitidas)))) {
+                    $escolaridades = TableRegistry::getTableLocator()->get('Escolaridades')->find()->where('id IN (' . $ed->escolaridades_permitidas . ')');
+                    $escolas = "";
+                    foreach($escolaridades as $esc){
+                        $escolas .= "<li>" . $esc->nome . "</li>";
+                    }
+                    $this->Flash->error("Este edital é restrito às seguintes escolaridades: <ul>" . $escolas . "</ul>", ['escape' => false]);
+                    return $this->redirect($this->referer());
+                }
+            }
+            if (in_array((int)$inscricao->fase_id, [1, 3], true)) {
+                $faseOriginal = (int)$inscricao->fase_id;
+                $inscricaoPatch = $tblInscricao->patchEntity($inscricao, ['fase_id' => 5]);
+                $tblInscricao->saveOrFail($inscricaoPatch);
+                $inscricao->fase_id = 5;
+                $this->historico((int)$inscricao->id, $faseOriginal, 5, 'Geração de termo PDJ', true);
+            }
+
+            //se for uma finalização de inscrição, deleta todas as indcrições anteriores desse orientador 
+            // e qq outra inscrição que o bolsista esteja vinculado
+            // sem comprometer as substituições
+            if((int)$inscricao->fase_id === 5){
+                $alt_bols = $tblInscricao->updateAll([
+                    'deleted' => date('Y-m-d H:i:s'),
+                ], ['bolsista' => $inscricao->bolsista,  'editai_id'=>$inscricao->editai_id, 'fase_id IN' => [1, 2, 3], '(deleted IS NULL)', 'id <>'=>$inscricao->id ]);
+                $alt_orient = $tblInscricao->updateAll([
+                    'deleted' => date('Y-m-d H:i:s'),
+                ], ['orientador' => $inscricao->orientador,  'editai_id'=>$inscricao->editai_id, 'fase_id IN' => [1, 2, 3], '(deleted IS NULL)', 'id <>'=>$inscricao->id ]);
+    
+            }
+            
+        //
+
+        $this->set(compact('inscricao', 'doc_bolsista'));
+    }
+
+
+    public function visualizar(int|string|null $inscricaoId = null)
     {
         $identity = $this->identityLogado;
         if (empty($inscricaoId)) {

@@ -1,4 +1,26 @@
 <?php
+/**
+ * @var \App\View\AppView $this
+ * @var \Cake\Datasource\EntityInterface $inscricao
+ * @var \Cake\Datasource\EntityInterface $edital
+ * @var array<string, array<int, array<string, mixed>>> $anexosPorBloco
+ * @var array<int, array<string, mixed>> $anexosProjetoTipos924
+ * @var array<int, array<string, mixed>> $anexosSubprojetoTela
+ * @var \Cake\Datasource\EntityInterface|null $relatorioFinalAtual
+ * @var bool $podeGerenciarRelatorioFinal
+ * @var bool $podeEnviarNovoRelatorioFinal
+ * @var \Cake\Datasource\ResultSetInterface|\Cake\Collection\CollectionInterface $historicos
+ * @var \Cake\Datasource\ResultSetInterface|\Cake\Collection\CollectionInterface $avaliacoes
+ * @var \Cake\Datasource\ResultSetInterface|\Cake\Collection\CollectionInterface|array $sumulasEdital
+ * @var array<int, mixed> $quantidadesSumula
+ * @var array<string, string> $origens
+ * @var array<string, string> $cotas
+ * @var array<string, string> $fontes
+ * @var array<string, string> $resultadoMap
+ * @var array<string, string> $statusAvaliacaoMap
+ * @var string $controllerFluxo
+ * @var string $origemAtual
+ */
 $naoInformado = '<span class="badge border border-danger text-danger bg-transparent fw-normal">Não informado</span>';
 $filhosMap = [
     '0' => 'não possui filhos, ou sao maiores de 5 anos',
@@ -235,10 +257,14 @@ if (!$temDataInicio && !$temDataFim) {
             ], ['class' => 'btn btn-sm btn-outline-secondary']) ?>
         <?php endif; ?>
 
-        <?php  if (($inscricao->vigente)): ?>
+        <?php  if ((int)($inscricao->vigente ?? 0) === 1): ?>
+            <?php
+            $programaIdTermo = (int)($inscricao->programa_id ?? $edital->programa_id ?? 0);
+            $acaoTermoVigente = $programaIdTermo === 1 ? 'termopdj' : 'imprimirSolicitacao';
+            ?>
             <?= $this->Html->link('Termo 2025', [
                 'controller' => 'Padrao',
-                'action' => 'imprimirSolicitacao',
+                'action' => $acaoTermoVigente,
                 (int)$inscricao->id,
             ], ['class' => 'btn btn-sm btn-outline-secondary']) ?>
         <?php endif; ?>

@@ -1,3 +1,15 @@
+<?php
+/**
+ * @var \App\View\AppView $this
+ * @var \Cake\Datasource\ResultSetInterface|\Cake\Collection\CollectionInterface $inscricoes
+ * @var array<int|string, string> $editais
+ * @var array<string, string> $homologadoOptions
+ * @var array<string, string> $statusOptions
+ * @var array<int|string, string> $grandesAreas
+ * @var array<int|string, string> $areas
+ * @var array<string, mixed> $filtros
+ */
+?>
 <style>
     .avaliadores-inscricoes-grid {
         display: flex;
@@ -288,6 +300,14 @@
                                             'status_classe' => $statusClasseAvaliador,
                                         ];
                                     }
+                                } elseif ($avaliadoresNomes !== '') {
+                                    $itensAvaliadores = array_values(array_filter(array_map('trim', explode(' | ', $avaliadoresNomes))));
+                                    foreach ($itensAvaliadores as $nomeAvaliador) {
+                                        $avaliadoresLista[] = [
+                                            'nome' => $nomeAvaliador,
+                                            'status_classe' => 'aguardando',
+                                        ];
+                                    }
                                 }
                                 ?>
                                 <div class="avaliadores-inscricao-card card h-100<?= $homologadoPendente ? ' avaliadores-inscricao-card--pendente-homologacao' : '' ?>">
@@ -312,11 +332,17 @@
                                                     ['controller' => 'Padrao', 'action' => 'visualizar', $inscricao->id],
                                                     ['class' => 'btn btn-sm btn-outline-primary']
                                                 ) ?>
-                                                <?= $this->Html->link(
-                                                    $totalAvaliadores === 0 ? 'Vincular avaliadores' : 'Gerenciar avaliadores',
-                                                    ['controller' => 'Avaliadores', 'action' => 'vincularInscricao', $inscricao->id],
-                                                    ['class' => 'btn btn-sm btn-outline-secondary']
-                                                ) ?>
+                                                <?php if ($homologadoPendente): ?>
+                                                    <span class="btn btn-sm btn-outline-secondary disabled" aria-disabled="true">
+                                                        Homologação pendente
+                                                    </span>
+                                                <?php else: ?>
+                                                    <?= $this->Html->link(
+                                                        $totalAvaliadores === 0 ? 'Vincular avaliadores' : 'Gerenciar avaliadores',
+                                                        ['controller' => 'Avaliadores', 'action' => 'vincularInscricao', $inscricao->id],
+                                                        ['class' => 'btn btn-sm btn-outline-secondary']
+                                                    ) ?>
+                                                <?php endif; ?>
                                             </div>
                                         </div>
 
