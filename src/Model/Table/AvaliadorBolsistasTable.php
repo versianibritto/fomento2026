@@ -69,6 +69,10 @@ class AvaliadorBolsistasTable extends Table
         $this->belongsTo('ProjetoBolsistas', [
             'foreignKey' => 'projeto_bolsista_id',
         ]);
+        $this->belongsTo('PdjInscricoes', [
+            'foreignKey' => 'bolsista',
+            'joinType' => 'LEFT',
+        ]);
         $this->belongsTo('Editais', [
             'foreignKey' => 'editai_id',
         ]);
@@ -76,6 +80,9 @@ class AvaliadorBolsistasTable extends Table
             'foreignKey' => 'banca_id',
         ]);
         $this->hasMany('Avaliations', [
+            'foreignKey' => 'avaliador_bolsista_id',
+        ]);
+        $this->hasMany('AvaliationsSumulas', [
             'foreignKey' => 'avaliador_bolsista_id',
         ]);
     }
@@ -157,6 +164,11 @@ class AvaliadorBolsistasTable extends Table
         $validator
             ->numeric('nota')
             ->allowEmptyString('nota');
+
+        $validator
+            ->numeric('nota_sumula')
+            ->range('nota_sumula', [-999.99, 999.99])
+            ->allowEmptyString('nota_sumula');
 
         $validator
             ->scalar('parecer')

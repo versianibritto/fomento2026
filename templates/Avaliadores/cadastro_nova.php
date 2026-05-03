@@ -1,3 +1,26 @@
+<?php
+/**
+ * @var \App\View\AppView $this
+ * @var array<int|string, string> $editais
+ * @var array<int|string, string> $grandesAreas
+ * @var array<int|string, string> $areas
+ * @var array{
+ *     editais?: array<int, int>,
+ *     grandes_area_id?: int,
+ *     area_id?: int,
+ *     cpfs?: string
+ * } $dados
+ * @var array{
+ *     processado?: bool,
+ *     confirmado?: bool,
+ *     elegiveis?: array<int, array<string, mixed>>,
+ *     inelegiveis?: array<int, array<string, mixed>>,
+ *     totalInformados?: int,
+ *     totalElegiveis?: int,
+ *     totalInelegiveis?: int
+ * } $resultado
+ */
+?>
 <div class="container-fluid p-1 pt-1">
     <div class="row">
         <div class="col-12">

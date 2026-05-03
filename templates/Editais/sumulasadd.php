@@ -24,6 +24,8 @@ foreach ($blocos as $id => $nome) {
                             <th style="min-width: 220px;">Bloco</th>
                             <th style="min-width: 320px;">Sumula</th>
                             <th style="min-width: 320px;">Parametro</th>
+                            <th style="min-width: 120px;">Fator</th>
+                            <th style="min-width: 120px;">Máximo</th>
                             <th class="text-center" style="min-width: 60px;"></th>
                         </tr>
                     </thead>
@@ -55,6 +57,26 @@ foreach ($blocos as $id => $nome) {
                                     'class' => 'form-control',
                                     'rows' => 3,
                                     'required' => true,
+                                ]) ?>
+                            </td>
+                            <td>
+                                <?= $this->Form->control('sumulas.0.fator', [
+                                    'label' => false,
+                                    'type' => 'number',
+                                    'step' => '0.01',
+                                    'min' => '0',
+                                    'max' => '99.99',
+                                    'class' => 'form-control',
+                                ]) ?>
+                            </td>
+                            <td>
+                                <?= $this->Form->control('sumulas.0.max', [
+                                    'label' => false,
+                                    'type' => 'number',
+                                    'step' => '0.01',
+                                    'min' => '0',
+                                    'max' => '99.99',
+                                    'class' => 'form-control',
                                 ]) ?>
                             </td>
                             <td class="text-center">
@@ -100,6 +122,8 @@ foreach ($blocos as $id => $nome) {
                 </td>
                 <td><textarea name="sumulas[${index}][sumula]" class="form-control" rows="3" required></textarea></td>
                 <td><textarea name="sumulas[${index}][parametro]" class="form-control" rows="3" required></textarea></td>
+                <td><input name="sumulas[${index}][fator]" type="number" step="0.01" min="0" max="99.99" class="form-control" required></td>
+                <td><input name="sumulas[${index}][max]" type="number" step="0.01" min="0" max="99.99" class="form-control"></td>
                 <td class="text-center">
                     <button type="button" class="btn btn-outline-danger btn-sm remove-row" title="Remover">
                         <i class="fas fa-times"></i>

@@ -78,6 +78,21 @@
                         </a>
                     </li>
                     <li class="sidebar-item">
+                        <a href="/avaliadores/cadastro-multiareas-demo" class="sidebar-link <?=(($this->request->getParam('controller') == 'Avaliadores' && $this->request->getParam('action') == 'cadastroMultiareasDemo') ? 'active' : '')?>">
+                            * Demo Avaliador Multiáreas
+                        </a>
+                    </li>
+                    <li class="sidebar-item">
+                        <a href="/avaliadores/cadastro-convites" class="sidebar-link <?=(($this->request->getParam('controller') == 'Avaliadores' && $this->request->getParam('action') == 'cadastroConvites') ? 'active' : '')?>">
+                            * Cadastro Massivo Convites
+                        </a>
+                    </li>
+                    <li class="sidebar-item">
+                        <a href="/avaliadores/lista-convites" class="sidebar-link <?=(($this->request->getParam('controller') == 'Avaliadores' && $this->request->getParam('action') == 'listaConvites') ? 'active' : '')?>">
+                            * Lista de Convites
+                        </a>
+                    </li>
+                    <li class="sidebar-item">
                         <a href="/feedbacks" class="sidebar-link">
                             Feedback
                             <span class="badge bg-danger rounded-pill ms-2"><?= (int)($feedbackCount ?? 0) ?></span>
@@ -133,6 +148,11 @@
                     <li class="sidebar-item">
                         <a href="/raic-new/painel" class="sidebar-link <?=(($this->request->getParam('controller') == 'RaicNew' && $this->request->getParam('action') == 'painel') ? 'active' : '')?>">
                             Raic
+                        </a>
+                    </li>
+                    <li class="sidebar-item">
+                        <a href="/avaliadores/avaliacoes" class="sidebar-link <?=(($this->request->getParam('controller') == 'Avaliadores' && $this->request->getParam('action') == 'avaliacoes') ? 'active' : '')?>">
+                            Avaliações
                         </a>
                     </li>
                     <?php if ((int)($usuario_logado['escolaridade_id'] ?? 0) >= 10) { ?>
@@ -313,14 +333,14 @@
                             * Lançar resultados
                             </a>
                         </li>
-                        <li class="sidebar-item">
-                            <a href="/avaliadores/cadastro-nova" class="sidebar-link <?=(($this->request->getParam('controller') == 'Avaliadores' && $this->request->getParam('action') == 'cadastroNova') ? 'active' : '')?>">
-                               * Cadastro Massivo Avaliadores Editais
-                            </a>
-                        </li>
-                        <li class="sidebar-item">
-                            <a href="/listas/lista-avaliadores-nova" class="sidebar-link <?=(($this->request->getParam('controller') == 'Listas' && $this->request->getParam('action') == 'listaAvaliadoresNova') ? 'active' : '')?>">
-                               * Lista de Avaliadores Editais
+	                        <li class="sidebar-item">
+	                            <a href="/avaliadores/cadastro-nova" class="sidebar-link <?=(($this->request->getParam('controller') == 'Avaliadores' && $this->request->getParam('action') == 'cadastroNova') ? 'active' : '')?>">
+	                               * Cadastro Massivo Avaliadores Editais
+	                            </a>
+	                        </li>
+	                        <li class="sidebar-item">
+	                            <a href="/listas/lista-avaliadores-nova" class="sidebar-link <?=(($this->request->getParam('controller') == 'Listas' && $this->request->getParam('action') == 'listaAvaliadoresNova') ? 'active' : '')?>">
+	                               * Lista de Avaliadores Editais
                             </a>
                         </li>
                         <li class="sidebar-item">

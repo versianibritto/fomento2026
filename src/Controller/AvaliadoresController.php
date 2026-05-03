@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Model\Entity\AvaliadorBolsista;
 use Cake\Event\EventInterface;
 
 class AvaliadoresController extends AppController
@@ -28,12 +29,1022 @@ class AvaliadoresController extends AppController
             $jedi = (string)($this->request->getAttribute('identity')['jedi'] ?? '');
         }
 
-        if (!$this->ehYoda() && $jedi === '') {
+        $action = (string)$this->request->getParam('action');
+        if (!$this->ehYoda() && $jedi === '' && !in_array($action, ['avaliacoes', 'avaliar', 'verNotas'], true)) {
             $this->Flash->error('Área restrita à Coordenação da Unidade e à Gestão de Fomento.');
             return $this->redirect(['controller' => 'Index', 'action' => 'dashboard']);
         }
 
         return null;
+    }
+
+    public function avaliacoes()
+    {
+        $this->request->allowMethod(['get']);
+
+        $identity = $this->getIdentityAtual();
+        $usuarioId = is_array($identity) ? (int)($identity['id'] ?? 0) : (int)($identity->id ?? 0);
+        if ($usuarioId <= 0) {
+            $this->Flash->error('Não foi possível identificar o usuário logado.');
+            return $this->redirect(['controller' => 'Index', 'action' => 'dashboard']);
+        }
+
+        $anoCorrente = (int)date('Y');
+        $filtros = [
+            'ano' => (string)$this->request->getQuery('ano', ''),
+            'tipo' => (string)$this->request->getQuery('tipo', ''),
+            'situacao' => (string)$this->request->getQuery('situacao', ''),
+        ];
+
+        $avaliadorBolsistasTable = $this->fetchTable('AvaliadorBolsistas');
+        $contain = [
+            'Avaliadors',
+            'Editais',
+            'ProjetoBolsistas' => [
+                'Editais',
+                'Bolsistas',
+                'Orientadores' => ['Unidades'],
+            ],
+            'Raics' => [
+                'Editais',
+                'Unidades',
+                'Usuarios',
+                'Orientadores' => ['Unidades'],
+            ],
+            'PdjInscricoes' => [
+                'Editais',
+                'Bolsistas',
+                'Orientadores' => ['Unidades'],
+            ],
+            'Workshops' => [
+                'Editais',
+                'Unidades',
+                'Usuarios',
+                'Orientadores' => ['Unidades'],
+                'PdjInscricoes' => [
+                    'Bolsistas',
+                    'Orientadores' => ['Unidades'],
+                ],
+            ],
+        ];
+
+        $baseQuery = function () use ($avaliadorBolsistasTable, $contain, $usuarioId) {
+            return $avaliadorBolsistasTable->find()
+                ->contain($contain)
+                ->matching('Avaliadors', function ($q) use ($usuarioId) {
+                    return $q->where(['Avaliadors.usuario_id' => $usuarioId]);
+                })
+                ->where(['AvaliadorBolsistas.deleted' => 0]);
+        };
+
+        $avaliacoesAnoCorrente = $baseQuery()
+            ->where(['AvaliadorBolsistas.ano' => (string)$anoCorrente])
+            ->orderBy([
+                'AvaliadorBolsistas.situacao' => 'ASC',
+                'AvaliadorBolsistas.created' => 'DESC',
+                'AvaliadorBolsistas.id' => 'DESC',
+            ])
+            ->all();
+
+        $query = $baseQuery()
+            ->where([
+                'OR' => [
+                    'AvaliadorBolsistas.ano IS' => null,
+                    'AvaliadorBolsistas.ano !=' => (string)$anoCorrente,
+                ],
+            ]);
+
+        if ($filtros['ano'] !== '') {
+            $query->where(['AvaliadorBolsistas.ano' => $filtros['ano']]);
+        }
+        if ($filtros['tipo'] !== '') {
+            $query->where(['AvaliadorBolsistas.tipo' => $filtros['tipo']]);
+        }
+        if ($filtros['situacao'] === 'F') {
+            $query->where(['AvaliadorBolsistas.situacao' => 'F']);
+        } elseif ($filtros['situacao'] === 'P') {
+            $query->where([
+                'OR' => [
+                    'AvaliadorBolsistas.situacao IS' => null,
+                    'AvaliadorBolsistas.situacao !=' => 'F',
+                ],
+            ]);
+        }
+
+        $anosOptions = $avaliadorBolsistasTable->find()
+            ->select(['AvaliadorBolsistas.ano'])
+            ->matching('Avaliadors', function ($q) use ($usuarioId) {
+                return $q->where(['Avaliadors.usuario_id' => $usuarioId]);
+            })
+            ->where(['AvaliadorBolsistas.deleted' => 0])
+            ->where([
+                'AvaliadorBolsistas.ano IS NOT' => null,
+                'AvaliadorBolsistas.ano !=' => (string)$anoCorrente,
+            ])
+            ->distinct(['AvaliadorBolsistas.ano'])
+            ->orderBy(['AvaliadorBolsistas.ano' => 'DESC'])
+            ->all()
+            ->combine('ano', 'ano')
+            ->toArray();
+
+        $query->orderBy([
+            'AvaliadorBolsistas.ano' => 'DESC',
+            'AvaliadorBolsistas.created' => 'DESC',
+            'AvaliadorBolsistas.id' => 'DESC',
+        ]);
+
+        $avaliacoes = $this->paginate($query, ['limit' => 20]);
+        $tipoMap = [
+            'N' => 'Inscrições',
+            'V' => 'RAIC (aluno de renovação)',
+            'Z' => 'RAIC de outras agências',
+            'J' => 'PDJ Nova',
+            'W' => 'Workshop',
+        ];
+        $situacaoMap = [
+            'P' => 'Pendente',
+            'F' => 'Finalizada',
+        ];
+
+        $this->set(compact(
+            'avaliacoes',
+            'avaliacoesAnoCorrente',
+            'anoCorrente',
+            'anosOptions',
+            'filtros',
+            'tipoMap',
+            'situacaoMap'
+        ));
+    }
+
+    public function avaliar(int $id)
+    {
+        $this->request->allowMethod(['get', 'post']);
+
+        $identity = $this->getIdentityAtual();
+        $usuarioId = is_array($identity) ? (int)($identity['id'] ?? 0) : (int)($identity->id ?? 0);
+        if ($usuarioId <= 0) {
+            $this->Flash->error('Não foi possível identificar o usuário logado.');
+            return $this->redirect(['controller' => 'Index', 'action' => 'dashboard']);
+        }
+
+        $avaliadorBolsistasTable = $this->fetchTable('AvaliadorBolsistas');
+        $avaliacao = $avaliadorBolsistasTable->find()
+            ->contain([
+                'Avaliadors' => ['Usuarios'],
+                'Editais',
+                'ProjetoBolsistas' => [
+                    'Editais',
+                    'Bolsistas',
+                    'Orientadores' => ['Unidades'],
+                    'Projetos',
+                ],
+                'Raics' => [
+                    'Editais',
+                    'Unidades',
+                    'Usuarios',
+                    'Orientadores',
+                    'ProjetoBolsistas' => ['Projetos'],
+                ],
+                'PdjInscricoes' => [
+                    'Editais',
+                    'Bolsistas',
+                    'Orientadores' => ['Unidades'],
+                    'Projetos',
+                ],
+                'Workshops' => [
+                    'Editais',
+                    'Unidades',
+                    'Usuarios',
+                    'Orientadores',
+                    'PdjInscricoes' => [
+                        'Bolsistas',
+                        'Orientadores' => ['Unidades'],
+                        'Projetos',
+                    ],
+                ],
+            ])
+            ->where(['AvaliadorBolsistas.id' => $id])
+            ->first();
+
+        if (!$avaliacao) {
+            $this->Flash->error('Avaliação não encontrada.');
+            return $this->redirect(['action' => 'avaliacoes']);
+        }
+        $this->carregarReferenciaAvaliacao($avaliacao);
+
+        $ti = in_array($usuarioId, [1, 8088], true);
+        $avaliadorUsuarioId = (int)($avaliacao->avaliador->usuario_id ?? 0);
+
+        if (!$ti && $avaliadorUsuarioId !== $usuarioId) {
+            $this->Flash->error('Você não tem permissão para acessar esta avaliação.');
+            return $this->redirect(['controller' => 'Index', 'action' => 'dashboard']);
+        }
+
+        if ((int)($avaliacao->deleted ?? 0) !== 0 || (int)($avaliacao->avaliador->deleted ?? 0) !== 0) {
+            $this->Flash->error('Registro deletado.');
+            return $this->redirect(['controller' => 'Index', 'action' => 'index']);
+        }
+
+        $situacao = (string)($avaliacao->situacao ?? '');
+        if ($situacao === 'F') {
+            if ($ti) {
+                return $this->redirect(['action' => 'verNotas', $avaliacao->id]);
+            }
+
+            $this->Flash->error('Você já avaliou esse registro.');
+            return $this->redirect(['controller' => 'Index', 'action' => 'index']);
+        }
+
+        if ($situacao === 'E') {
+            if (!$ti) {
+                $identityPeriodo = is_array($identity) ? (object)$identity : $identity;
+                if (
+                    empty($avaliacao->editai)
+                    || !$this->loadPeriodo(
+                        $avaliacao->editai,
+                        $identityPeriodo,
+                        8,
+                        [$usuarioId],
+                        [(int)($avaliacao->bolsista ?? 0)]
+                    )
+                ) {
+                    $this->Flash->error('Fora do período de avaliação.');
+                    return $this->redirect(['controller' => 'Index', 'action' => 'index']);
+                }
+                if (in_array((string)$avaliacao->tipo, ['V', 'Z'], true)) {
+                    $dataAgendada = $avaliacao->raic->data_apresentacao ?? null;
+                    $dataAgendadaDia = null;
+                    if ($dataAgendada instanceof \DateTimeInterface) {
+                        $dataAgendadaDia = \Cake\I18n\FrozenDate::parse($dataAgendada->format('Y-m-d'));
+                    } elseif (!empty($dataAgendada)) {
+                        $dataAgendadaDia = \Cake\I18n\FrozenDate::parse((string)$dataAgendada);
+                    }
+
+                    if (
+                        empty($avaliacao->raic)
+                        || empty($dataAgendadaDia)
+                        || $dataAgendadaDia->greaterThan(\Cake\I18n\FrozenDate::today())
+                    ) {
+                        $raicId = (int)($avaliacao->raic->id ?? $avaliacao->bolsista ?? 0);
+                        $dataAgendadaTexto = $dataAgendadaDia
+                            ? $dataAgendadaDia->i18nFormat('dd/MM/yyyy')
+                            : 'não informada';
+                        $this->Flash->error(
+                            sprintf(
+                                'A avaliação da RAIC #%d estará disponível a partir da data agendada: %s.',
+                                $raicId,
+                                $dataAgendadaTexto
+                            )
+                        );
+                        return $this->redirect(['controller' => 'Index', 'action' => 'index']);
+                    }
+                }
+            }
+        } else {
+            $this->Flash->error('Esta avaliação não está liberada para lançamento.');
+            return $this->redirect(['controller' => 'Index', 'action' => 'index']);
+        }
+
+        $questoes = $this->fetchTable('Questions')->find()
+            ->where([
+                'Questions.editai_id' => (int)$avaliacao->editai_id,
+                //'Questions.tipo' => (string)$avaliacao->tipo,
+                'OR' => [
+                    'Questions.deleted IS' => null,
+                    'Questions.deleted' => 0,
+                ],
+            ])
+            ->orderBy(['Questions.id' => 'ASC'])
+            ->all();
+        $questoesLista = $questoes->toList();
+
+        if (count($questoesLista) === 0) {
+            $this->Flash->error('Não há quesitos cadastrados para o edital desta avaliação.');
+            return $this->redirect(['action' => 'avaliacoes']);
+        }
+
+        $avaliarSumulas = $this->deveAvaliarSumulas($avaliacao);
+        $sumulasAvaliacao = $avaliarSumulas ? $this->carregarSumulasAvaliacao($avaliacao) : [];
+        if ($this->request->is('post') && (string)$this->request->getData('_voltar_lancamento', '') !== '1') {
+            $erros = $this->validarLancamentoAvaliacao($questoesLista, (array)$this->request->getData('q', []));
+            if ($avaliarSumulas) {
+                $erros = array_merge(
+                    $erros,
+                    $this->validarLancamentoSumulas($sumulasAvaliacao, (array)$this->request->getData('sumula', []))
+                );
+            }
+            if (trim((string)$this->request->getData('observacao_avaliador', '')) === '') {
+                $erros[] = 'Informe as observações dos quesitos.';
+            }
+            if ($avaliarSumulas && $sumulasAvaliacao !== [] && trim((string)$this->request->getData('observacao_sumulas', '')) === '') {
+                $erros[] = 'Informe as observações da súmula.';
+            }
+            if ((string)$this->request->getData('parecer', '') === '') {
+                $erros[] = 'Informe a situação do parecer do Comitê de Ética.';
+            }
+            if (in_array((string)($avaliacao->editai->origem ?? ''), ['R', 'V'], true)) {
+                if ((string)$this->request->getData('destaque', '') === '') {
+                    $erros[] = 'Informe se o aluno se destacou.';
+                }
+                if ((string)$this->request->getData('indicado_premio_capes', '') === '') {
+                    $erros[] = 'Informe se há indicação ao Prêmio Destaque CNPq.';
+                }
+            }
+
+            if ($erros !== []) {
+                $this->Flash->error(implode('<br>', $erros), ['escape' => false]);
+            } elseif ((string)$this->request->getData('confirmar_lancamento', '') !== '1') {
+                $dadosLancamento = $this->request->getData();
+                $tipoMap = [
+                    'N' => 'Inscrições',
+                    'V' => 'RAIC (aluno de renovação)',
+                    'Z' => 'RAIC de outras agências',
+                    'J' => 'PDJ Nova',
+                    'W' => 'Workshop',
+                ];
+
+                $this->set(compact('avaliacao', 'questoesLista', 'tipoMap', 'avaliarSumulas', 'sumulasAvaliacao', 'dadosLancamento'));
+                return $this->render('confirmar_avaliacao');
+            } else {
+                try {
+                    $this->salvarLancamentoAvaliacao($avaliacao, $questoesLista, $sumulasAvaliacao);
+                    $this->Flash->success('Avaliação finalizada com sucesso.');
+                    return $this->redirect(['action' => 'avaliacoes']);
+                } catch (\Throwable $e) {
+                    $this->flashFriendlyException(
+                        $e,
+                        'Erro no Sistema - confirmar lançamento de avaliação',
+                        'Não foi possível gravar a avaliação. Os dados não foram finalizados; revise as informações e tente novamente.'
+                    );
+                }
+            }
+        }
+
+        $tipoMap = [
+            'N' => 'Inscrições',
+            'V' => 'RAIC (aluno de renovação)',
+            'Z' => 'RAIC de outras agências',
+            'J' => 'PDJ Nova',
+            'W' => 'Workshop',
+        ];
+        $questoes = $questoesLista;
+
+        $this->set(compact('avaliacao', 'questoes', 'tipoMap', 'avaliarSumulas', 'sumulasAvaliacao'));
+    }
+
+    public function verNotas(int $id)
+    {
+        $this->request->allowMethod(['get']);
+
+        $avaliacao = $this->fetchTable('AvaliadorBolsistas')->find()
+            ->contain([
+                'Avaliadors' => ['Usuarios'],
+                'Editais',
+                'Avaliations' => [
+                    'Questions',
+                    'sort' => ['Avaliations.id' => 'ASC'],
+                ],
+                'ProjetoBolsistas' => [
+                    'Editais',
+                    'Bolsistas',
+                    'Orientadores' => ['Unidades'],
+                    'Coorientadores',
+                ],
+                'Raics' => [
+                    'Editais',
+                    'Unidades',
+                    'Usuarios',
+                    'Orientadores',
+                ],
+                'PdjInscricoes' => [
+                    'Editais',
+                    'Bolsistas',
+                    'Orientadores' => ['Unidades'],
+                ],
+                'Workshops' => [
+                    'Editais',
+                    'Unidades',
+                    'Usuarios',
+                    'Orientadores',
+                    'PdjInscricoes' => [
+                        'Bolsistas',
+                        'Orientadores' => ['Unidades'],
+                    ],
+                ],
+            ])
+            ->where(['AvaliadorBolsistas.id' => $id])
+            ->first();
+
+        if (!$avaliacao) {
+            $this->Flash->error('Avaliação não encontrada.');
+            return $this->redirect(['action' => 'avaliacoes']);
+        }
+        $this->carregarReferenciaAvaliacao($avaliacao);
+
+        if (!$this->podeVerNotasAvaliacao($avaliacao)) {
+            $this->Flash->error('Sem acesso às notas desta avaliação.');
+            return $this->redirect(['controller' => 'Index', 'action' => 'index']);
+        }
+
+        $notas = $this->fetchTable('Avaliations')->find()
+            ->contain(['Questions'])
+            ->where([
+                'Avaliations.avaliador_bolsista_id' => (int)$avaliacao->id,
+                'Avaliations.deleted' => 0,
+            ])
+            ->orderBy(['Avaliations.id' => 'ASC'])
+            ->all();
+
+        $notasSumulas = $this->fetchTable('AvaliationsSumulas')->find()
+            ->contain([
+                'EditaisSumulas' => ['EditaisSumulasBlocos'],
+                'EditaisSumulasBlocos',
+                'InscricaoSumulas',
+            ])
+            ->where([
+                'AvaliationsSumulas.avaliador_bolsista_id' => (int)$avaliacao->id,
+                'AvaliationsSumulas.deleted' => 0,
+            ])
+            ->orderBy([
+                'AvaliationsSumulas.editais_sumula_bloco_id' => 'ASC',
+                'AvaliationsSumulas.id' => 'ASC',
+            ])
+            ->all();
+
+        $tipoMap = [
+            'N' => 'Inscrições',
+            'V' => 'RAIC (aluno de renovação)',
+            'Z' => 'RAIC de outras agências',
+            'J' => 'PDJ Nova',
+            'W' => 'Workshop',
+        ];
+
+        $this->set(compact('avaliacao', 'notas', 'notasSumulas', 'tipoMap'));
+    }
+
+    public function deletarNotas(int $id)
+    {
+        $this->request->allowMethod(['post']);
+
+        if (!$this->ehTi()) {
+            $this->Flash->error('Sem permissão para excluir notas.');
+            return $this->redirect(['controller' => 'Index', 'action' => 'index']);
+        }
+
+        $chamado = trim((string)$this->request->getData('chamado', ''));
+        if ($chamado === '') {
+            $this->Flash->error('Informe o número do chamado para registrar a exclusão das notas.');
+            return $this->redirect(['action' => 'verNotas', $id]);
+        }
+
+        $avaliadorBolsistasTable = $this->fetchTable('AvaliadorBolsistas');
+        $avaliationsTable = $this->fetchTable('Avaliations');
+        $avaliationsSumulasTable = $this->fetchTable('AvaliationsSumulas');
+
+        $avaliacao = $avaliadorBolsistasTable->find()
+            ->contain([
+                'Avaliadors' => ['Usuarios'],
+                'ProjetoBolsistas',
+                'Raics',
+                'Workshops',
+            ])
+            ->where(['AvaliadorBolsistas.id' => $id])
+            ->first();
+
+        if (!$avaliacao) {
+            $this->Flash->error('Avaliação não encontrada.');
+            return $this->redirect(['action' => 'avaliacoes']);
+        }
+
+        try {
+            $avaliadorBolsistasTable->getConnection()->transactional(function () use (
+                $avaliacao,
+                $avaliadorBolsistasTable,
+                $avaliationsTable,
+                $avaliationsSumulasTable,
+                $chamado
+            ): void {
+                $avaliationsTable->updateAll(
+                    ['deleted' => 1],
+                    [
+                        'avaliador_bolsista_id' => (int)$avaliacao->id,
+                        'OR' => [
+                            'deleted IS' => null,
+                            'deleted' => 0,
+                        ],
+                    ]
+                );
+
+                $avaliationsSumulasTable->updateAll(
+                    ['deleted' => 1],
+                    [
+                        'avaliador_bolsista_id' => (int)$avaliacao->id,
+                        'OR' => [
+                            'deleted IS' => null,
+                            'deleted' => 0,
+                        ],
+                    ]
+                );
+
+                $avaliacao->situacao = 'E';
+                $avaliacao->nota = null;
+                $avaliacao->nota_sumula = null;
+                $avaliadorBolsistasTable->saveOrFail($avaliacao);
+
+                $this->registrarHistoricoExclusaoNotas($avaliacao, $chamado);
+            });
+
+            $this->Flash->success('Notas excluídas com sucesso. A avaliação voltou para aguardando notas.');
+            return $this->redirect($this->urlDetalhesReferenciaAvaliacao($avaliacao));
+        } catch (\Throwable $e) {
+            $this->flashFriendlyException(
+                $e,
+                'Erro no Sistema - excluir notas de avaliação',
+                'Não foi possível excluir as notas da avaliação.'
+            );
+            return $this->redirect(['action' => 'verNotas', $id]);
+        }
+    }
+
+    protected function urlDetalhesReferenciaAvaliacao(AvaliadorBolsista $avaliacao): array
+    {
+        $tipo = (string)($avaliacao->tipo ?? '');
+
+        if ($tipo === 'N') {
+            $inscricaoId = (int)($avaliacao->projeto_bolsista_id ?? $avaliacao->bolsista ?? 0);
+            if ($inscricaoId > 0) {
+                return ['controller' => 'Padrao', 'action' => 'visualizar', $inscricaoId];
+            }
+        }
+
+        if (in_array($tipo, ['V', 'Z'], true)) {
+            $raicId = (int)($avaliacao->raic_id ?? $avaliacao->bolsista ?? 0);
+            if ($raicId > 0) {
+                return ['controller' => 'RaicNew', 'action' => 'ver', $raicId];
+            }
+        }
+
+        return ['controller' => 'Avaliadores', 'action' => 'avaliacoes'];
+    }
+
+    protected function registrarHistoricoExclusaoNotas(AvaliadorBolsista $avaliacao, string $chamado): void
+    {
+        $tipo = (string)($avaliacao->tipo ?? '');
+        $avaliadorNome = trim((string)($avaliacao->avaliador->usuario->nome ?? 'Não informado'));
+        $identity = $this->getIdentityAtual();
+        $usuarioId = is_array($identity) ? (int)($identity['id'] ?? 0) : (int)($identity->id ?? 0);
+        $alteracao = 'Exclusão de notas de avaliação';
+        $justificativa = sprintf(
+            'Solicitada exclusão das notas do avaliador %s (avaliador_bolsista #%d). Chamado: %s',
+            $avaliadorNome,
+            (int)$avaliacao->id,
+            $chamado
+        );
+
+        if ($tipo === 'N') {
+            $inscricaoId = (int)($avaliacao->projeto_bolsista_id ?? $avaliacao->bolsista ?? 0);
+            if ($inscricaoId <= 0) {
+                return;
+            }
+
+            $inscricao = $this->fetchTable('ProjetoBolsistas')->get($inscricaoId);
+            $faseAtual = (int)($inscricao->fase_id ?? 0);
+            $historicoSituacao = function_exists('mb_substr')
+                ? mb_substr($justificativa, 0, 255)
+                : substr($justificativa, 0, 255);
+            $this->historico($inscricaoId, $faseAtual, $faseAtual, $historicoSituacao, true);
+
+            return;
+        }
+
+        if (in_array($tipo, ['V', 'Z'], true)) {
+            $raicId = (int)($avaliacao->raic_id ?? $avaliacao->bolsista ?? 0);
+            if ($raicId <= 0) {
+                return;
+            }
+
+            $raicHistoricos = $this->fetchTable('RaicHistoricos');
+            $historico = $raicHistoricos->newEntity([
+                'raic_id' => $raicId,
+                'usuario_id' => $usuarioId,
+                'alteracao' => $alteracao,
+                'justificativa' => $justificativa,
+            ]);
+            $raicHistoricos->saveOrFail($historico);
+
+            return;
+        }
+
+        if ($tipo === 'W') {
+            $workshopId = (int)($avaliacao->workshop_id ?? $avaliacao->bolsista ?? 0);
+            if ($workshopId <= 0) {
+                return;
+            }
+
+            $workshopHistoricos = $this->fetchTable('WorkshopHistoricos');
+            $historico = $workshopHistoricos->newEntity([
+                'workshop_id' => $workshopId,
+                'usuario_id' => $usuarioId,
+                'alteracao' => $alteracao,
+                'justificativa' => $justificativa,
+            ]);
+            $workshopHistoricos->saveOrFail($historico);
+        }
+    }
+
+    protected function podeVerNotasAvaliacao(AvaliadorBolsista $avaliacao): bool
+    {
+        if ($this->ehYoda() || $this->ehTi()) {
+            return true;
+        }
+
+        $identity = $this->getIdentityAtual();
+        $usuarioId = is_array($identity) ? (int)($identity['id'] ?? 0) : (int)($identity->id ?? 0);
+        if ($usuarioId <= 0) {
+            return false;
+        }
+
+        $tipo = (string)($avaliacao->tipo ?? '');
+        if ($tipo === 'N' && !empty($avaliacao->projeto_bolsista)) {
+            $inscricao = $avaliacao->projeto_bolsista;
+            $jedi = is_array($identity) ? (string)($identity['jedi'] ?? '') : (string)($identity->jedi ?? '');
+            $padauan = is_array($identity) ? (string)($identity['padauan'] ?? '') : (string)($identity->padauan ?? '');
+            $jediPermitidas = array_values(array_filter(array_map('trim', explode(',', $jedi))));
+            $unidadeOrientador = (string)($inscricao->orientadore->unidade_id ?? $inscricao->orientadore->unidade?->id ?? '');
+            $ehJediPermitido = !empty($jediPermitidas)
+                && $unidadeOrientador !== ''
+                && in_array($unidadeOrientador, $jediPermitidas, true);
+
+            $padauanPermitidos = array_values(array_filter(array_map('trim', explode(',', $padauan))));
+            $programaInscricao = (string)((int)($inscricao->programa_id ?? $inscricao->editai->programa_id ?? 0));
+            $ehPadauanPermitido = !empty($padauanPermitidos)
+                && $programaInscricao !== '0'
+                && in_array($programaInscricao, $padauanPermitidos, true);
+
+            return in_array($usuarioId, [
+                (int)($inscricao->orientador ?? 0),
+                (int)($inscricao->coorientador ?? 0),
+                (int)($inscricao->bolsista ?? 0),
+            ], true) || $ehJediPermitido || $ehPadauanPermitido;
+        }
+        if (in_array($tipo, ['V', 'Z'], true) && !empty($avaliacao->raic)) {
+            return in_array($usuarioId, [
+                (int)($avaliacao->raic->orientador ?? 0),
+                (int)($avaliacao->raic->usuario_id ?? 0),
+            ], true);
+        }
+        if ($tipo === 'J' && !empty($avaliacao->pdj_inscrico)) {
+            return in_array($usuarioId, [
+                (int)($avaliacao->pdj_inscrico->usuario_id ?? 0),
+                (int)($avaliacao->pdj_inscrico->bolsista ?? 0),
+            ], true);
+        }
+        if ($tipo === 'W' && !empty($avaliacao->workshop)) {
+            return in_array($usuarioId, [
+                (int)($avaliacao->workshop->orientador ?? 0),
+                (int)($avaliacao->workshop->usuario_id ?? 0),
+            ], true);
+        }
+
+        return false;
+    }
+
+    protected function validarLancamentoAvaliacao(array $questoes, array $notas): array
+    {
+        $erros = [];
+        foreach ($questoes as $questao) {
+            $questaoId = (int)$questao->id;
+            if (!array_key_exists((string)$questaoId, $notas) && !array_key_exists($questaoId, $notas)) {
+                $erros[] = 'Informe a nota de todos os quesitos.';
+                break;
+            }
+
+            $valor = $notas[$questaoId] ?? $notas[(string)$questaoId] ?? null;
+            $valor = str_replace(',', '.', trim((string)$valor));
+            if ($valor === '' || !is_numeric($valor)) {
+                $erros[] = 'Há nota inválida nos quesitos.';
+                break;
+            }
+
+            $nota = (float)$valor;
+            $minimo = (float)($questao->limite_min ?? 0);
+            $maximo = (float)($questao->limite_max ?? 0);
+            if ($nota < $minimo || $nota > $maximo) {
+                $erros[] = sprintf(
+                    'A nota do quesito "%s" deve estar entre %s e %s.',
+                    (string)$questao->questao,
+                    (string)$questao->limite_min,
+                    (string)$questao->limite_max
+                );
+            }
+        }
+
+        return $erros;
+    }
+
+    protected function validarLancamentoSumulas(array $sumulasAvaliacao, array $dadosSumulas): array
+    {
+        $erros = [];
+        foreach ($sumulasAvaliacao as $linha) {
+            $sumula = $linha['sumula'] ?? null;
+            $sumulaId = (int)($sumula->id ?? 0);
+            if ($sumulaId <= 0) {
+                continue;
+            }
+            if (!array_key_exists((string)$sumulaId, $dadosSumulas) && !array_key_exists($sumulaId, $dadosSumulas)) {
+                $erros[] = 'Informe todas as quantidades avaliadas da súmula. Use 0 quando não houver produção.';
+                break;
+            }
+
+            $valor = $dadosSumulas[$sumulaId] ?? $dadosSumulas[(string)$sumulaId] ?? null;
+            $valor = trim((string)$valor);
+            if ($valor === '' || !ctype_digit($valor)) {
+                $erros[] = 'As quantidades avaliadas da súmula devem ser números inteiros. Use 0 quando não houver produção.';
+                break;
+            }
+
+            $quantidade = (int)$valor;
+            if ($quantidade < 0 || $quantidade > 50) {
+                $erros[] = 'As quantidades avaliadas da súmula devem estar entre 0 e 50.';
+                break;
+            }
+        }
+
+        return $erros;
+    }
+
+    protected function valorSumulaLancamento(array $dadosSumulas, int $sumulaId, int $padrao = 0): int
+    {
+        if (array_key_exists($sumulaId, $dadosSumulas)) {
+            return (int)$dadosSumulas[$sumulaId];
+        }
+        if (array_key_exists((string)$sumulaId, $dadosSumulas)) {
+            return (int)$dadosSumulas[(string)$sumulaId];
+        }
+
+        return $padrao;
+    }
+
+    protected function salvarLancamentoAvaliacao(AvaliadorBolsista $avaliacao, array $questoes, array $sumulasAvaliacao = []): void
+    {
+        $avaliadorBolsistasTable = $this->fetchTable('AvaliadorBolsistas');
+        $avaliationsTable = $this->fetchTable('Avaliations');
+        $avaliationsSumulasTable = $this->fetchTable('AvaliationsSumulas');
+        $notas = (array)$this->request->getData('q', []);
+        $dadosSumulas = (array)$this->request->getData('sumula', []);
+        $observacaoQuesitos = trim((string)$this->request->getData('observacao_avaliador', ''));
+        $observacaoSumulas = trim((string)$this->request->getData('observacao_sumulas', ''));
+        $parecer = (string)$this->request->getData('parecer', '');
+        $destaque = $this->request->getData('destaque');
+        $indicadoPremioCapes = $this->request->getData('indicado_premio_capes');
+
+        $avaliadorBolsistasTable->getConnection()->transactional(function () use (
+            $avaliacao,
+            $questoes,
+            $notas,
+            $observacaoQuesitos,
+            $observacaoSumulas,
+            $parecer,
+            $destaque,
+            $indicadoPremioCapes,
+            $avaliadorBolsistasTable,
+            $avaliationsTable,
+            $avaliationsSumulasTable,
+            $sumulasAvaliacao,
+            $dadosSumulas
+        ): void {
+            $avaliationsTable->updateAll(
+                ['deleted' => 1],
+                [
+                    'avaliador_bolsista_id' => (int)$avaliacao->id,
+                    'OR' => [
+                        'deleted IS' => null,
+                        'deleted' => 0,
+                    ],
+                ]
+            );
+
+            $total = 0.0;
+            foreach ($questoes as $questao) {
+                $questaoId = (int)$questao->id;
+                $nota = (float)str_replace(',', '.', (string)($notas[$questaoId] ?? $notas[(string)$questaoId]));
+                $total += $nota;
+
+                $avaliationsTable->saveOrFail($avaliationsTable->newEntity([
+                    'avaliador_bolsista_id' => (int)$avaliacao->id,
+                    'question_id' => $questaoId,
+                    'nota' => $nota,
+                    'observacao_avaliador' => $observacaoQuesitos,
+                    'parecer' => $parecer,
+                    'deleted' => 0,
+                ]));
+            }
+
+            $notaSumula = null;
+            if ($sumulasAvaliacao !== []) {
+                $avaliationsSumulasTable->updateAll(
+                    ['deleted' => 1],
+                    [
+                        'avaliador_bolsista_id' => (int)$avaliacao->id,
+                        'OR' => [
+                            'deleted IS' => null,
+                            'deleted' => 0,
+                        ],
+                    ]
+                );
+
+                $totaisPorBloco = [];
+                $maxPorBloco = [];
+                foreach ($sumulasAvaliacao as $linha) {
+                    $sumula = $linha['sumula'];
+                    $inscricaoSumula = $linha['inscricao_sumula'] ?? null;
+                    $sumulaId = (int)$sumula->id;
+                    $blocoId = (int)($sumula->editais_sumula_bloco_id ?? 0);
+                    $quantidadeOriginal = (int)($linha['quantidade_original'] ?? 0);
+                    $quantidadeAvaliada = $this->valorSumulaLancamento($dadosSumulas, $sumulaId);
+                    $fator = (float)($sumula->fator ?? 0);
+                    $notaItem = round($quantidadeAvaliada * $fator, 2);
+                    $maxSumula = $sumula->max ?? null;
+                    if ($maxSumula !== null && $maxSumula !== '') {
+                        $notaItem = min($notaItem, (float)$maxSumula);
+                    }
+
+                    $totaisPorBloco[$blocoId] = ($totaisPorBloco[$blocoId] ?? 0) + $notaItem;
+                    $maxBloco = $sumula->editais_sumulas_bloco->max ?? null;
+                    if ($maxBloco !== null && $maxBloco !== '') {
+                        $maxPorBloco[$blocoId] = (float)$maxBloco;
+                    }
+
+                    $avaliationsSumulasTable->saveOrFail($avaliationsSumulasTable->newEntity([
+                        'avaliador_bolsista_id' => (int)$avaliacao->id,
+                        'editais_sumula_id' => $sumulaId,
+                        'editais_sumula_bloco_id' => $blocoId > 0 ? $blocoId : null,
+                        'inscricao_sumula_id' => !empty($inscricaoSumula) ? (int)$inscricaoSumula->id : null,
+                        'nota' => $notaItem,
+                        'observacao_avaliador' => $observacaoSumulas,
+                        'deleted' => 0,
+                        'quantidade_original' => $quantidadeOriginal,
+                        'quantidade_avaliada' => $quantidadeAvaliada,
+                    ]));
+                }
+
+                $notaSumula = 0.0;
+                foreach ($totaisPorBloco as $blocoId => $totalBloco) {
+                    $maxBloco = $maxPorBloco[$blocoId] ?? null;
+                    if ($maxBloco !== null) {
+                        $totalBloco = min((float)$totalBloco, (float)$maxBloco);
+                    }
+                    $notaSumula += (float)$totalBloco;
+                }
+                $notaSumula = round($notaSumula, 2);
+            }
+
+            $avaliacao->observacao = $observacaoQuesitos;
+            $avaliacao->situacao = 'F';
+            $avaliacao->nota = $total;
+            $avaliacao->nota_sumula = $notaSumula;
+            $avaliacao->parecer = $parecer;
+            if ($destaque !== null && $destaque !== '') {
+                $avaliacao->destaque = (int)$destaque;
+            }
+            if ($indicadoPremioCapes !== null && $indicadoPremioCapes !== '') {
+                $avaliacao->indicado_premio_capes = (int)$indicadoPremioCapes;
+            }
+            $avaliadorBolsistasTable->saveOrFail($avaliacao);
+
+            if (in_array((string)$avaliacao->tipo, ['V', 'Z'], true) && (!empty($avaliacao->raic_id) || !empty($avaliacao->bolsista))) {
+                $raicsTable = $this->fetchTable('Raics');
+                $raic = $raicsTable->get((int)($avaliacao->raic_id ?: $avaliacao->bolsista));
+                $raic->observacao_avaliador = $observacaoQuesitos;
+                $raic->nota_final = $total;
+                if ($destaque !== null && $destaque !== '') {
+                    $raic->destaque = (int)$destaque;
+                }
+                if ($indicadoPremioCapes !== null && $indicadoPremioCapes !== '') {
+                    $raic->indicado_premio_capes = (int)$indicadoPremioCapes;
+                }
+                $raicsTable->saveOrFail($raic);
+            } elseif ((string)$avaliacao->tipo === 'W' && (!empty($avaliacao->workshop_id) || !empty($avaliacao->bolsista))) {
+                $workshopsTable = $this->fetchTable('Workshops');
+                $workshop = $workshopsTable->get((int)($avaliacao->workshop_id ?: $avaliacao->bolsista));
+                $workshop->observacao_avaliador = $observacaoQuesitos;
+                $workshop->nota_final = $total;
+                if ($destaque !== null && $destaque !== '') {
+                    $workshop->destaque = (int)$destaque;
+                }
+                if ($indicadoPremioCapes !== null && $indicadoPremioCapes !== '') {
+                    $workshop->indicado_premio_capes = (int)$indicadoPremioCapes;
+                }
+                $workshopsTable->saveOrFail($workshop);
+            }
+        });
+    }
+
+    protected function deveAvaliarSumulas(AvaliadorBolsista $avaliacao): bool
+    {
+        return (string)($avaliacao->tipo ?? '') === 'N'
+            && (string)($avaliacao->editai->origem ?? '') === 'N'
+            && !empty($avaliacao->projeto_bolsista);
+    }
+
+    protected function carregarSumulasAvaliacao(AvaliadorBolsista $avaliacao): array
+    {
+        $inscricaoId = (int)($avaliacao->projeto_bolsista->id ?? $avaliacao->projeto_bolsista_id ?? $avaliacao->bolsista ?? 0);
+        $editalId = (int)($avaliacao->editai_id ?? $avaliacao->editai->id ?? 0);
+        if ($inscricaoId <= 0 || $editalId <= 0) {
+            return [];
+        }
+
+        $sumulas = $this->fetchTable('EditaisSumulas')->find()
+            ->contain(['EditaisSumulasBlocos'])
+            ->where([
+                'EditaisSumulas.editai_id' => $editalId,
+                'EditaisSumulas.deleted IS' => null,
+            ])
+            ->orderBy([
+                'EditaisSumulas.editais_sumula_bloco_id' => 'ASC',
+                'EditaisSumulas.id' => 'ASC',
+            ])
+            ->all()
+            ->toList();
+
+        if ($sumulas === []) {
+            return [];
+        }
+
+        $sumulasIds = array_map(fn($sumula): int => (int)$sumula->id, $sumulas);
+        $inscricaoSumulas = $this->fetchTable('InscricaoSumulas')->find()
+            ->where([
+                'InscricaoSumulas.projeto_bolsista_id' => $inscricaoId,
+                //'InscricaoSumulas.pdj_inscricoe_id IS' => null,
+                'InscricaoSumulas.editais_sumula_id IN' => $sumulasIds,
+            ])
+            ->all();
+
+        $mapInscricaoSumulas = [];
+        foreach ($inscricaoSumulas as $inscricaoSumula) {
+            $mapInscricaoSumulas[(int)$inscricaoSumula->editais_sumula_id] = $inscricaoSumula;
+        }
+
+        $linhas = [];
+        foreach ($sumulas as $sumula) {
+            $inscricaoSumula = $mapInscricaoSumulas[(int)$sumula->id] ?? null;
+            $linhas[] = [
+                'sumula' => $sumula,
+                'inscricao_sumula' => $inscricaoSumula,
+                'quantidade' => (int)($inscricaoSumula->quantidade ?? 0),
+            ];
+        }
+
+        return $linhas;
+    }
+
+    protected function carregarReferenciaAvaliacao($avaliacao): void
+    {
+        $tipo = (string)($avaliacao->tipo ?? '');
+        $referenciaId = (int)($avaliacao->bolsista ?? 0);
+
+        if ($tipo === 'N' && empty($avaliacao->projeto_bolsista) && $referenciaId > 0) {
+            $referencia = $this->fetchTable('ProjetoBolsistas')->find()
+                ->contain([
+                    'Editais',
+                    'Bolsistas',
+                    'Orientadores' => ['Unidades'],
+                    'Projetos',
+                ])
+                ->where(['ProjetoBolsistas.id' => $referenciaId])
+                ->first();
+            $avaliacao->set('projeto_bolsista', $referencia);
+        } elseif (in_array($tipo, ['V', 'Z'], true) && empty($avaliacao->raic) && $referenciaId > 0) {
+            $referencia = $this->fetchTable('Raics')->find()
+                ->contain([
+                    'Editais',
+                    'Unidades',
+                    'Usuarios',
+                    'Orientadores',
+                    'ProjetoBolsistas' => ['Projetos'],
+                ])
+                ->where(['Raics.id' => $referenciaId])
+                ->first();
+            $avaliacao->set('raic', $referencia);
+        } elseif ($tipo === 'W' && empty($avaliacao->workshop) && $referenciaId > 0) {
+            $referencia = $this->fetchTable('Workshops')->find()
+                ->contain([
+                    'Editais',
+                    'Unidades',
+                    'Usuarios',
+                    'Orientadores',
+                    'PdjInscricoes' => [
+                        'Bolsistas',
+                        'Orientadores' => ['Unidades'],
+                        'Projetos',
+                    ],
+                ])
+                ->where(['Workshops.id' => $referenciaId])
+                ->first();
+            $avaliacao->set('workshop', $referencia);
+        }
     }
 
     public function cadastroRaic()
@@ -128,7 +1139,11 @@ class AvaliadoresController extends AppController
                     }
                 } catch (\Throwable $e) {
                     $resultado['processado'] = true;
-                    $this->Flash->error('Não foi possível concluir o cadastro massivo de avaliadores RAIC.');
+                    $this->flashFriendlyException(
+                        $e,
+                        'Erro no Sistema - cadastro massivo de avaliadores RAIC',
+                        'Não foi possível concluir o cadastro massivo de avaliadores RAIC.'
+                    );
                 }
             }
         }
@@ -230,12 +1245,204 @@ class AvaliadoresController extends AppController
                     }
                 } catch (\Throwable $e) {
                     $resultado['processado'] = true;
-                    $this->Flash->error('Não foi possível concluir o cadastro massivo de avaliadores para editais.');
+                    $this->flashFriendlyException(
+                        $e,
+                        'Erro no Sistema - cadastro massivo de avaliadores para editais',
+                        'Não foi possível concluir o cadastro massivo de avaliadores para editais.'
+                    );
                 }
             }
         }
 
         $this->set(compact('editais', 'grandesAreas', 'areas', 'dados', 'resultado'));
+    }
+
+    public function cadastroConvites()
+    {
+        $this->request->allowMethod(['get', 'post']);
+
+        if (!$this->ehYoda()) {
+            $this->Flash->error('Área restrita à Gestão de Fomento.');
+            return $this->redirect(['controller' => 'Index', 'action' => 'dashboard']);
+        }
+
+        $editais = $this->fetchTable('Editais')->find('list', [
+            'keyField' => 'id',
+            'valueField' => 'nome',
+        ])
+            ->where([
+                'Editais.origem IN' => ['N', 'R', 'J', 'W'],
+                'Editais.deleted' => 0,
+                'Editais.inicio_avaliar < NOW()',
+                'Editais.fim_avaliar > NOW()',
+            ])
+            ->orderBy(['Editais.nome' => 'ASC'])
+            ->toArray();
+
+        $dados = [
+            'editais' => $this->normalizarEditaisSelecionados((array)$this->request->getData('editais', [])),
+            'cpfs' => (string)$this->request->getData('cpfs', ''),
+        ];
+        sort($dados['editais'], SORT_NUMERIC);
+
+        $resultado = [
+            'processado' => false,
+            'confirmado' => false,
+            'elegiveis' => [],
+            'inelegiveis' => [],
+            'totalInformados' => 0,
+            'totalElegiveis' => 0,
+            'totalInelegiveis' => 0,
+        ];
+
+        if ($this->request->is('post')) {
+            $acao = (string)$this->request->getData('acao', 'analisar');
+            $errosFormulario = $this->validarFormularioCadastroConvites($dados, $editais);
+
+            if ($errosFormulario !== []) {
+                $this->Flash->error(implode('<br>', $errosFormulario), ['escape' => false]);
+            } else {
+                try {
+                    $resultado = $this->analisarCadastroConvites($dados);
+
+                    if ($acao === 'confirmar') {
+                        if ($resultado['totalElegiveis'] === 0) {
+                            $this->Flash->error('Não há convites elegíveis para confirmar o cadastro.');
+                        } else {
+                            $totalGravados = $this->confirmarCadastroConvites($dados, $resultado['elegiveis']);
+                            $resultado['confirmado'] = true;
+                            $this->Flash->success($totalGravados . ' convite(s) gravado(s) com sucesso.');
+                        }
+                    } elseif ($resultado['totalElegiveis'] > 0) {
+                        $this->Flash->info('Revise a prévia abaixo antes de confirmar o cadastro massivo de convites.');
+                    }
+
+                    if ($resultado['totalInelegiveis'] > 0) {
+                        $this->Flash->error(
+                            'Foram encontradas inelegibilidades em ' . $resultado['totalInelegiveis'] . ' CPF(s). Revise a listagem abaixo.',
+                            ['escape' => false]
+                        );
+                    }
+
+                    if ($resultado['totalElegiveis'] === 0 && $resultado['totalInelegiveis'] === 0) {
+                        $this->Flash->info('Nenhum CPF válido foi informado para processamento.');
+                    }
+                } catch (\Throwable $e) {
+                    $resultado['processado'] = true;
+                    $this->flashFriendlyException(
+                        $e,
+                        'Erro no Sistema - cadastro massivo de convites de avaliadores',
+                        'Não foi possível concluir o cadastro massivo de convites.'
+                    );
+                }
+            }
+        }
+
+        $this->set(compact('editais', 'dados', 'resultado'));
+    }
+
+    public function listaConvites()
+    {
+        $this->request->allowMethod(['get']);
+
+        if (!$this->ehYoda()) {
+            $this->Flash->error('Área restrita à Gestão de Fomento.');
+            return $this->redirect(['controller' => 'Index', 'action' => 'dashboard']);
+        }
+
+        $convitesTable = $this->fetchTable('Convites');
+        $anoAtual = (int)date('Y');
+        $anos = $convitesTable->find('list', [
+            'keyField' => 'ano',
+            'valueField' => 'ano',
+        ])
+            ->select(['ano'])
+            ->where(['Convites.ano IS NOT' => null])
+            ->distinct(['Convites.ano'])
+            ->orderBy(['Convites.ano' => 'DESC'])
+            ->toArray();
+        if (!isset($anos[$anoAtual])) {
+            $anos = [$anoAtual => $anoAtual] + $anos;
+        }
+
+        $filtros = [
+            'ano' => (int)$this->request->getQuery('ano', $anoAtual),
+            'aceite' => trim((string)$this->request->getQuery('aceite', '')),
+        ];
+        if ($filtros['ano'] > 0 && !isset($anos[$filtros['ano']])) {
+            $filtros['ano'] = $anoAtual;
+        }
+
+        $aceiteOptions = [
+            'pendente' => 'Não respondido',
+            '1' => 'Aceito',
+            '0' => 'Recusado',
+        ];
+        if ($filtros['aceite'] !== '' && !isset($aceiteOptions[$filtros['aceite']])) {
+            $filtros['aceite'] = '';
+        }
+
+        $query = $convitesTable->find()
+            ->contain([
+                'Usuarios',
+                'Cadastradores',
+            ])
+            ->where(['Convites.deleted IS' => null])
+            ->orderBy([
+                'Convites.created' => 'DESC',
+                'Convites.id' => 'DESC',
+            ]);
+
+        if ($filtros['ano'] > 0) {
+            $query->where(['Convites.ano' => $filtros['ano']]);
+        }
+
+        if ($filtros['aceite'] === 'pendente') {
+            $query->where(['Convites.aceite IS' => null]);
+        } elseif ($filtros['aceite'] !== '') {
+            $query->where(['Convites.aceite' => (int)$filtros['aceite']]);
+        }
+
+        $convites = $this->paginate($query, ['limit' => 20]);
+        $editais = $this->fetchTable('Editais')->find('list', [
+            'keyField' => 'id',
+            'valueField' => 'nome',
+        ])->toArray();
+
+        $this->set(compact('convites', 'anos', 'aceiteOptions', 'filtros', 'editais'));
+    }
+
+    public function cadastroMultiareasDemo()
+    {
+        $this->request->allowMethod(['get']);
+
+        $grandesAreas = $this->fetchTable('GrandesAreas')->find('list', [
+            'keyField' => 'id',
+            'valueField' => 'nome',
+        ])
+            ->where(['GrandesAreas.id <' => 10])
+            ->orderBy(['GrandesAreas.nome' => 'ASC'])
+            ->toArray();
+
+        $areasPorGrandeArea = [];
+        $areas = $this->fetchTable('Areas')->find()
+            ->select(['id', 'nome', 'grandes_area_id'])
+            ->where(['Areas.grandes_area_id IN' => array_keys($grandesAreas)])
+            ->orderBy([
+                'Areas.grandes_area_id' => 'ASC',
+                'Areas.nome' => 'ASC',
+            ])
+            ->all();
+
+        foreach ($areas as $area) {
+            $grandeAreaId = (int)$area->grandes_area_id;
+            if (!isset($areasPorGrandeArea[$grandeAreaId])) {
+                $areasPorGrandeArea[$grandeAreaId] = [];
+            }
+            $areasPorGrandeArea[$grandeAreaId][(int)$area->id] = (string)$area->nome;
+        }
+
+        $this->set(compact('grandesAreas', 'areasPorGrandeArea'));
     }
 
     public function buscaAreas()
@@ -648,7 +1855,11 @@ class AvaliadoresController extends AppController
                 );
                 return $this->redirect(['controller' => 'Listas', 'action' => 'listaInscricoesAvaliadores']);
             } catch (\Throwable $e) {
-                $this->Flash->error('Não foi possível salvar a vinculação dos avaliadores.');
+                $this->flashFriendlyException(
+                    $e,
+                    'Erro no Sistema - vincular avaliadores a inscricao',
+                    'Não foi possível salvar a vinculação dos avaliadores.'
+                );
                 return $this->redirect(['action' => 'vincularInscricao', $inscricao->id]);
             }
         }
@@ -1276,6 +2487,7 @@ class AvaliadoresController extends AppController
             $erros[] = 'Selecione uma unidade válida e ativa.';
         }
 
+        
         if (empty($dados['grandes_area_id'])) {
             $erros[] = 'Selecione a grande área.';
         }
@@ -1283,6 +2495,7 @@ class AvaliadoresController extends AppController
         if (empty($dados['area_id']) || !isset($areas[$dados['area_id']])) {
             $erros[] = 'Selecione a área correspondente à grande área informada.';
         }
+        
 
         if (trim((string)$dados['cpfs']) === '') {
             $erros[] = 'Informe ao menos um CPF.';
@@ -1306,12 +2519,41 @@ class AvaliadoresController extends AppController
             }
         }
 
+        
         if (empty($dados['grandes_area_id'])) {
             $erros[] = 'Selecione a grande área.';
         }
 
         if (empty($dados['area_id']) || !isset($areas[$dados['area_id']])) {
             $erros[] = 'Selecione a área correspondente à grande área informada.';
+        }
+            
+
+        if (trim((string)$dados['cpfs']) === '') {
+            $erros[] = 'Informe ao menos um CPF.';
+        }
+
+        return $erros;
+    }
+
+    protected function validarFormularioCadastroConvites(array $dados, array $editais): array
+    {
+        $erros = [];
+
+        if (empty($dados['editais'])) {
+            $erros[] = 'Selecione ao menos um edital.';
+        } else {
+            foreach ($dados['editais'] as $editaiId) {
+                if (!isset($editais[$editaiId])) {
+                    $erros[] = 'Há edital inválido entre os selecionados.';
+                    break;
+                }
+            }
+            $editaisSelecionados = $this->normalizarEditaisSelecionados((array)$dados['editais']);
+            sort($editaisSelecionados, SORT_NUMERIC);
+            if (strlen(implode(',', $editaisSelecionados)) > 45) {
+                $erros[] = 'A lista de editais selecionados excede o tamanho máximo permitido para gravação.';
+            }
         }
 
         if (trim((string)$dados['cpfs']) === '') {
@@ -1561,6 +2803,134 @@ class AvaliadoresController extends AppController
         return $totalSalvar;
     }
 
+    protected function analisarCadastroConvites(array $dados): array
+    {
+        $usuariosTable = $this->fetchTable('Usuarios');
+        $cpfs = $this->normalizarCpfs((string)$dados['cpfs']);
+        $editaisSelecionados = $this->normalizarEditaisSelecionados((array)$dados['editais']);
+        sort($editaisSelecionados, SORT_NUMERIC);
+        $editaisTexto = implode(',', $editaisSelecionados);
+        $anoAtual = (int)date('Y');
+
+        $resultado = [
+            'processado' => true,
+            'confirmado' => false,
+            'elegiveis' => [],
+            'inelegiveis' => [],
+            'totalInformados' => count($cpfs),
+            'totalElegiveis' => 0,
+            'totalInelegiveis' => 0,
+        ];
+
+        if ($cpfs === [] || $editaisSelecionados === []) {
+            return $resultado;
+        }
+
+        $cpfJaProcessado = [];
+        foreach ($cpfs as $cpfInformado) {
+            $cpfOriginal = $cpfInformado['original'];
+            $cpfNumerico = $cpfInformado['numerico'];
+
+            if (isset($cpfJaProcessado[$cpfNumerico])) {
+                $resultado['inelegiveis'][] = [
+                    'cpf' => $cpfOriginal,
+                    'editais' => $editaisTexto,
+                    'ano' => $anoAtual,
+                    'motivo' => 'CPF repetido na própria listagem enviada.',
+                ];
+                continue;
+            }
+            $cpfJaProcessado[$cpfNumerico] = true;
+
+            if (!$this->validaCPF($cpfNumerico)) {
+                $resultado['inelegiveis'][] = [
+                    'cpf' => $cpfOriginal,
+                    'editais' => $editaisTexto,
+                    'ano' => $anoAtual,
+                    'motivo' => 'CPF inválido.',
+                ];
+                continue;
+            }
+
+            $usuario = $usuariosTable->find()
+                ->select(['id', 'nome', 'cpf'])
+                ->where(['Usuarios.cpf' => $cpfNumerico])
+                ->first();
+
+            if (!$usuario) {
+                $resultado['inelegiveis'][] = [
+                    'cpf' => $cpfOriginal,
+                    'editais' => $editaisTexto,
+                    'ano' => $anoAtual,
+                    'motivo' => 'CPF não localizado na base de usuários.',
+                ];
+                continue;
+            }
+
+            if ($this->existeConviteAtivo((int)$usuario->id, $anoAtual, $editaisTexto)) {
+                $resultado['inelegiveis'][] = [
+                    'cpf' => $cpfOriginal,
+                    'nome' => (string)$usuario->nome,
+                    'editais' => $editaisTexto,
+                    'ano' => $anoAtual,
+                    'motivo' => 'Usuário já possui convite ativo neste ano para o mesmo conjunto de editais.',
+                ];
+                continue;
+            }
+
+            $resultado['elegiveis'][] = [
+                'usuario_id' => (int)$usuario->id,
+                'cpf' => $cpfOriginal,
+                'nome' => (string)$usuario->nome,
+                'editais' => $editaisTexto,
+                'ano' => $anoAtual,
+            ];
+        }
+
+        $resultado['totalElegiveis'] = count($resultado['elegiveis']);
+        $resultado['totalInelegiveis'] = count($resultado['inelegiveis']);
+
+        return $resultado;
+    }
+
+    protected function confirmarCadastroConvites(array $dados, array $elegiveis): int
+    {
+        $convitesTable = $this->fetchTable('Convites');
+        $editaisSelecionados = $this->normalizarEditaisSelecionados((array)$dados['editais']);
+        sort($editaisSelecionados, SORT_NUMERIC);
+        $editaisTexto = implode(',', $editaisSelecionados);
+        $anoAtual = (int)date('Y');
+        $identity = $this->getIdentityAtual();
+        $cadastradoPor = is_array($identity) ? (int)($identity['id'] ?? 0) : (int)($identity->id ?? 0);
+        $entidadesSalvar = [];
+        $totalSalvar = 0;
+
+        foreach ($elegiveis as $item) {
+            if ($this->existeConviteAtivo((int)$item['usuario_id'], $anoAtual, $editaisTexto)) {
+                continue;
+            }
+
+            $entidadesSalvar[] = $convitesTable->newEntity([
+                'usuario_id' => (int)$item['usuario_id'],
+                'ano' => $anoAtual,
+                'aceite' => null,
+                'editais' => $editaisTexto,
+                'cadastrado_por' => $cadastradoPor > 0 ? $cadastradoPor : null,
+                'deletado_por' => null,
+                'deleted' => null,
+            ]);
+            $totalSalvar++;
+        }
+
+        $convitesTable->getConnection()->transactional(function () use ($convitesTable, $entidadesSalvar): void {
+            foreach ($entidadesSalvar as $entidade) {
+                $convitesTable->saveOrFail($entidade);
+            }
+        });
+
+        return $totalSalvar;
+    }
+
     protected function existeCadastroRaic(int $usuarioId, int $editaiId, int $unidadeId): bool
     {
         return $this->fetchTable('Avaliadors')->find()
@@ -1580,6 +2950,18 @@ class AvaliadoresController extends AppController
                 'Avaliadors.usuario_id' => $usuarioId,
                 'Avaliadors.editai_id' => $editaiId,
                 'Avaliadors.deleted' => 0,
+            ])
+            ->count() > 0;
+    }
+
+    protected function existeConviteAtivo(int $usuarioId, int $ano, string $editais): bool
+    {
+        return $this->fetchTable('Convites')->find()
+            ->where([
+                'Convites.usuario_id' => $usuarioId,
+                'Convites.ano' => $ano,
+                'Convites.editais' => $editais,
+                'Convites.deleted IS' => null,
             ])
             ->count() > 0;
     }

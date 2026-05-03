@@ -21,6 +21,26 @@
                                     'required' => true,
                                 ]) ?>
                             </div>
+                            <div class="col-md-2">
+                                <?= $this->Form->control('fator', [
+                                    'label' => 'Fator',
+                                    'type' => 'number',
+                                    'step' => '0.01',
+                                    'min' => '0',
+                                    'max' => '99.99',
+                                    'class' => 'form-control',
+                                ]) ?>
+                            </div>
+                            <div class="col-md-2">
+                                <?= $this->Form->control('max', [
+                                    'label' => 'Máximo',
+                                    'type' => 'number',
+                                    'step' => '0.01',
+                                    'min' => '0',
+                                    'max' => '99.99',
+                                    'class' => 'form-control',
+                                ]) ?>
+                            </div>
                             <div class="col-12">
                                 <?= $this->Form->control('sumula', [
                                     'label' => 'Sumula',

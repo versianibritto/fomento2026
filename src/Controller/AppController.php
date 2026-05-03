@@ -208,6 +208,61 @@ class AppController extends Controller
         return in_array((int)($identity->id ?? 0), [1, 8088], true);
     }
 
+    protected function avaliadorTemAcessoAvaliacaoReferencia(array $tipos, int $referenciaId): bool
+    {
+        if ($referenciaId <= 0) {
+            return false;
+        }
+
+        $identity = $this->getIdentityAtual();
+        if (!$identity) {
+            return false;
+        }
+
+        $usuarioId = is_array($identity) ? (int)($identity['id'] ?? 0) : (int)($identity->id ?? 0);
+        if ($usuarioId <= 0) {
+            return false;
+        }
+
+        $tipos = array_values(array_filter(array_map('strval', $tipos)));
+        if ($tipos === []) {
+            return false;
+        }
+
+        $referencias = [];
+        if (array_intersect($tipos, ['N', 'J'])) {
+            $referencias[] = ['AvaliadorBolsistas.bolsista' => $referenciaId];
+            $referencias[] = ['AvaliadorBolsistas.projeto_bolsista_id' => $referenciaId];
+        }
+        if (array_intersect($tipos, ['V', 'Z'])) {
+            $referencias[] = ['AvaliadorBolsistas.bolsista' => $referenciaId];
+            $referencias[] = ['AvaliadorBolsistas.raic_id' => $referenciaId];
+        }
+        if (in_array('W', $tipos, true)) {
+            $referencias[] = ['AvaliadorBolsistas.bolsista' => $referenciaId];
+            $referencias[] = ['AvaliadorBolsistas.workshop_id' => $referenciaId];
+        }
+
+        if ($referencias === []) {
+            return false;
+        }
+
+        return $this->fetchTable('AvaliadorBolsistas')->find()
+            ->matching('Avaliadors', function ($q) use ($usuarioId) {
+                return $q->where([
+                    'Avaliadors.usuario_id' => $usuarioId,
+                    'Avaliadors.deleted' => 0,
+                ]);
+            })
+            ->where([
+                'AvaliadorBolsistas.tipo IN' => $tipos,
+                'AvaliadorBolsistas.deleted' => 0,
+                'AvaliadorBolsistas.situacao !=' => 'F',
+                'OR' => $referencias,
+            ])
+            ->count() > 0;
+    }
+
     
 
     public function idade($nascimento, $completo = true) 

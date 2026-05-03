@@ -358,6 +358,7 @@ class PadraoController extends AppController
         $ehOrientador = $identityId > 0 && $identityId === (int)($inscricao->orientador ?? 0);
         $ehCoorientador = $identityId > 0 && $identityId === (int)($inscricao->coorientador ?? 0);
         $ehBolsista = $identityId > 0 && $identityId === (int)($inscricao->bolsista ?? 0);
+        $ehAvaliadorPendente = $this->avaliadorTemAcessoAvaliacaoReferencia(['N'], (int)$inscricao->id);
 
         $jediPermitidas = array_values(array_filter(array_map('trim', explode(',', (string)($identity->jedi ?? '')))));
         $unidadeOrientador = (string)($inscricao->orientadore->unidade_id ?? $inscricao->orientadore->unidade?->id ?? '');
@@ -373,7 +374,7 @@ class PadraoController extends AppController
             && $programaInscricao !== '0'
             && in_array($programaInscricao, $padauanPermitidos, true);
 
-        if (!$ehYoda && !$ehOrientador && !$ehCoorientador && !$ehBolsista && !$ehJediPermitido && !$ehPadauanPermitido) {
+        if (!$ehYoda && !$ehOrientador && !$ehCoorientador && !$ehBolsista && !$ehJediPermitido && !$ehPadauanPermitido && !$ehAvaliadorPendente) {
             $this->Flash->error('Sem acesso a esta inscrição. Somente Gestão e coordenação da unidade da inscrição.');
             return $this->redirect(['controller' => 'Index', 'action' => 'index']);
         }

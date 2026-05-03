@@ -1,4 +1,18 @@
 <?php
+/**
+ * @var \App\View\AppView $this
+ * @var \Cake\Datasource\EntityInterface $inscricao
+ * @var array<int|string, string> $grandesAreas
+ * @var array<int|string, string> $areasAvaliador1
+ * @var array<int|string, string> $areasAvaliador2
+ * @var array<int|string, string> $avaliadoresAvaliador1
+ * @var array<int|string, string> $avaliadoresAvaliador2
+ * @var int|null $avaliador1Atual
+ * @var int|null $avaliador2Atual
+ * @var \Cake\Datasource\ResultSetInterface|\Cake\Collection\CollectionInterface|array $vinculosAtivos
+ * @var array{grandes_area_id?: int, area_id?: int} $filtrosAvaliador1
+ * @var array{grandes_area_id?: int, area_id?: int} $filtrosAvaliador2
+ */
 $vinculoExistente = !empty($vinculosAtivos);
 $projetoTitulo = trim((string)($inscricao->projeto->titulo ?? ''));
 if ($projetoTitulo === '') {

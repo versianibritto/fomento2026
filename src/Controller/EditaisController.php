@@ -533,9 +533,15 @@ class EditaisController extends AppController
                     $this->Flash->error('Informe o nome do bloco.');
                     return $this->redirect($this->referer());
                 }
+                $maxRaw = trim((string)($dados['max'] ?? ''));
+                if ($maxRaw === '' || !is_numeric(str_replace(',', '.', $maxRaw))) {
+                    $this->Flash->error('Informe um valor máximo válido para o bloco.');
+                    return $this->redirect($this->referer());
+                }
 
                 $bloco = $this->fetchTable('EditaisSumulasBlocos')->newEmptyEntity();
                 $bloco->nome = $nome;
+                $bloco->max = $maxRaw !== '' ? (float)str_replace(',', '.', $maxRaw) : null;
 
                 if ($this->fetchTable('EditaisSumulasBlocos')->save($bloco)) {
                     $this->Flash->success('Bloco cadastrado com sucesso.');
@@ -578,7 +584,13 @@ class EditaisController extends AppController
                     $this->Flash->error('Informe o nome do bloco.');
                     return $this->redirect($this->referer());
                 }
+                $maxRaw = trim((string)($dados['max'] ?? ''));
+                if ($maxRaw === '' || !is_numeric(str_replace(',', '.', $maxRaw))) {
+                    $this->Flash->error('Informe um valor máximo válido para o bloco.');
+                    return $this->redirect($this->referer());
+                }
                 $bloco->nome = $nome;
+                $bloco->max = $maxRaw !== '' ? (float)str_replace(',', '.', $maxRaw) : null;
 
             if ($this->fetchTable('EditaisSumulasBlocos')->save($bloco)) {
                 $this->Flash->success('Bloco atualizado com sucesso.');
@@ -649,18 +661,30 @@ class EditaisController extends AppController
                     $sumula = trim((string)($item['sumula'] ?? ''));
                     $parametro = trim((string)($item['parametro'] ?? ''));
                     $blocoId = $item['editais_sumula_bloco_id'] ?? '';
+                    $fator = trim((string)($item['fator'] ?? ''));
+                    $max = trim((string)($item['max'] ?? ''));
 
-                    $allEmpty = $sumula === '' && $parametro === '' && $blocoId === '';
+                    $allEmpty = $sumula === '' && $parametro === '' && $blocoId === '' && $fator === '' && $max === '';
                     if ($allEmpty) {
                         continue;
                     }
-                    if ($sumula === '' || $parametro === '' || $blocoId === '') {
+                    if ($sumula === '' || $parametro === '' || $blocoId === '' || $fator === '') {
                         $this->Flash->error('Preencha todos os campos da súmula antes de salvar.');
+                        return $this->redirect($this->referer());
+                    }
+                    if (!is_numeric(str_replace(',', '.', $fator))) {
+                        $this->Flash->error('Informe um fator válido para a súmula.');
+                        return $this->redirect($this->referer());
+                    }
+                    if ($max !== '' && !is_numeric(str_replace(',', '.', $max))) {
+                        $this->Flash->error('Informe um máximo válido para a súmula.');
                         return $this->redirect($this->referer());
                     }
 
                     $item['sumula'] = $sumula;
                     $item['parametro'] = $parametro;
+                    $item['fator'] = (float)str_replace(',', '.', $fator);
+                    $item['max'] = $max !== '' ? (float)str_replace(',', '.', $max) : null;
                     $rows[] = $item;
                 }
 
@@ -738,6 +762,18 @@ class EditaisController extends AppController
 
             if ($this->request->is(['post', 'put', 'patch'])) {
                 $dados = $this->request->getData();
+                $fator = trim((string)($dados['fator'] ?? ''));
+                if ($fator === '' || !is_numeric(str_replace(',', '.', $fator))) {
+                    $this->Flash->error('Informe um fator válido para a súmula.');
+                    return $this->redirect($this->referer());
+                }
+                $max = trim((string)($dados['max'] ?? ''));
+                if ($max !== '' && !is_numeric(str_replace(',', '.', $max))) {
+                    $this->Flash->error('Informe um máximo válido para a súmula.');
+                    return $this->redirect($this->referer());
+                }
+                $dados['fator'] = (float)str_replace(',', '.', $fator);
+                $dados['max'] = $max !== '' ? (float)str_replace(',', '.', $max) : null;
 
                 try {
                     $connection = $sumulasTable->getConnection();

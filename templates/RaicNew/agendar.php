@@ -67,35 +67,43 @@ $dataAtual = !empty($raic->data_apresentacao) ? $raic->data_apresentacao->format
                     </div>
                 </div>
 
-                <?php if (!$jaAgendada): ?>
-                    <hr>
+                <hr>
 
-                    <h5 class="mb-3">Banca</h5>
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <?= $this->Form->control('avaliador_1', [
-                                'label' => 'Avaliador 1',
-                                'type' => 'select',
-                                'options' => $avaliadores,
-                                'empty' => 'Selecione',
-                                'value' => $avaliador1Atual,
-                                'required' => true,
-                                'class' => 'form-select',
-                            ]) ?>
-                        </div>
-                        <div class="col-md-6">
-                            <?= $this->Form->control('avaliador_2', [
-                                'label' => 'Avaliador 2',
-                                'type' => 'select',
-                                'options' => $avaliadores,
-                                'empty' => 'Selecione',
-                                'value' => $avaliador2Atual,
-                                'required' => true,
-                                'class' => 'form-select',
-                            ]) ?>
-                        </div>
+                <h5 class="mb-3">Banca</h5>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <?= $this->Form->control('avaliador_1', [
+                            'label' => 'Avaliador 1',
+                            'type' => 'select',
+                            'options' => $avaliadores,
+                            'empty' => 'Selecione',
+                            'value' => $avaliador1Atual,
+                            'required' => true,
+                            'class' => 'form-select',
+                            'disabled' => !empty($avaliador1Bloqueado),
+                        ]) ?>
+                        <?php if (!empty($avaliador1Bloqueado)): ?>
+                            <div class="form-text text-muted">Bloqueado porque a nota deste avaliador já foi lançada.</div>
+                            <?= $this->Form->hidden('avaliador_1', ['value' => $avaliador1Atual]) ?>
+                        <?php endif; ?>
                     </div>
-                <?php endif; ?>
+                    <div class="col-md-6">
+                        <?= $this->Form->control('avaliador_2', [
+                            'label' => 'Avaliador 2',
+                            'type' => 'select',
+                            'options' => $avaliadores,
+                            'empty' => 'Selecione',
+                            'value' => $avaliador2Atual,
+                            'required' => true,
+                            'class' => 'form-select',
+                            'disabled' => !empty($avaliador2Bloqueado),
+                        ]) ?>
+                        <?php if (!empty($avaliador2Bloqueado)): ?>
+                            <div class="form-text text-muted">Bloqueado porque a nota deste avaliador já foi lançada.</div>
+                            <?= $this->Form->hidden('avaliador_2', ['value' => $avaliador2Atual]) ?>
+                        <?php endif; ?>
+                    </div>
+                </div>
 
                 <div class="mt-4 d-flex gap-2">
                     <?= $this->Form->button($jaAgendada ? 'Salvar Reagendamento' : 'Salvar Agendamento', ['class' => 'btn btn-primary']) ?>

@@ -12,12 +12,24 @@
                         'url' => ['controller' => 'Editais', 'action' => 'sumulasblocosadd'],
                         'class' => 'row g-2 align-items-end mb-3',
                     ]) ?>
-                        <div class="col-md-6">
+                        <div class="col-md-5">
                             <?= $this->Form->control('nome', [
                                 'label' => 'Novo bloco',
                                 'class' => 'form-control',
                                 'maxlength' => 45,
                                 'required' => true,
+                            ]) ?>
+                        </div>
+                        <div class="col-md-2">
+                            <?= $this->Form->control('max', [
+                                'label' => 'Máximo',
+                                'type' => 'number',
+                                'step' => '0.01',
+                                'min' => '0',
+                                'max' => '99.99',
+                                'class' => 'form-control',
+                                'required' => true,
+
                             ]) ?>
                         </div>
                         <div class="col-md-3">
@@ -32,6 +44,7 @@
                                     <tr>
                                         <th style="width: 70px;">ID</th>
                                         <th>Nome</th>
+                                        <th style="width: 120px;">Máximo</th>
                                         <th style="width: 140px;">Status</th>
                                         <th style="width: 140px;">Acoes</th>
                                     </tr>
@@ -41,6 +54,7 @@
                                         <tr>
                                             <td><?= h($bloco->id) ?></td>
                                             <td><?= h($bloco->nome) ?></td>
+                                            <td><?= $bloco->max !== null ? h(number_format((float)$bloco->max, 2, ',', '.')) : '-' ?></td>
                                             <td><?= $bloco->deleted ? 'Deletado' : 'Ativo' ?></td>
                                             <td class="text-end">
                                                 <?php if (!$bloco->deleted) { ?>

@@ -63,6 +63,11 @@ class EditaisSumulasBlocosTable extends Table
             ->allowEmptyString('nome');
 
         $validator
+            ->numeric('max')
+            ->range('max', [-99.99, 99.99])
+            ->notEmptyString('max');
+
+        $validator
             ->allowEmptyString('deleted');
 
         return $validator;

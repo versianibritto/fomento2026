@@ -1871,3 +1871,47 @@ VIEW `dashcountavaliadores` AS
         LEFT JOIN `usuarios` `u` ON ((`u`.`id` = `ab`.`usuario_id`)))
    
     GROUP BY `ab`.`usuario_id` , `u`.`nome` , `ab`.`situacao` , `ab`.`ano` , `ab`.`deleted`;
+
+
+-- talvez
+CREATE TABLE `fomento2026`.`convites` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `usuario_id` INT NULL,
+  `ano` INT NULL,
+  `aceite` TINYINT NULL,
+  `editais` VARCHAR(45) NULL,
+  `cadastrado_por` INT NULL,
+  `deletado_por` INT NULL,
+  `created` TIMESTAMP NULL,
+  `modified` TIMESTAMP NULL,
+  `deleted` TIMESTAMP NULL,
+  PRIMARY KEY (`id`));
+
+  ALTER TABLE `editais_sumulas` 
+ADD COLUMN `fator` DOUBLE(4,2) NULL AFTER `editais_sumula_bloco_id`;
+ALTER TABLE tra`editais_sumulas` 
+ADD COLUMN `max` DOUBLE(4,2) NULL AFTER `fator`;
+
+
+ALTER TABLE `editais_sumulas_blocos` 
+ADD COLUMN `max` DOUBLE(4,2) NULL AFTER `modified`;
+
+
+CREATE TABLE `avaliations_sumulas` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `avaliador_bolsista_id` INT UNSIGNED NULL DEFAULT NULL,
+  `editais_sumula_id` INT UNSIGNED NULL DEFAULT NULL,
+  `editais_sumula_bloco_id` INT NULL,
+  `inscricao_sumula_id` INT NULL,
+  `nota` DOUBLE(4,2) UNSIGNED NULL DEFAULT NULL,
+  `created` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  `modified` TIMESTAMP NULL DEFAULT NULL,
+  `observacao_avaliador` TEXT CHARACTER SET 'latin1' NULL DEFAULT NULL,
+  `deleted` INT NULL DEFAULT '0',
+  `quantidade_original` INT NULL,
+  `quantidade_avaliada` INT NULL,
+  PRIMARY KEY (`id`));
+
+
+ALTER TABLE `avaliador_bolsistas` 
+ADD COLUMN `nota_sumula` DOUBLE(5,2) NULL AFTER `projeto_bolsista_id`;

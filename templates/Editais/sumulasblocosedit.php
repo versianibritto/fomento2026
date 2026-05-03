@@ -16,6 +16,18 @@
                         'required' => true,
                     ]) ?>
                 </div>
+                <div class="col-md-2">
+                    <?= $this->Form->control('max', [
+                        'label' => 'Máximo',
+                        'type' => 'number',
+                        'step' => '0.01',
+                        'min' => '0',
+                        'max' => '99.99',
+                        'class' => 'form-control',
+                        'required' => true,
+
+                    ]) ?>
+                </div>
                 <div class="col-12">
                     <?= $this->Form->button('Salvar', ['class' => 'btn btn-success']) ?>
                 </div>

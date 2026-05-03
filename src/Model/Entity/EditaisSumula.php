@@ -13,6 +13,8 @@ use Cake\ORM\Entity;
  * @property string|null $sumula
  * @property string|null $parametro
  * @property int|null $editais_sumula_bloco_id
+ * @property float|null $fator
+ * @property float|null $max
  * @property \Cake\I18n\DateTime|null $deleted
  * @property \Cake\I18n\DateTime|null $created
  * @property \Cake\I18n\DateTime|null $modified
@@ -32,10 +34,13 @@ class EditaisSumula extends Entity
         'sumula' => true,
         'parametro' => true,
         'editais_sumula_bloco_id' => true,
+        'fator' => true,
+        'max' => true,
         'deleted' => true,
         'created' => true,
         'modified' => true,
         'editai' => true,
         'editais_sumulas_bloco' => true,
+
     ];
 }

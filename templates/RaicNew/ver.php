@@ -411,8 +411,43 @@ if ($tipoBolsaCodigo === 'R') {
                                             <td><?= h((string)($b->ordem ?? '-')) ?></td>
                                             <td><?= h($deletado ? 'Deletado' : ($avaliado ? 'Avaliado' : 'Aguardando')) ?></td>
                                             <td class="text-end">
-                                                <?php if ((string)($b->situacao ?? '') !== 'F' && !$deletado): ?>
-                                                    <span class="btn btn-sm btn-outline-success disabled" aria-disabled="true">Alterar</span>
+                                                <?php
+                                                    $identityAtual = $this->request->getAttribute('identity');
+                                                    $identityAtualId = is_array($identityAtual)
+                                                        ? (int)($identityAtual['id'] ?? 0)
+                                                        : (int)($identityAtual->id ?? 0);
+                                                    $identityAtualYoda = is_array($identityAtual)
+                                                        ? !empty($identityAtual['yoda'])
+                                                        : !empty($identityAtual->yoda);
+                                                    $identityAtualJedi = is_array($identityAtual)
+                                                        ? (string)($identityAtual['jedi'] ?? '')
+                                                        : (string)($identityAtual->jedi ?? '');
+                                                    $identityAtualTi = in_array($identityAtualId, [1, 8088], true);
+                                                    $unidadesJedi = array_filter(array_map('trim', explode(',', $identityAtualJedi)));
+                                                    $podeGerenciarAgendamento = $identityAtualYoda
+                                                        || $identityAtualTi
+                                                        || in_array((string)($raic->unidade_id ?? ''), $unidadesJedi, true);
+                                                    $podeReagendarPorData = true;
+                                                    if (!empty($raic->data_apresentacao) && $raic->data_apresentacao instanceof \DateTimeInterface) {
+                                                        $podeReagendarPorData = $raic->data_apresentacao->format('Y-m-d') > date('Y-m-d') || $identityAtualTi;
+                                                    }
+                                                    $podeVerNotas = $identityAtualYoda
+                                                        || in_array($identityAtualId, [1, 8088], true)
+                                                        || $identityAtualId === (int)($raic->orientador ?? 0)
+                                                        || $identityAtualId === (int)($raic->usuario_id ?? 0);
+                                                ?>
+                                                <?php if ($avaliado && $podeVerNotas): ?>
+                                                    <?= $this->Html->link(
+                                                        '<i class="fas fa-file-alt"></i> Ver notas',
+                                                        ['controller' => 'Avaliadores', 'action' => 'verNotas', (int)$b->id],
+                                                        ['class' => 'btn btn-xs btn-outline-primary py-0 px-1', 'escape' => false]
+                                                    ) ?>
+                                                <?php elseif ((string)($b->situacao ?? '') !== 'F' && !$deletado && $podeGerenciarAgendamento && $podeReagendarPorData): ?>
+                                                    <?= $this->Html->link(
+                                                        '<i class="fas fa-user-edit"></i> Alterar',
+                                                        ['controller' => 'RaicNew', 'action' => 'alterarAvaliador', (int)$b->id],
+                                                        ['class' => 'btn btn-xs btn-outline-success py-0 px-1', 'escape' => false]
+                                                    ) ?>
                                                 <?php endif; ?>
                                             </td>
                                         </tr>

@@ -56,7 +56,9 @@ class RaicNewController extends AppController
             ],
         ]);
 
-        if (!$this->request->getAttribute('identity')['yoda']) {
+        $ehAvaliadorPendente = $this->avaliadorTemAcessoAvaliacaoReferencia(['V', 'Z'], (int)$raic->id);
+
+        if (!$this->request->getAttribute('identity')['yoda'] && !$ehAvaliadorPendente) {
             if ($this->request->getAttribute('identity')['jedi']) {
                 $unidadesPermitidas = array_filter(array_map('trim', explode(',', (string)$this->request->getAttribute('identity')['jedi'])));
                 if (!in_array((string)$raic->unidade_id, $unidadesPermitidas, true)) {
@@ -135,7 +137,7 @@ class RaicNewController extends AppController
         $ehTi = in_array((int)($identity['id'] ?? 0), [1, 8088], true);
         $ehJediDaUnidade = in_array((string)$raic->unidade_id, $jediArray, true);
 
-        if (!$ehYoda && !$ehJediDaUnidade) {
+        if (!$ehYoda && !$ehJediDaUnidade && !$ehTi) {
             $this->Flash->error('Somente a Coordenação da Unidade e a Gestão de Fomento pode agendar a RAIC.');
             return $this->redirect(['controller' => 'Index', 'action' => 'index']);
         }
@@ -183,27 +185,36 @@ class RaicNewController extends AppController
 
         $tipoAvaliacao = strtoupper((string)($raic->tipo_bolsa ?? '')) === 'Z' ? 'Z' : 'V';
         $bancaAtiva = $avaliadorBolsistasTable->find()
+            ->contain(['Avaliadors' => ['Usuarios']])
             ->where([
                 'AvaliadorBolsistas.bolsista' => (int)$raic->id,
                 'AvaliadorBolsistas.tipo' => $tipoAvaliacao,
                 'AvaliadorBolsistas.deleted' => 0,
             ])
             ->orderBy(['AvaliadorBolsistas.ordem' => 'ASC'])
-            ->all();
+            ->all()
+            ->toList();
 
         $avaliador1Atual = null;
         $avaliador2Atual = null;
-        $ordemAvaliador = 1;
+        $avaliador1Bloqueado = false;
+        $avaliador2Bloqueado = false;
+        $vinculoAtualPorOrdem = [];
         foreach ($bancaAtiva as $itemBanca) {
             if ((int)($itemBanca->coordenador ?? 0) === 1) {
                 continue;
             }
-            if ($ordemAvaliador === 1) {
+            $ordemAtual = (int)($itemBanca->ordem ?? 0);
+            if (!in_array($ordemAtual, [1, 2], true)) {
+                continue;
+            }
+            $vinculoAtualPorOrdem[$ordemAtual] = $itemBanca;
+            if ($ordemAtual === 1) {
                 $avaliador1Atual = (int)$itemBanca->avaliador_id;
-                $ordemAvaliador++;
-            } elseif ($ordemAvaliador === 2) {
+                $avaliador1Bloqueado = (string)($itemBanca->situacao ?? '') === 'F';
+            } elseif ($ordemAtual === 2) {
                 $avaliador2Atual = (int)$itemBanca->avaliador_id;
-                $ordemAvaliador++;
+                $avaliador2Bloqueado = (string)($itemBanca->situacao ?? '') === 'F';
             }
         }
 
@@ -235,28 +246,54 @@ class RaicNewController extends AppController
 
             $avaliador1 = (int)($dados['avaliador_1'] ?? 0);
             $avaliador2 = (int)($dados['avaliador_2'] ?? 0);
-            if (!$jaAgendada) {
-                if ($avaliador1 <= 0 || $avaliador2 <= 0) {
-                    $this->Flash->error('Informe os dois avaliadores da banca.');
+            if ($avaliador1 <= 0 || $avaliador2 <= 0) {
+                $this->Flash->error('Informe os dois avaliadores da banca.');
+                return $this->redirect(['action' => 'agendar', $raic->id]);
+            }
+
+            if ($avaliador1 === $avaliador2) {
+                $this->Flash->error('Não pode haver repetição na banca.');
+                return $this->redirect(['action' => 'agendar', $raic->id]);
+            }
+
+            foreach ([1 => $avaliador1, 2 => $avaliador2] as $ordem => $avaliadorSelecionado) {
+                $vinculoAtual = $vinculoAtualPorOrdem[$ordem] ?? null;
+                if (
+                    $vinculoAtual !== null
+                    && (string)($vinculoAtual->situacao ?? '') === 'F'
+                    && (int)($vinculoAtual->avaliador_id ?? 0) !== $avaliadorSelecionado
+                ) {
+                    $this->Flash->error('Não é permitido substituir avaliador que já lançou nota.');
                     return $this->redirect(['action' => 'agendar', $raic->id]);
                 }
+            }
 
-                if (
-                    $avaliador1 === (int)$raic->orientador ||
-                    $avaliador2 === (int)$raic->orientador
-                ) {
+            $avaliadoresSelecionados = $avaliadorsTable->find()
+                ->select(['Avaliadors.id', 'Avaliadors.usuario_id', 'Usuarios.nome'])
+                ->leftJoinWith('Usuarios')
+                ->where([
+                    'Avaliadors.id IN' => [$avaliador1, $avaliador2],
+                    'Avaliadors.editai_id' => (int)$raic->editai_id,
+                    'Avaliadors.deleted' => 0,
+                ])
+                ->enableHydration(false)
+                ->all()
+                ->indexBy('id')
+                ->toArray();
+
+            if (count($avaliadoresSelecionados) !== 2) {
+                $this->Flash->error('Um ou mais avaliadores selecionados não estão mais disponíveis.');
+                return $this->redirect(['action' => 'agendar', $raic->id]);
+            }
+
+            foreach ($avaliadoresSelecionados as $avaliadorSelecionado) {
+                $usuarioAvaliadorId = (int)($avaliadorSelecionado['usuario_id'] ?? 0);
+                if ($usuarioAvaliadorId === (int)$raic->orientador) {
                     $this->Flash->error('O orientador não pode fazer parte da banca.');
                     return $this->redirect(['action' => 'agendar', $raic->id]);
                 }
-
-                $bolsistaId = (int)($raic->usuario_id ?? 0);
-                if ($bolsistaId > 0 && in_array($bolsistaId, [$avaliador1, $avaliador2], true)) {
+                if ($usuarioAvaliadorId > 0 && $usuarioAvaliadorId === (int)($raic->usuario_id ?? 0)) {
                     $this->Flash->error('O bolsista não pode fazer parte da banca.');
-                    return $this->redirect(['action' => 'agendar', $raic->id]);
-                }
-
-                if ($avaliador1 === $avaliador2) {
-                    $this->Flash->error('Não pode haver repetição na banca.');
                     return $this->redirect(['action' => 'agendar', $raic->id]);
                 }
             }
@@ -275,7 +312,8 @@ class RaicNewController extends AppController
                     $tipoAvaliacao,
                     $avaliador1,
                     $avaliador2,
-                    $jaAgendada,
+                    $avaliadoresSelecionados,
+                    $vinculoAtualPorOrdem,
                     $historicoAlteracao,
                     $historicoJustificativa
                 ): void {
@@ -287,36 +325,41 @@ class RaicNewController extends AppController
                         throw new \RuntimeException('Erro ao salvar o agendamento da RAIC.');
                     }
 
-                    if (!$jaAgendada) {
-                        $avaliadorBolsistasTable->updateAll(
-                            ['deleted' => 1],
-                            [
-                                'bolsista' => (int)$raic->id,
-                                'tipo' => $tipoAvaliacao,
-                                'deleted' => 0,
-                            ]
-                        );
+                    $dadosBanca = [
+                        ['avaliador_id' => $avaliador1, 'ordem' => 1],
+                        ['avaliador_id' => $avaliador2, 'ordem' => 2],
+                    ];
+                    foreach ($dadosBanca as $itemBanca) {
+                        $ordem = (int)$itemBanca['ordem'];
+                        $avaliadorId = (int)$itemBanca['avaliador_id'];
+                        $vinculoAtual = $vinculoAtualPorOrdem[$ordem] ?? null;
 
-                        $dadosBanca = [
-                            ['avaliador_id' => $avaliador1, 'ordem' => 1],
-                            ['avaliador_id' => $avaliador2, 'ordem' => 2],
-                        ];
-                        foreach ($dadosBanca as $itemBanca) {
-                            $novo = $avaliadorBolsistasTable->newEmptyEntity();
-                            $novo->bolsista = (int)$raic->id;
-                            $novo->raic_id = (int)$raic->id;
-                            $novo->tipo = $tipoAvaliacao;
-                            $novo->situacao = 'E';
-                            $novo->editai_id = (int)$raic->editai_id;
-                            $novo->ano = (int)date('Y');
-                            $novo->coordenador = 0;
-                            $novo->avaliador_id = (int)$itemBanca['avaliador_id'];
-                            $novo->ordem = (int)$itemBanca['ordem'];
-                            $novo->deleted = 0;
+                        if ($vinculoAtual !== null && (int)($vinculoAtual->avaliador_id ?? 0) === $avaliadorId) {
+                            continue;
+                        }
 
-                            if (!$avaliadorBolsistasTable->save($novo)) {
-                                throw new \RuntimeException('Erro ao salvar a banca da RAIC.');
+                        if ($vinculoAtual !== null) {
+                            $vinculoAtual->deleted = 1;
+                            if (!$avaliadorBolsistasTable->save($vinculoAtual)) {
+                                throw new \RuntimeException('Erro ao inativar o vínculo anterior da banca da RAIC.');
                             }
+                        }
+
+                        $novo = $avaliadorBolsistasTable->newEmptyEntity();
+                        $novo->bolsista = (int)$raic->id;
+                        $novo->raic_id = (int)$raic->id;
+                        $novo->tipo = $tipoAvaliacao;
+                        $novo->situacao = 'E';
+                        $novo->editai_id = (int)$raic->editai_id;
+                        $novo->ano = (int)date('Y');
+                        $novo->coordenador = 0;
+                        $novo->avaliador_id = $avaliadorId;
+                        $novo->usuario_id = (int)($avaliadoresSelecionados[$avaliadorId]['usuario_id'] ?? 0);
+                        $novo->ordem = $ordem;
+                        $novo->deleted = 0;
+
+                        if (!$avaliadorBolsistasTable->save($novo)) {
+                            throw new \RuntimeException('Erro ao salvar a banca da RAIC.');
                         }
                     }
 
@@ -367,8 +410,38 @@ class RaicNewController extends AppController
             'avaliadores',
             'avaliador1Atual',
             'avaliador2Atual',
-            'jaAgendada'
+            'jaAgendada',
+            'avaliador1Bloqueado',
+            'avaliador2Bloqueado',
+            'bancaAtiva'
         ));
+    }
+
+    public function alterarAvaliador($id = null)
+    {
+        $vinculo = $this->fetchTable('AvaliadorBolsistas')->find()
+            ->where([
+                'AvaliadorBolsistas.id' => (int)$id,
+                'AvaliadorBolsistas.tipo IN' => ['V', 'Z'],
+            ])
+            ->first();
+
+        if (!$vinculo) {
+            $this->Flash->error('Vínculo de avaliador não encontrado.');
+            return $this->redirect(['action' => 'painel']);
+        }
+
+        $raicId = (int)($vinculo->raic_id ?? $vinculo->bolsista ?? 0);
+        if ((int)($vinculo->deleted ?? 0) === 1) {
+            $this->Flash->error('Este avaliador já está desvinculado.');
+            return $this->redirect(['controller' => 'RaicNew', 'action' => 'ver', $raicId]);
+        }
+        if ((string)($vinculo->situacao ?? '') === 'F') {
+            $this->Flash->error('Não é permitido alterar avaliador que já lançou nota.');
+            return $this->redirect(['controller' => 'RaicNew', 'action' => 'ver', $raicId]);
+        }
+
+        return $this->redirect(['controller' => 'RaicNew', 'action' => 'agendar', $raicId]);
     }
 
     public function editar($id = null)

@@ -364,6 +364,8 @@ $modifiedLabel = $edital->modified
                             <th class="sortable" style="width: 220px;">Bloco</th>
                             <th class="sortable">Sumula</th>
                             <th class="sortable">Parametro</th>
+                            <th class="sortable" style="width: 90px;">Fator</th>
+                            <th class="sortable" style="width: 100px;">Máx. súmula</th>
                             <th class="sortable" style="width: 120px;">Ações</th>
                         </tr>
                     </thead>
@@ -372,12 +374,21 @@ $modifiedLabel = $edital->modified
                             <?php foreach ($edital->editais_sumulas as $sumula) { ?>
                                 <?php
                                 $blocoNome = $sumula->editais_sumulas_bloco ? $sumula->editais_sumulas_bloco->nome : '-';
+                                $blocoMax = $sumula->editais_sumulas_bloco ? $sumula->editais_sumulas_bloco->max : null;
                                 ?>
                                 <tr>
                                     <td><?= $sumula->id ?></td>
-                                    <td><?= h($blocoNome) ?></td>
+                                    <td>
+                                        <div><?= h($blocoNome) ?></div>
+                                        <small class="text-muted">
+                                            Máx. bloco:
+                                            <?= $blocoMax !== null ? h(number_format((float)$blocoMax, 2, ',', '.')) : '-' ?>
+                                        </small>
+                                    </td>
                                     <td><?= h($sumula->sumula) ?></td>
                                     <td><?= h($sumula->parametro) ?></td>
+                                    <td><?= $sumula->fator !== null ? h(number_format((float)$sumula->fator, 2, ',', '.')) : '-' ?></td>
+                                    <td><?= $sumula->max !== null ? h(number_format((float)$sumula->max, 2, ',', '.')) : '-' ?></td>
                                     <td class="text-end">
                                         <?php if (in_array($this->request->getAttribute('identity')['id'], [1, 8088], true)) { ?>
                                             <?php if (empty($sumula->deleted)) { ?>
@@ -400,7 +411,7 @@ $modifiedLabel = $edital->modified
                             <?php } ?>
                         <?php } else { ?>
                             <tr>
-                                <td colspan="5" class="text-muted">Nenhuma súmula cadastrada.</td>
+                                <td colspan="7" class="text-muted">Nenhuma súmula cadastrada.</td>
                             </tr>
                         <?php } ?>
                     </tbody>

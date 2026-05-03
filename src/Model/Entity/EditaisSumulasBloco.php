@@ -13,6 +13,7 @@ use Cake\ORM\Entity;
  * @property \Cake\I18n\DateTime|null $deleted
  * @property \Cake\I18n\DateTime|null $created
  * @property \Cake\I18n\DateTime|null $modified
+ * @property float|null $max
  *
  * @property \App\Model\Entity\EditaisSumula[] $editais_sumulas
  */
@@ -28,6 +29,7 @@ class EditaisSumulasBloco extends Entity
         'deleted' => true,
         'created' => true,
         'modified' => true,
+        'max' => true,
         'editais_sumulas' => true,
     ];
 }

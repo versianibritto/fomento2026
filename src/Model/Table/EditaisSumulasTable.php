@@ -72,6 +72,15 @@ class EditaisSumulasTable extends Table
             ->allowEmptyString('editais_sumula_bloco_id');
 
         $validator
+            ->numeric('fator')
+            ->range('fator', [-99.99, 99.99])
+            ->notEmptyString('fator');
+        $validator
+            ->numeric('max')
+            ->range('max', [0, 99.99])
+            ->allowEmptyString('max');
+
+        $validator
             ->scalar('sumula')
             ->allowEmptyString('sumula');
 

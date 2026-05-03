@@ -945,6 +945,9 @@ if (!$temDataInicio && !$temDataFim) {
                                         <th>Avaliador</th>
                                         <th>Status</th>
                                         <th>Nota</th>
+                                        <th>Nota súmula</th>
+                                        <th>Total</th>
+                                        <th>Ações</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -992,13 +995,61 @@ if (!$temDataInicio && !$temDataFim) {
                                                 <?php
                                                     $situacaoAvaliacao = (string)($av->situacao ?? '');
                                                     if ($situacaoAvaliacao === 'F') {
-                                                        echo $av->nota !== null ? h((string)$av->nota) : $naoInformado;
+                                                        echo $av->nota !== null ? h(number_format((float)$av->nota, 2, ',', '.')) : $naoInformado;
                                                     } elseif ($situacaoAvaliacao === 'E') {
                                                         echo 'Não lançada';
                                                     } else {
                                                         echo $naoInformado;
                                                     }
                                                 ?>
+                                            </td>
+                                            <td>
+                                                <?php
+                                                    if ($situacaoAvaliacao === 'F') {
+                                                        echo $av->nota_sumula !== null ? h(number_format((float)$av->nota_sumula, 2, ',', '.')) : $naoInformado;
+                                                    } elseif ($situacaoAvaliacao === 'E') {
+                                                        echo 'Não lançada';
+                                                    } else {
+                                                        echo $naoInformado;
+                                                    }
+                                                ?>
+                                            </td>
+                                            <td>
+                                                <?php
+                                                    if ($situacaoAvaliacao === 'F') {
+                                                        $notaQuesitos = $av->nota !== null ? (float)$av->nota : 0.0;
+                                                        $notaSumula = $av->nota_sumula !== null ? (float)$av->nota_sumula : 0.0;
+                                                        echo h(number_format($notaQuesitos + $notaSumula, 2, ',', '.'));
+                                                    } elseif ($situacaoAvaliacao === 'E') {
+                                                        echo 'Não lançada';
+                                                    } else {
+                                                        echo $naoInformado;
+                                                    }
+                                                ?>
+                                            </td>
+                                            <td>
+                                                <?php
+                                                    $identityAtual = $this->request->getAttribute('identity');
+                                                    $identityAtualId = is_array($identityAtual)
+                                                        ? (int)($identityAtual['id'] ?? 0)
+                                                        : (int)($identityAtual->id ?? 0);
+                                                    $podeVerNotas = $situacaoAvaliacao === 'F'
+                                                        && (
+                                                            $ehYoda
+                                                            || in_array($identityAtualId, [1, 8088], true)
+                                                            || $identityAtualId === (int)($inscricao->orientador ?? 0)
+                                                            || $identityAtualId === (int)($inscricao->bolsista ?? 0)
+                                                        );
+                                                ?>
+                                                <?php if ($podeVerNotas && (int)($av->deleted ?? 0) === 0): ?>
+                                                    <?= $this->Html->link(
+                                                        '<i class="fas fa-file-alt"></i> Ver notas',
+                                                        ['controller' => 'Avaliadores', 'action' => 'verNotas', (int)$av->id],
+                                                        ['class' => 'btn btn-xs btn-outline-primary py-0 px-1', 'escape' => false]
+                                                    ) ?>
+                                                <?php else: ?>
+                                                    <?= $naoInformado ?>
+                                                <?php endif; ?>
                                             </td>
                                         </tr>
                                     <?php endforeach; ?>

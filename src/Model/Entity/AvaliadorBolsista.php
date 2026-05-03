@@ -15,6 +15,7 @@ use Cake\ORM\Entity;
  * @property int|null $raic_id
  * @property int|null $workshop_id
  * @property int|null $projeto_bolsista_id
+ * @property float|null $nota_sumula
  * @property string|null $tipo
  * @property string|null $ano
  * @property string|null $situacao
@@ -40,6 +41,7 @@ use Cake\ORM\Entity;
  * @property \App\Model\Entity\Editai $editai
  * @property \App\Model\Entity\Banca $banca
  * @property \App\Model\Entity\Avaliation[] $avaliations
+ * @property \App\Model\Entity\AvaliationsSumula[] $avaliations_sumulas
  */
 class AvaliadorBolsista extends Entity
 {
@@ -59,6 +61,7 @@ class AvaliadorBolsista extends Entity
         'raic_id' => true,
         'workshop_id' => true,
         'projeto_bolsista_id' => true,
+        'nota_sumula' => true,
         'tipo' => true,
         'ano' => true,
         'situacao' => true,
@@ -83,5 +86,6 @@ class AvaliadorBolsista extends Entity
         'editai' => true,
         'banca' => true,
         'avaliations' => true,
+        'avaliations_sumulas' => true,
     ];
 }

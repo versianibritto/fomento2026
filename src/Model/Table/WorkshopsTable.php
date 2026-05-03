@@ -54,6 +54,11 @@ class WorkshopsTable extends Table
         $this->belongsTo('Usuarios', [
             'foreignKey' => 'usuario_id',
         ]);
+        $this->belongsTo('Orientadores', [
+            'className' => 'Usuarios',
+            'foreignKey' => 'orientador',
+            'propertyName' => 'orientadore',
+        ]);
         $this->belongsTo('Unidades', [
             'foreignKey' => 'unidade_id',
         ]);
@@ -167,6 +172,7 @@ class WorkshopsTable extends Table
     public function buildRules(RulesChecker $rules): RulesChecker
     {
         $rules->add($rules->existsIn(['usuario_id'], 'Usuarios'), ['errorField' => 'usuario_id']);
+        $rules->add($rules->existsIn(['orientador'], 'Orientadores'), ['errorField' => 'orientador']);
         $rules->add($rules->existsIn(['unidade_id'], 'Unidades'), ['errorField' => 'unidade_id']);
         $rules->add($rules->existsIn(['editai_id'], 'Editais'), ['errorField' => 'editai_id']);
         $rules->add($rules->existsIn(['pdj_inscricoe_id'], 'PdjInscricoes'), ['errorField' => 'pdj_inscricoe_id']);

@@ -32,6 +32,7 @@ use Cake\ORM\Entity;
  * @property int|null $pdj_inscricoe_id
  *
  * @property \App\Model\Entity\Usuario $usuario
+ * @property \App\Model\Entity\Usuario $orientadore
  * @property \App\Model\Entity\Unidade $unidade
  * @property \App\Model\Entity\Editai $editai
  * @property \App\Model\Entity\PdjInscrico $pdj_inscrico
@@ -71,6 +72,7 @@ class Workshop extends Entity
         'data_liberacao' => true,
         'pdj_inscricoe_id' => true,
         'usuario' => true,
+        'orientadore' => true,
         'unidade' => true,
         'editai' => true,
         'pdj_inscrico' => true,
