@@ -44,9 +44,12 @@ class RaicNewController extends AppController
         $raic = $this->fetchTable('Raics')->get($id, [
             'contain' => [
                 'Usuarios',
-                'ProjetoBolsistas',
+                'ProjetoBolsistas' => [
+                    'Programas',
+                    'Editais' => ['Programas'],
+                ],
                 'Projetos' => ['Areas', 'Linhas'],
-                'Editais',
+                'Editais' => ['Programas'],
                 'Orientadores',
                 'Coorientadores',
                 'Cadastro',

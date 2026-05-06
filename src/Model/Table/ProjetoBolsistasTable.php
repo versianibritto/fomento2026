@@ -36,6 +36,11 @@ class ProjetoBolsistasTable extends Table
             'foreignKey' => 'fase_id',
             'joinType' => 'LEFT',
         ]);
+        $this->belongsTo('Programas', [
+            'foreignKey' => 'programa_id',
+            'joinType' => 'LEFT',
+            'propertyName' => 'programa_associado',
+        ]);
         
         $this->belongsTo('Projetos', [
             'foreignKey' => 'projeto_id',

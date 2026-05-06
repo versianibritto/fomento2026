@@ -137,6 +137,52 @@
         align-items: center;
         flex-wrap: wrap;
     }
+    .avaliadores-paginacao {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.4rem;
+    }
+    .avaliadores-paginacao ul,
+    .avaliadores-paginacao li {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+    }
+    .avaliadores-paginacao ul {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.35rem;
+    }
+    .avaliadores-paginacao a,
+    .avaliadores-paginacao .current {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 2.1rem;
+        height: 2.1rem;
+        padding: 0 0.65rem;
+        border: 1px solid #ced4da;
+        border-radius: 0.35rem;
+        background: #fff;
+        color: #0d6efd;
+        line-height: 1;
+        text-decoration: none;
+    }
+    .avaliadores-paginacao a:hover {
+        background: #e9f2ff;
+        border-color: #9ec5fe;
+    }
+    .avaliadores-paginacao .current {
+        background: #0d6efd;
+        border-color: #0d6efd;
+        color: #fff;
+        font-weight: 700;
+    }
+    .avaliadores-paginacao .disabled {
+        opacity: 0.55;
+        pointer-events: none;
+    }
     @media (max-width: 1200px) {
         .avaliadores-inscricao-layout {
             grid-template-columns: 1fr;
@@ -233,7 +279,13 @@
                             Nenhuma inscrição localizada com os filtros informados.
                         </div>
                     <?php else: ?>
-                        <?php $this->Paginator->options(['url' => $this->request->getQueryParams()]); ?>
+                        <?php
+                        $paginationQuery = array_intersect_key(
+                            $this->request->getQueryParams(),
+                            array_flip(['editai_id', 'homologado', 'status_vinculo', 'grandes_area_id', 'area_id'])
+                        );
+                        $this->Paginator->options(['url' => ['?' => $paginationQuery]]);
+                        ?>
 
                         <div class="avaliadores-inscricoes-grid">
                             <?php foreach ($inscricoes as $inscricao): ?>
@@ -408,7 +460,7 @@
                             <?php endforeach; ?>
                         </div>
 
-                        <div class="mt-4 d-flex flex-wrap align-items-center gap-2">
+                        <div class="mt-4 avaliadores-paginacao">
                             <?= $this->Paginator->prev('« Anterior', ['class' => 'btn btn-outline-secondary btn-sm']) ?>
                             <?= $this->Paginator->numbers([
                                 'before' => '',

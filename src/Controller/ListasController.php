@@ -225,7 +225,28 @@ class ListasController extends AppController
                     return $q->select(['Unidades.id', 'Unidades.sigla']);
                 },
                 'Editais' => function ($q) {
-                    return $q->select(['Editais.id', 'Editais.fim_vigencia']);
+                    return $q->select(['Editais.id', 'Editais.fim_vigencia', 'Editais.programa_id'])
+                        ->contain([
+                            'Programas' => function ($qp) {
+                                return $qp->select(['Programas.id', 'Programas.sigla', 'Programas.nome']);
+                            },
+                        ]);
+                },
+                'ProjetoBolsistas' => function ($q) {
+                    return $q->select(['ProjetoBolsistas.id', 'ProjetoBolsistas.editai_id', 'ProjetoBolsistas.programa_id'])
+                        ->contain([
+                            'Programas' => function ($qp) {
+                                return $qp->select(['Programas.id', 'Programas.sigla', 'Programas.nome']);
+                            },
+                            'Editais' => function ($qe) {
+                                return $qe->select(['Editais.id', 'Editais.programa_id'])
+                                    ->contain([
+                                        'Programas' => function ($qp) {
+                                            return $qp->select(['Programas.id', 'Programas.sigla', 'Programas.nome']);
+                                        },
+                                    ]);
+                            },
+                        ]);
                 },
             ])
             ->where(['Raics.created >=' => $dataLimite])
@@ -318,6 +339,7 @@ class ListasController extends AppController
             $rows = $query->all();
             $header = [
                 'id',
+                'programa',
                 'orientador',
                 'orientador_telefone',
                 'orientador_telefone_contato',
@@ -345,10 +367,28 @@ class ListasController extends AppController
                 'projeto_bolsista_id',
                 'tem_relatorio',
             ];
+            $programaRaicTexto = function ($raic): string {
+                if (empty($raic->projeto_bolsista_id)) {
+                    return 'Outras agências de fomento';
+                }
+
+                $programaTexto = trim((string)(
+                    $raic->projeto_bolsista->programa_associado->sigla
+                    ?? $raic->projeto_bolsista->programa_associado->nome
+                    ?? $raic->projeto_bolsista->editai->programa->sigla
+                    ?? $raic->projeto_bolsista->editai->programa->nome
+                    ?? $raic->editai->programa->sigla
+                    ?? $raic->editai->programa->nome
+                    ?? ''
+                ));
+
+                return $programaTexto !== '' ? $programaTexto : 'Não informado';
+            };
             $exportRows = [];
             foreach ($rows as $raic) {
                 $exportRows[] = [
                     $raic->id,
+                    $programaRaicTexto($raic),
                     $raic->orientadore->nome ?? '',
                     $raic->orientadore->telefone ?? '',
                     $raic->orientadore->telefone_contato ?? '',

@@ -21,6 +21,9 @@ if ($projetoTitulo === '') {
 if ($projetoTitulo === '') {
     $projetoTitulo = 'Não informado';
 }
+$orientadorNome = trim((string)($inscricao->orientadore->nome ?? ''));
+$orientadorUnidadeSigla = trim((string)($inscricao->orientadore->unidade->sigla ?? ''));
+$orientadorTexto = $orientadorNome !== '' ? $orientadorNome : 'Não informado';
 $homologadoValor = strtoupper((string)($inscricao->homologado ?? ''));
 if ($homologadoValor === 'S') {
     $homologadoTexto = 'Homologada';
@@ -75,7 +78,10 @@ foreach ($vinculosAtivos as $vinculoAtivo) {
                 </div>
                 <div class="col-md-4">
                     <strong>Orientador</strong><br>
-                    <?= h((string)($inscricao->orientadore->nome ?? 'Não informado')) ?>
+                    <?= h($orientadorTexto) ?>
+                    <?php if ($orientadorUnidadeSigla !== ''): ?>
+                        - <strong><?= h($orientadorUnidadeSigla) ?></strong>
+                    <?php endif; ?>
                 </div>
                 <div class="col-md-8">
                     <strong>Projeto</strong><br>

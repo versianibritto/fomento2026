@@ -1,4 +1,13 @@
 <?php
+/**
+ * @var \App\View\AppView $this
+ * @var \App\Model\Entity\Raic $raic
+ * @var \Cake\Datasource\ResultSetInterface|\Cake\Collection\CollectionInterface|array $lista
+ * @var \App\Model\Entity\Anexo|null $anexoRelatorio
+ * @var \Cake\Datasource\ResultSetInterface|\Cake\Collection\CollectionInterface|array $historicos
+ * @var \App\Model\Entity\Editai|null $editalReferencia
+ * @var \App\Model\Entity\Editai|null $editalEvento
+ */
 $naoInformado = '<span class="badge border border-danger text-danger bg-transparent fw-normal">Não informado</span>';
 $tipoBolsaTexto = match (strtoupper((string)($raic->tipo_bolsa ?? ''))) {
     'R' => 'Aluno de Renovação',
@@ -13,11 +22,19 @@ $tipoApresentacaoTexto = match ((string)($raic->tipo_apresentacao ?? '')) {
     'P' => 'Painel',
     default => null,
 };
-$programaTexto = match ((string)($raic->projeto_bolsista->programa ?? '')) {
-    'P' => 'Pibic',
-    'T' => 'Pibiti',
-    default => 'Iniciação Científica',
-};
+$programaTexto = 'Outras agências de fomento';
+if (!empty($raic->projeto_bolsista_id)) {
+    $programaTexto = trim((string)(
+        $raic->projeto_bolsista->programa_associado->sigla
+        ?? $raic->projeto_bolsista->programa_associado->nome
+        ?? $raic->projeto_bolsista->editai->programa->sigla
+        ?? $raic->projeto_bolsista->editai->programa->nome
+        ?? ''
+    ));
+    if ($programaTexto === '') {
+        $programaTexto = 'Não informado';
+    }
+}
 $certificadoLiberado = strtoupper((string)($raic->presenca ?? '')) === 'S';
 $identityRaicView = $this->getRequest()->getAttribute('identity');
 $ehYodaRaicView = !empty($identityRaicView['yoda']);
