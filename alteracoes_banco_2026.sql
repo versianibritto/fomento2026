@@ -1874,7 +1874,7 @@ VIEW `dashcountavaliadores` AS
 
 
 -- talvez
-CREATE TABLE `fomento2026`.`convites` (
+CREATE TABLE `convites` (
   `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `usuario_id` INT NULL,
   `ano` INT NULL,
@@ -1887,10 +1887,8 @@ CREATE TABLE `fomento2026`.`convites` (
   `deleted` TIMESTAMP NULL,
   PRIMARY KEY (`id`));
 
-  ALTER TABLE `editais_sumulas` 
-ADD COLUMN `fator` DOUBLE(4,2) NULL AFTER `editais_sumula_bloco_id`;
-ALTER TABLE tra`editais_sumulas` 
-ADD COLUMN `max` DOUBLE(4,2) NULL AFTER `fator`;
+ALTER TABLE `editais_sumulas` ADD COLUMN `fator` DOUBLE(4,2) NULL AFTER `editais_sumula_bloco_id`;
+ALTER TABLE `editais_sumulas` ADD COLUMN `max` DOUBLE(4,2) NULL AFTER `fator`;
 
 
 ALTER TABLE `editais_sumulas_blocos` 

@@ -1,3 +1,13 @@
+<?php
+/**
+ * @var array<int|string, string> $grandesAreas
+ * @var array<int|string, string> $areas
+ * @var array<int|string, string> $todasAreas
+ * @var array<string, mixed> $filtros
+ */
+$grandesAreasOptions = ['__none' => 'Nenhuma'] + $grandesAreas;
+$areasOptions = ['__none' => 'Nenhuma'] + $areas;
+?>
 <div class="container-fluid p-1 pt-1">
     <div class="row">
         <div class="col-12">
@@ -39,9 +49,9 @@
                         <div class="col-md-2">
                             <?= $this->Form->control('grandes_area_id', [
                                 'label' => 'Grande área',
-                                'options' => $grandesAreas,
+                                'options' => $grandesAreasOptions,
                                 'empty' => 'Todas',
-                                'default' => $filtros['grandes_area_id'] ?? 0,
+                                'default' => $filtros['grandes_area_id'] ?? '',
                                 'class' => 'form-select',
                                 'id' => 'grandes-area-id',
                             ]) ?>
@@ -49,9 +59,9 @@
                         <div class="col-md-2">
                             <?= $this->Form->control('area_id', [
                                 'label' => 'Área',
-                                'options' => $areas,
+                                'options' => $areasOptions,
                                 'empty' => 'Todas',
-                                'default' => $filtros['area_id'] ?? 0,
+                                'default' => $filtros['area_id'] ?? '',
                                 'class' => 'form-select',
                                 'id' => 'area-id',
                             ]) ?>
@@ -93,6 +103,7 @@
                                         <th>Área</th>
                                         <th>Ano</th>
                                         <th>Edital</th>
+                                        <th>Ações</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -104,6 +115,18 @@
                                             <td><?= h((string)($avaliador->area->nome ?? 'Não informada')) ?></td>
                                             <td><?= h((string)($avaliador->ano_convite ?? '-')) ?></td>
                                             <td><?= h((string)($avaliador->editai->nome ?? 'Não informado')) ?></td>
+                                            <td>
+                                                <?= $this->Html->link(
+                                                    'Alterar competência',
+                                                    [
+                                                        'controller' => 'Listas',
+                                                        'action' => 'editarAreaAvaliadorNova',
+                                                        (int)$avaliador->id,
+                                                        '?' => ['retorno' => $this->request->getRequestTarget()],
+                                                    ],
+                                                    ['class' => 'btn btn-sm btn-outline-primary']
+                                                ) ?>
+                                            </td>
                                         </tr>
                                     <?php endforeach; ?>
                                 </tbody>
@@ -130,11 +153,26 @@
 </div>
 
 <script>
+const todasAreasListaAvaliadoresNova = <?= json_encode($todasAreas, JSON_UNESCAPED_UNICODE) ?>;
+
+function montarOptionsAreasListaAvaliadoresNova(areas) {
+    let html = "<option value=''>Todas</option><option value='__none'>Nenhuma</option>";
+    $.each(areas, function(id, nome) {
+        html += `<option value="${id}">${nome}</option>`;
+    });
+    return html;
+}
+
 $(document).on('change', '#grandes-area-id', function () {
     const grandeAreaId = $(this).val();
 
     if (!grandeAreaId) {
-        $('#area-id').html("<option value=''>Todas</option>");
+        $('#area-id').html(montarOptionsAreasListaAvaliadoresNova(todasAreasListaAvaliadoresNova));
+        return;
+    }
+
+    if (grandeAreaId === '__none') {
+        $('#area-id').html("<option value=''>Todas</option><option value='__none'>Nenhuma</option>");
         return;
     }
 
@@ -148,7 +186,7 @@ $(document).on('change', '#grandes-area-id', function () {
             $('#area-id').html("<option value=''>Carregando...</option>");
         },
         success: function(json) {
-            let html = "<option value=''>Todas</option>";
+            let html = "<option value=''>Todas</option><option value='__none'>Nenhuma</option>";
             $.each(json, function(_, item) {
                 html += `<option value="${item.id}">${item.nome}</option>`;
             });

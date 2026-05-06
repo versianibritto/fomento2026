@@ -28,7 +28,7 @@
                 <div class="card-body">
                     <h4 class="mb-2">Cadastro Massivo de Avaliadores por Edital</h4>
                     <p class="text-muted mb-3">
-                        Selecione um ou mais editais, a grande área, a área e informe os CPFs separados por vírgula. Os vínculos serão gravados como avaliador do tipo N.
+                        Selecione um ou mais editais e informe os CPFs separados por vírgula. Grande área e área são opcionais para registrar a competência do avaliador.
                     </p>
 
                     <?= $this->Form->create(null, ['class' => 'row g-3']) ?>
@@ -41,7 +41,6 @@
                                 'default' => $dados['grandes_area_id'] ?? 0,
                                 'class' => 'form-select',
                                 'id' => 'grandes-area-id',
-                                'required' => true,
                             ]) ?>
                         </div>
                         <div class="col-md-4">
@@ -52,7 +51,6 @@
                                 'default' => $dados['area_id'] ?? 0,
                                 'class' => 'form-select',
                                 'id' => 'area-id',
-                                'required' => true,
                             ]) ?>
                         </div>
                         <div class="col-12">

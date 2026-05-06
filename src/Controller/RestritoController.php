@@ -37,7 +37,7 @@ class RestritoController extends AppController
             [
                 'titulo' => 'Cadastrar Usuario',
                 'descricao' => 'Cadastro manual de usuario (TI)',
-                'url' => ['controller' => 'Users', 'action' => 'cadastrarUsuarioCpf'],
+                'url' => ['controller' => 'Restrito', 'action' => 'cadastrarUsuario'],
                 'class' => 'btn-warning',
                 'icon' => 'fas fa-user-plus',
             ],
@@ -128,6 +128,109 @@ class RestritoController extends AppController
         ];
 
         $this->set(compact('atalhos'));
+    }
+
+    public function cadastrarUsuario()
+    {
+        $this->request->allowMethod(['get', 'post']);
+
+        $dados = [
+            'cpf' => preg_replace('/[^0-9]/', '', (string)$this->request->getData('cpf', '')),
+            'nome' => trim((string)$this->request->getData('nome', '')),
+            'email' => trim((string)$this->request->getData('email', '')),
+        ];
+        $usuario = null;
+
+        if ($this->request->is('post')) {
+            if (!$this->validaCPF($dados['cpf'])) {
+                $this->Flash->error('Informe um CPF válido.');
+                return $this->redirect(['action' => 'cadastrarUsuario']);
+            }
+
+            $usuariosTable = $this->fetchTable('Usuarios');
+            $usuarioExistente = $usuariosTable->find()
+                ->where(['Usuarios.cpf' => $dados['cpf']])
+                ->first();
+
+            if ($usuarioExistente) {
+                $this->Flash->info('CPF já cadastrado. Usuário localizado na base.');
+                return $this->redirect(['controller' => 'Users', 'action' => 'ver', (int)$usuarioExistente->id]);
+            }
+
+            $erros = [];
+            if ($dados['nome'] === '') {
+                $erros[] = 'Informe o nome.';
+            }
+            if ($dados['email'] === '' || !filter_var($dados['email'], FILTER_VALIDATE_EMAIL)) {
+                $erros[] = 'Informe um e-mail válido.';
+            }
+            if ($erros !== []) {
+                $this->Flash->error(implode('<br>', $erros), ['escape' => false]);
+            } else {
+                $usuario = $usuariosTable->newEntity([
+                    'cpf' => $dados['cpf'],
+                    'nome' => $dados['nome'],
+                    'email' => $dados['email'],
+                    'active' => 1,
+                    'yoda' => 0,
+                    'jedi' => null,
+                    'padauan' => null,
+                ]);
+
+                try {
+                    $usuariosTable->saveOrFail($usuario);
+                    $this->Flash->success('Usuário cadastrado com sucesso.');
+                    return $this->redirect(['controller' => 'Users', 'action' => 'ver', (int)$usuario->id]);
+                } catch (\Throwable $e) {
+                    $this->flashFriendlyException(
+                        $e,
+                        'Erro no Sistema - cadastro rapido de usuario TI',
+                        'Não foi possível cadastrar o usuário.'
+                    );
+                }
+            }
+        }
+
+        $this->set(compact('dados', 'usuario'));
+    }
+
+    public function buscarUsuarioCpf()
+    {
+        $this->request->allowMethod(['post']);
+
+        $cpf = preg_replace('/[^0-9]/', '', (string)$this->request->getData('cpf', ''));
+        if (!$this->validaCPF($cpf)) {
+            $retorno = [
+                'error' => true,
+                'message' => 'CPF inválido.',
+                'data' => null,
+            ];
+        } else {
+            $usuario = $this->fetchTable('Usuarios')->find()
+                ->select(['id', 'cpf', 'nome', 'email'])
+                ->where(['Usuarios.cpf' => $cpf])
+                ->first();
+
+            if ($usuario) {
+                $retorno = [
+                    'error' => false,
+                    'exists' => true,
+                    'message' => 'Usuário já cadastrado.',
+                    'data' => $usuario,
+                ];
+            } else {
+                $retorno = [
+                    'error' => false,
+                    'exists' => false,
+                    'message' => 'CPF não localizado. Informe nome e e-mail para cadastrar.',
+                    'data' => ['cpf' => $cpf],
+                ];
+            }
+        }
+
+        $this->set('retorno', $retorno);
+        $this->viewBuilder()->setClassName('Json');
+        $this->viewBuilder()->setOption('serialize', 'retorno');
     }
 
     public function cargaRaicsVigentes()

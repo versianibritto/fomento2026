@@ -3,13 +3,9 @@
  * @var \App\View\AppView $this
  * @var array<int|string, string> $editais
  * @var array<int|string, string> $unidades
- * @var array<int|string, string> $grandesAreas
- * @var array<int|string, string> $areas
  * @var array{
  *     editai_id?: int,
  *     unidade_id?: int,
- *     grandes_area_id?: int,
- *     area_id?: int,
  *     cpfs?: string
  * } $dados
  * @var array{
@@ -30,12 +26,12 @@
                 <div class="card-body">
                     <h4 class="mb-2">Cadastro Massivo de Avaliadores RAIC</h4>
                     <p class="text-muted mb-3">
-                        Selecione o edital RAIC aberto, a unidade, a grande área, a área e informe os CPFs separados por vírgula.
+                        Selecione o edital RAIC aberto, a unidade e informe os CPFs separados por vírgula.
                     </p>
 
                     <?= $this->Form->create(null, ['class' => 'row g-3']) ?>
                         <?= $this->Form->hidden('acao', ['value' => 'analisar']) ?>
-                        <div class="col-md-3">
+                        <div class="col-md-6">
                             <?= $this->Form->control('editai_id', [
                                 'label' => 'Edital RAIC',
                                 'options' => $editais,
@@ -45,35 +41,13 @@
                                 'required' => true,
                             ]) ?>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-6">
                             <?= $this->Form->control('unidade_id', [
                                 'label' => 'Unidade',
                                 'options' => $unidades,
                                 'empty' => 'Selecione',
                                 'default' => $dados['unidade_id'] ?? 0,
                                 'class' => 'form-select',
-                                'required' => true,
-                            ]) ?>
-                        </div>
-                        <div class="col-md-3">
-                            <?= $this->Form->control('grandes_area_id', [
-                                'label' => 'Grande área',
-                                'options' => $grandesAreas,
-                                'empty' => 'Selecione',
-                                'default' => $dados['grandes_area_id'] ?? 0,
-                                'class' => 'form-select',
-                                'id' => 'grandes-area-id',
-                                'required' => true,
-                            ]) ?>
-                        </div>
-                        <div class="col-md-3">
-                            <?= $this->Form->control('area_id', [
-                                'label' => 'Área',
-                                'options' => $areas,
-                                'empty' => 'Selecione',
-                                'default' => $dados['area_id'] ?? 0,
-                                'class' => 'form-select',
-                                'id' => 'area-id',
                                 'required' => true,
                             ]) ?>
                         </div>
@@ -169,8 +143,6 @@
                                 <?= $this->Form->hidden('acao', ['value' => 'confirmar']) ?>
                                 <?= $this->Form->hidden('editai_id', ['value' => (int)($dados['editai_id'] ?? 0)]) ?>
                                 <?= $this->Form->hidden('unidade_id', ['value' => (int)($dados['unidade_id'] ?? 0)]) ?>
-                                <?= $this->Form->hidden('grandes_area_id', ['value' => (int)($dados['grandes_area_id'] ?? 0)]) ?>
-                                <?= $this->Form->hidden('area_id', ['value' => (int)($dados['area_id'] ?? 0)]) ?>
                                 <?= $this->Form->hidden('cpfs', ['value' => (string)($dados['cpfs'] ?? '')]) ?>
                                 <?= $this->Form->button('Confirmar cadastro dos elegíveis', [
                                     'class' => 'btn btn-danger',
@@ -184,35 +156,3 @@
         </div>
     </div>
 </div>
-
-<script>
-$(document).on('change', '#grandes-area-id', function () {
-    const grandeAreaId = $(this).val();
-
-    if (!grandeAreaId) {
-        $('#area-id').html("<option value=''>Selecione</option>");
-        return;
-    }
-
-    $.ajax({
-        type: 'POST',
-        url: "<?= $this->Url->build(['controller' => 'Avaliadores', 'action' => 'buscaAreas']) ?>",
-        data: { id: grandeAreaId },
-        dataType: 'json',
-        beforeSend: function(xhr) {
-            xhr.setRequestHeader('X-CSRF-Token', <?= json_encode($this->request->getAttribute('csrfToken')) ?>);
-            $('#area-id').html("<option value=''>Carregando...</option>");
-        },
-        success: function(json) {
-            let html = "<option value=''>Selecione</option>";
-            $.each(json, function(_, item) {
-                html += `<option value="${item.id}">${item.nome}</option>`;
-            });
-            $('#area-id').html(html);
-        },
-        error: function() {
-            $('#area-id').html("<option value=''>Erro ao carregar áreas</option>");
-        }
-    });
-});
-</script>

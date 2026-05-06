@@ -77,6 +77,7 @@
                             Resumo
                         </a>
                     </li>
+                    <!--
                     <li class="sidebar-item">
                         <a href="/avaliadores/cadastro-multiareas-demo" class="sidebar-link <?=(($this->request->getParam('controller') == 'Avaliadores' && $this->request->getParam('action') == 'cadastroMultiareasDemo') ? 'active' : '')?>">
                             * Demo Avaliador Multiáreas
@@ -92,6 +93,7 @@
                             * Lista de Convites
                         </a>
                     </li>
+                    -->
                     <li class="sidebar-item">
                         <a href="/feedbacks" class="sidebar-link">
                             Feedback

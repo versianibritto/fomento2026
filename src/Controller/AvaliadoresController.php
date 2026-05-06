@@ -1066,32 +1066,11 @@ class AvaliadoresController extends AppController
 
         $unidades = $this->obterUnidadesDisponiveis();
 
-        $grandesAreas = $this->fetchTable('GrandesAreas')->find('list', [
-            'keyField' => 'id',
-            'valueField' => 'nome',
-        ])
-            ->where(['GrandesAreas.id <' => 10])
-            ->orderBy(['GrandesAreas.nome' => 'ASC'])
-            ->toArray();
-
         $dados = [
             'editai_id' => (int)$this->request->getData('editai_id', 0),
             'unidade_id' => (int)$this->request->getData('unidade_id', 0),
-            'grandes_area_id' => (int)$this->request->getData('grandes_area_id', 0),
-            'area_id' => (int)$this->request->getData('area_id', 0),
             'cpfs' => (string)$this->request->getData('cpfs', ''),
         ];
-
-        $areas = [];
-        if (!empty($dados['grandes_area_id'])) {
-            $areas = $this->fetchTable('Areas')->find('list', [
-                'keyField' => 'id',
-                'valueField' => 'nome',
-            ])
-                ->where(['Areas.grandes_area_id' => $dados['grandes_area_id']])
-                ->orderBy(['Areas.nome' => 'ASC'])
-                ->toArray();
-        }
 
         $resultado = [
             'processado' => false,
@@ -1105,7 +1084,7 @@ class AvaliadoresController extends AppController
 
         if ($this->request->is('post')) {
             $acao = (string)$this->request->getData('acao', 'analisar');
-            $errosFormulario = $this->validarFormularioCadastroRaic($dados, $editais, $unidades, $areas);
+            $errosFormulario = $this->validarFormularioCadastroRaic($dados, $editais, $unidades);
 
             if ($errosFormulario !== []) {
                 $this->Flash->error(implode('<br>', $errosFormulario), ['escape' => false]);
@@ -1148,7 +1127,7 @@ class AvaliadoresController extends AppController
             }
         }
 
-        $this->set(compact('editais', 'unidades', 'grandesAreas', 'areas', 'dados', 'resultado'));
+        $this->set(compact('editais', 'unidades', 'dados', 'resultado'));
     }
 
     public function cadastroNova()
@@ -1211,7 +1190,7 @@ class AvaliadoresController extends AppController
 
         if ($this->request->is('post')) {
             $acao = (string)$this->request->getData('acao', 'analisar');
-            $errosFormulario = $this->validarFormularioCadastroNova($dados, $editais, $areas);
+            $errosFormulario = $this->validarFormularioCadastroNova($dados, $editais, $grandesAreas, $areas);
 
             if ($errosFormulario !== []) {
                 $this->Flash->error(implode('<br>', $errosFormulario), ['escape' => false]);
@@ -1764,6 +1743,13 @@ class AvaliadoresController extends AppController
 
             if (count($avaliadoresSelecionados) !== 2) {
                 $this->Flash->error('Um ou mais avaliadores selecionados não estão mais disponíveis.');
+                return $this->redirect(['action' => 'vincularInscricao', $inscricao->id]);
+            }
+
+            $usuarioAvaliador1 = (int)($avaliadoresSelecionados[$avaliador1]['usuario_id'] ?? 0);
+            $usuarioAvaliador2 = (int)($avaliadoresSelecionados[$avaliador2]['usuario_id'] ?? 0);
+            if ($usuarioAvaliador1 <= 0 || $usuarioAvaliador2 <= 0 || $usuarioAvaliador1 === $usuarioAvaliador2) {
+                $this->Flash->error('Não pode haver repetição entre os avaliadores.');
                 return $this->redirect(['action' => 'vincularInscricao', $inscricao->id]);
             }
 
@@ -2475,7 +2461,7 @@ class AvaliadoresController extends AppController
         return array_values(array_unique($ids));
     }
 
-    protected function validarFormularioCadastroRaic(array $dados, array $editais, array $unidades, array $areas): array
+    protected function validarFormularioCadastroRaic(array $dados, array $editais, array $unidades): array
     {
         $erros = [];
 
@@ -2487,16 +2473,6 @@ class AvaliadoresController extends AppController
             $erros[] = 'Selecione uma unidade válida e ativa.';
         }
 
-        
-        if (empty($dados['grandes_area_id'])) {
-            $erros[] = 'Selecione a grande área.';
-        }
-
-        if (empty($dados['area_id']) || !isset($areas[$dados['area_id']])) {
-            $erros[] = 'Selecione a área correspondente à grande área informada.';
-        }
-        
-
         if (trim((string)$dados['cpfs']) === '') {
             $erros[] = 'Informe ao menos um CPF.';
         }
@@ -2504,7 +2480,7 @@ class AvaliadoresController extends AppController
         return $erros;
     }
 
-    protected function validarFormularioCadastroNova(array $dados, array $editais, array $areas): array
+    protected function validarFormularioCadastroNova(array $dados, array $editais, array $grandesAreas, array $areas): array
     {
         $erros = [];
 
@@ -2519,15 +2495,17 @@ class AvaliadoresController extends AppController
             }
         }
 
-        
-        if (empty($dados['grandes_area_id'])) {
-            $erros[] = 'Selecione a grande área.';
+        if (!empty($dados['grandes_area_id']) && !isset($grandesAreas[$dados['grandes_area_id']])) {
+            $erros[] = 'Selecione uma grande área válida.';
         }
 
-        if (empty($dados['area_id']) || !isset($areas[$dados['area_id']])) {
-            $erros[] = 'Selecione a área correspondente à grande área informada.';
+        if (!empty($dados['area_id'])) {
+            if (empty($dados['grandes_area_id'])) {
+                $erros[] = 'Selecione a grande área antes de selecionar a área.';
+            } elseif (!isset($areas[$dados['area_id']])) {
+                $erros[] = 'Selecione uma área correspondente à grande área informada.';
+            }
         }
-            
 
         if (trim((string)$dados['cpfs']) === '') {
             $erros[] = 'Informe ao menos um CPF.';
@@ -2664,8 +2642,8 @@ class AvaliadoresController extends AppController
 
             $entidadesSalvar[] = $avaliadorsTable->newEntity([
                 'usuario_id' => (int)$item['usuario_id'],
-                'grandes_area_id' => (int)$dados['grandes_area_id'],
-                'area_id' => (int)$dados['area_id'],
+                'grandes_area_id' => null,
+                'area_id' => null,
                 'ano_convite' => $anoAtual,
                 'ano_aceite' => $anoAtual,
                 'tipo_avaliador' => 'R',
@@ -2742,12 +2720,23 @@ class AvaliadoresController extends AppController
             }
 
             foreach ($editaisSelecionados as $editaiId) {
-                if ($this->existeCadastroNova((int)$usuario->id, $editaiId)) {
+                $grandeAreaCadastro = !empty($dados['grandes_area_id']) ? (int)$dados['grandes_area_id'] : null;
+                $areaCadastro = !empty($dados['area_id']) ? (int)$dados['area_id'] : null;
+
+                if ($this->existeCadastroNova(
+                    (int)$usuario->id,
+                    $editaiId,
+                    $grandeAreaCadastro,
+                    $areaCadastro
+                )) {
+                    $motivoDuplicidade = $grandeAreaCadastro === null && $areaCadastro === null
+                        ? 'Avaliador já possui cadastro para este edital; cadastro sem competência só é permitido quando não há nenhuma referência anterior.'
+                        : 'Avaliador já cadastrado para este edital com a mesma competência.';
                     $resultado['inelegiveis'][] = [
                         'cpf' => $cpfOriginal,
                         'nome' => (string)$usuario->nome,
                         'editai_id' => $editaiId,
-                        'motivo' => 'Avaliador já cadastrado para este edital.',
+                        'motivo' => $motivoDuplicidade,
                     ];
                     continue;
                 }
@@ -2775,14 +2764,19 @@ class AvaliadoresController extends AppController
         $totalSalvar = 0;
 
         foreach ($elegiveis as $item) {
-            if ($this->existeCadastroNova((int)$item['usuario_id'], (int)$item['editai_id'])) {
+            if ($this->existeCadastroNova(
+                (int)$item['usuario_id'],
+                (int)$item['editai_id'],
+                !empty($dados['grandes_area_id']) ? (int)$dados['grandes_area_id'] : null,
+                !empty($dados['area_id']) ? (int)$dados['area_id'] : null
+            )) {
                 continue;
             }
 
             $entidadesSalvar[] = $avaliadorsTable->newEntity([
                 'usuario_id' => (int)$item['usuario_id'],
-                'grandes_area_id' => (int)$dados['grandes_area_id'],
-                'area_id' => (int)$dados['area_id'],
+                'grandes_area_id' => !empty($dados['grandes_area_id']) ? (int)$dados['grandes_area_id'] : null,
+                'area_id' => !empty($dados['area_id']) ? (int)$dados['area_id'] : null,
                 'ano_convite' => $anoAtual,
                 'ano_aceite' => $anoAtual,
                 'tipo_avaliador' => 'N',
@@ -2943,14 +2937,34 @@ class AvaliadoresController extends AppController
             ->count() > 0;
     }
 
-    protected function existeCadastroNova(int $usuarioId, int $editaiId): bool
+    protected function existeCadastroNova(int $usuarioId, int $editaiId, ?int $grandeAreaId, ?int $areaId): bool
     {
+        $condicoes = [
+            'Avaliadors.usuario_id' => $usuarioId,
+            'Avaliadors.editai_id' => $editaiId,
+            'Avaliadors.deleted' => 0,
+        ];
+
+        if ($grandeAreaId === null && $areaId === null) {
+            return $this->fetchTable('Avaliadors')->find()
+                ->where($condicoes)
+                ->count() > 0;
+        }
+
+        if ($grandeAreaId === null) {
+            $condicoes['Avaliadors.grandes_area_id IS'] = null;
+        } else {
+            $condicoes['Avaliadors.grandes_area_id'] = $grandeAreaId;
+        }
+
+        if ($areaId === null) {
+            $condicoes['Avaliadors.area_id IS'] = null;
+        } else {
+            $condicoes['Avaliadors.area_id'] = $areaId;
+        }
+
         return $this->fetchTable('Avaliadors')->find()
-            ->where([
-                'Avaliadors.usuario_id' => $usuarioId,
-                'Avaliadors.editai_id' => $editaiId,
-                'Avaliadors.deleted' => 0,
-            ])
+            ->where($condicoes)
             ->count() > 0;
     }
 

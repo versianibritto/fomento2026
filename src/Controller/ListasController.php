@@ -471,13 +471,28 @@ class ListasController extends AppController
         }
 
         $grandesAreas = $this->obterGrandesAreasRestritasAvaliadores();
-        if ($filtros['grandes_area_id'] !== 0 && !isset($grandesAreas[$filtros['grandes_area_id']])) {
-            $filtros['grandes_area_id'] = 0;
+        if (
+            $filtros['grandes_area_id'] !== ''
+            && $filtros['grandes_area_id'] !== '__none'
+            && !isset($grandesAreas[(int)$filtros['grandes_area_id']])
+        ) {
+            $filtros['grandes_area_id'] = '';
         }
 
-        $areas = $this->obterAreasPorGrandeAreaAvaliadores((int)$filtros['grandes_area_id']);
-        if ($filtros['area_id'] !== 0 && !isset($areas[$filtros['area_id']])) {
-            $filtros['area_id'] = 0;
+        $todasAreas = $this->obterAreasPorGrandeAreaAvaliadores(0, true);
+        $areas = $this->obterAreasPorGrandeAreaAvaliadores(
+            ctype_digit((string)$filtros['grandes_area_id']) ? (int)$filtros['grandes_area_id'] : 0,
+            true
+        );
+        if (
+            $filtros['area_id'] !== ''
+            && $filtros['area_id'] !== '__none'
+            && !isset($areas[(int)$filtros['area_id']])
+        ) {
+            $filtros['area_id'] = '';
+        }
+        if ($filtros['grandes_area_id'] === '__none' && ctype_digit((string)$filtros['area_id'])) {
+            $filtros['area_id'] = '';
         }
 
         $query = $this->montarQueryListaAvaliadoresNova($filtros);
@@ -488,7 +503,90 @@ class ListasController extends AppController
 
         $avaliadores = $this->paginate($query, ['limit' => 20]);
 
-        $this->set(compact('avaliadores', 'anosOptions', 'editais', 'grandesAreas', 'areas', 'filtros'));
+        $this->set(compact('avaliadores', 'anosOptions', 'editais', 'grandesAreas', 'areas', 'todasAreas', 'filtros'));
+    }
+
+    public function editarAreaAvaliadorNova(int $id)
+    {
+        $this->request->allowMethod(['get', 'post', 'put', 'patch']);
+
+        if (!$this->ehYoda()) {
+            $this->Flash->error('Área restrita à Gestão de Fomento.');
+            return $this->redirect(['controller' => 'Index', 'action' => 'dashboard']);
+        }
+
+        $avaliadorsTable = $this->fetchTable('Avaliadors');
+        $avaliador = $avaliadorsTable->get($id, [
+            'contain' => ['Usuarios', 'Editais', 'GrandesAreas', 'Areas'],
+        ]);
+
+        if ((string)($avaliador->tipo_avaliador ?? '') !== 'N' || (int)($avaliador->deleted ?? 0) !== 0) {
+            $this->Flash->error('Avaliador não localizado na lista de avaliadores nova.');
+            return $this->redirect(['action' => 'listaAvaliadoresNova']);
+        }
+
+        $grandesAreas = $this->obterGrandesAreasRestritasAvaliadores();
+        $grandeAreaSelecionada = (int)$this->request->getData('grandes_area_id', (int)($avaliador->grandes_area_id ?? 0));
+        $areas = $this->obterAreasPorGrandeAreaAvaliadores($grandeAreaSelecionada);
+        $retorno = (string)$this->request->getData(
+            'retorno',
+            (string)$this->request->getQuery('retorno', $this->request->referer(true))
+        );
+
+        if ($this->request->is(['post', 'put', 'patch'])) {
+            $grandeAreaId = (int)$this->request->getData('grandes_area_id', 0);
+            $areaId = (int)$this->request->getData('area_id', 0);
+            $grandeAreaSalvar = $grandeAreaId > 0 ? $grandeAreaId : null;
+            $areaSalvar = $areaId > 0 ? $areaId : null;
+
+            $erros = [];
+            if ($grandeAreaSalvar !== null && !isset($grandesAreas[$grandeAreaSalvar])) {
+                $erros[] = 'Selecione uma grande área válida.';
+            }
+
+            $areasSelecionadas = $this->obterAreasPorGrandeAreaAvaliadores($grandeAreaSalvar ?? 0);
+            if ($areaSalvar !== null) {
+                if ($grandeAreaSalvar === null) {
+                    $erros[] = 'Selecione a grande área antes de selecionar a área.';
+                } elseif (!isset($areasSelecionadas[$areaSalvar])) {
+                    $erros[] = 'Selecione uma área correspondente à grande área informada.';
+                }
+            }
+
+            if ($erros === [] && $this->existeOutroAvaliadorNovaMesmaCompetencia(
+                (int)$avaliador->id,
+                (int)$avaliador->usuario_id,
+                (int)$avaliador->editai_id,
+                $grandeAreaSalvar,
+                $areaSalvar
+            )) {
+                $erros[] = 'Já existe cadastro deste avaliador para o mesmo edital com esta competência.';
+            }
+
+            if ($erros !== []) {
+                $this->Flash->error(implode('<br>', $erros), ['escape' => false]);
+                $areas = $areasSelecionadas;
+            } else {
+                $avaliador = $avaliadorsTable->patchEntity($avaliador, [
+                    'grandes_area_id' => $grandeAreaSalvar,
+                    'area_id' => $areaSalvar,
+                ]);
+
+                try {
+                    $avaliadorsTable->saveOrFail($avaliador);
+                    $this->Flash->success('Grande área e área atualizadas com sucesso.');
+                    return $this->redirect($retorno !== '' ? $retorno : ['action' => 'listaAvaliadoresNova']);
+                } catch (\Throwable $e) {
+                    $this->flashFriendlyException(
+                        $e,
+                        'Erro no Sistema - alterar area de avaliador nova',
+                        'Não foi possível atualizar a grande área e a área do avaliador.'
+                    );
+                }
+            }
+        }
+
+        $this->set(compact('avaliador', 'grandesAreas', 'areas', 'retorno'));
     }
 
     public function listaInscricoesAvaliadores()
@@ -770,11 +868,15 @@ class ListasController extends AppController
             $query->where(['Avaliadors.editai_id' => (int)$filtros['editai_id']]);
         }
 
-        if ((int)$filtros['grandes_area_id'] > 0) {
+        if ($filtros['grandes_area_id'] === '__none') {
+            $query->where(['Avaliadors.grandes_area_id IS' => null]);
+        } elseif (ctype_digit((string)$filtros['grandes_area_id']) && (int)$filtros['grandes_area_id'] > 0) {
             $query->where(['Avaliadors.grandes_area_id' => (int)$filtros['grandes_area_id']]);
         }
 
-        if ((int)$filtros['area_id'] > 0) {
+        if ($filtros['area_id'] === '__none') {
+            $query->where(['Avaliadors.area_id IS' => null]);
+        } elseif (ctype_digit((string)$filtros['area_id']) && (int)$filtros['area_id'] > 0) {
             $query->where(['Avaliadors.area_id' => (int)$filtros['area_id']]);
         }
 
@@ -805,8 +907,8 @@ class ListasController extends AppController
             'ano' => (int)$this->request->getQuery('ano', $anoAtual),
             'nome' => trim((string)$this->request->getQuery('nome', '')),
             'editai_id' => (int)$this->request->getQuery('editai_id', 0),
-            'grandes_area_id' => (int)$this->request->getQuery('grandes_area_id', 0),
-            'area_id' => (int)$this->request->getQuery('area_id', 0),
+            'grandes_area_id' => trim((string)$this->request->getQuery('grandes_area_id', '')),
+            'area_id' => trim((string)$this->request->getQuery('area_id', '')),
         ];
     }
 
@@ -1035,19 +1137,55 @@ class ListasController extends AppController
             ->toArray();
     }
 
-    protected function obterAreasPorGrandeAreaAvaliadores(int $grandeAreaId): array
+    protected function obterAreasPorGrandeAreaAvaliadores(int $grandeAreaId, bool $incluirTodasSemGrandeArea = false): array
     {
-        if ($grandeAreaId <= 0) {
+        if ($grandeAreaId <= 0 && !$incluirTodasSemGrandeArea) {
             return [];
         }
 
-        return $this->fetchTable('Areas')->find('list', [
+        $query = $this->fetchTable('Areas')->find('list', [
             'keyField' => 'id',
             'valueField' => 'nome',
         ])
-            ->where(['Areas.grandes_area_id' => $grandeAreaId])
-            ->orderBy(['Areas.nome' => 'ASC'])
-            ->toArray();
+            ->orderBy(['Areas.nome' => 'ASC']);
+
+        if ($grandeAreaId > 0) {
+            $query->where(['Areas.grandes_area_id' => $grandeAreaId]);
+        }
+
+        return $query->toArray();
+    }
+
+    protected function existeOutroAvaliadorNovaMesmaCompetencia(
+        int $avaliadorId,
+        int $usuarioId,
+        int $editaiId,
+        ?int $grandeAreaId,
+        ?int $areaId
+    ): bool {
+        $condicoes = [
+            'Avaliadors.id !=' => $avaliadorId,
+            'Avaliadors.usuario_id' => $usuarioId,
+            'Avaliadors.editai_id' => $editaiId,
+            'Avaliadors.tipo_avaliador' => 'N',
+            'Avaliadors.deleted' => 0,
+        ];
+
+        if ($grandeAreaId === null) {
+            $condicoes['Avaliadors.grandes_area_id IS'] = null;
+        } else {
+            $condicoes['Avaliadors.grandes_area_id'] = $grandeAreaId;
+        }
+
+        if ($areaId === null) {
+            $condicoes['Avaliadors.area_id IS'] = null;
+        } else {
+            $condicoes['Avaliadors.area_id'] = $areaId;
+        }
+
+        return $this->fetchTable('Avaliadors')->find()
+            ->where($condicoes)
+            ->count() > 0;
     }
 
     protected function montarQueryListaInscricoesAvaliadores(array $filtros)
