@@ -1768,7 +1768,7 @@ class AvaliadoresController extends AppController
                 return $avaliadorId > 0;
             });
 
-            if ($avaliadoresInformados === []) {
+            if ($avaliadoresInformados === [] && empty($vinculosAtivos)) {
                 $this->Flash->error('Selecione pelo menos um avaliador.');
                 return $this->redirect(['action' => 'vincularInscricao', $inscricao->id]);
             }
@@ -1817,17 +1817,20 @@ class AvaliadoresController extends AppController
                 }
             }
 
-            $avaliadoresSelecionados = $avaliadorsTable->find()
-                ->select(['Avaliadors.id', 'Avaliadors.usuario_id', 'Usuarios.nome'])
-                ->leftJoinWith('Usuarios')
-                ->where([
-                    'Avaliadors.id IN' => $avaliadoresInformados,
-                    'Avaliadors.deleted' => 0,
-                ])
-                ->enableHydration(false)
-                ->all()
-                ->indexBy('id')
-                ->toArray();
+            $avaliadoresSelecionados = [];
+            if ($avaliadoresInformados !== []) {
+                $avaliadoresSelecionados = $avaliadorsTable->find()
+                    ->select(['Avaliadors.id', 'Avaliadors.usuario_id', 'Usuarios.nome'])
+                    ->leftJoinWith('Usuarios')
+                    ->where([
+                        'Avaliadors.id IN' => $avaliadoresInformados,
+                        'Avaliadors.deleted' => 0,
+                    ])
+                    ->enableHydration(false)
+                    ->all()
+                    ->indexBy('id')
+                    ->toArray();
+            }
 
             if (count($avaliadoresSelecionados) !== count($avaliadoresInformados)) {
                 $this->Flash->error('Um ou mais avaliadores selecionados não estão mais disponíveis.');

@@ -154,7 +154,11 @@ foreach ($vinculosAtivos as $vinculoAtivo) {
     <div class="card shadow-sm">
         <div class="card-body">
             <div class="alert alert-light border">
-                Selecione pelo menos um avaliador. O Avaliador 1 sempre será gravado com ordem 1 e o Avaliador 2 sempre será gravado com ordem 2.
+                <?php if ($vinculoExistente): ?>
+                    Para remover avaliadores sem nota lançada, deixe o respectivo campo vazio. Se ambos ficarem vazios, os vínculos disponíveis serão removidos sem criar avaliador vazio.
+                <?php else: ?>
+                    Selecione pelo menos um avaliador. O Avaliador 1 sempre será gravado com ordem 1 e o Avaliador 2 sempre será gravado com ordem 2.
+                <?php endif; ?>
             </div>
 
             <?= $this->Form->create(null) ?>

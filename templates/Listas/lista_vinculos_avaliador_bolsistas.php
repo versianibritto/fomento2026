@@ -178,12 +178,10 @@ $formatarNota = static function ($valor): string {
                                         <th>Status</th>
                                         <th>Orientador</th>
                                         <th>Bolsista</th>
-                                        <th>Nota</th>
-                                        <th>Nota súmula</th>
-                                        <th>Unidade avaliador</th>
-                                        <th>Unidade referência</th>
+                                        <th>Unidade<br>avaliador</th>
+                                        <th>Unidade<br>orientador</th>
                                         <th>Ano</th>
-                                        <th>Ordem</th>
+                                        <th class="text-end">Ações</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -253,6 +251,14 @@ $formatarNota = static function ($valor): string {
                                             $urlAvaliarTi = ($ehTI && !$deletado && $temReferenciaAvaliacao)
                                                 ? ['controller' => 'Avaliadores', 'action' => 'avaliar', (int)$vinculo->id]
                                                 : null;
+                                            $inscricaoVinculoId = (int)($vinculo->projeto_bolsista_id ?: $vinculo->projeto_bolsista_legado_id ?: 0);
+                                            $urlVincularInscricao = ($tipoVinculo === 'N' && $inscricaoVinculoId > 0)
+                                                ? ['controller' => 'Avaliadores', 'action' => 'vincularInscricao', $inscricaoVinculoId]
+                                                : null;
+                                            $raicVinculoId = (int)($vinculo->raic_id ?? 0);
+                                            $urlAgendarRaic = (in_array($tipoVinculo, ['V', 'Z'], true) && $raicVinculoId > 0)
+                                                ? ['controller' => 'RaicNew', 'action' => 'agendar', $raicVinculoId]
+                                                : null;
                                         ?>
                                         <tr class="<?= $deletado ? 'table-danger' : '' ?>">
                                             <td>
@@ -279,12 +285,32 @@ $formatarNota = static function ($valor): string {
                                             <td><?= $avaliado ? 'Avaliado' : 'Não avaliado' ?></td>
                                             <td><?= h($orientadorNome) ?></td>
                                             <td><?= h($bolsistaNome) ?></td>
-                                            <td><?= h($emEdicao ? '-' : $formatarNota($vinculo->nota ?? null)) ?></td>
-                                            <td><?= h($emEdicao ? '-' : $formatarNota($vinculo->nota_sumula ?? null)) ?></td>
-                                            <td><?= h($unidadeAvaliador) ?></td>
-                                            <td><?= h($unidadeReferencia) ?></td>
+                                            <td><?= h(mb_substr((string)$unidadeAvaliador, 0, 4)) ?></td>
+                                            <td><?= h(mb_substr((string)$unidadeReferencia, 0, 4)) ?></td>
                                             <td><?= h((string)($vinculo->ano ?? '-')) ?></td>
-                                            <td><?= h((string)($vinculo->ordem ?? '-')) ?></td>
+                                            <td class="text-end">
+                                                <?php if ($urlVincularInscricao !== null): ?>
+                                                    <?= $this->Html->link(
+                                                        'Vincular',
+                                                        $urlVincularInscricao,
+                                                        [
+                                                            'class' => 'btn btn-outline-primary btn-sm py-0 px-2',
+                                                            'style' => 'font-size: 0.75rem;',
+                                                        ]
+                                                    ) ?>
+                                                <?php elseif ($urlAgendarRaic !== null): ?>
+                                                    <?= $this->Html->link(
+                                                        'Agendar',
+                                                        $urlAgendarRaic,
+                                                        [
+                                                            'class' => 'btn btn-outline-primary btn-sm py-0 px-2',
+                                                            'style' => 'font-size: 0.75rem;',
+                                                        ]
+                                                    ) ?>
+                                                <?php else: ?>
+                                                    <span class="text-muted">-</span>
+                                                <?php endif; ?>
+                                            </td>
                                         </tr>
                                     <?php endforeach; ?>
                                 </tbody>
