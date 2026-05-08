@@ -19,6 +19,8 @@ use Cake\Validation\Validator;
  * @property \App\Model\Table\EditaisTable&\Cake\ORM\Association\BelongsTo $Editais
  * @property \App\Model\Table\BancasTable&\Cake\ORM\Association\BelongsTo $Bancas
  * @property \App\Model\Table\AvaliationsTable&\Cake\ORM\Association\HasMany $Avaliations
+ * @property \App\Model\Table\UsuariosTable&\Cake\ORM\Association\BelongsTo $Criadores
+ * @property \App\Model\Table\UsuariosTable&\Cake\ORM\Association\BelongsTo $Deletadores
  *
  * @method \App\Model\Entity\AvaliadorBolsista newEmptyEntity()
  * @method \App\Model\Entity\AvaliadorBolsista newEntity(array $data, array $options = [])
@@ -59,6 +61,18 @@ class AvaliadorBolsistasTable extends Table
         ]);
         $this->belongsTo('Usuarios', [
             'foreignKey' => 'usuario_id',
+        ]);
+        $this->belongsTo('Criadores', [
+            'className' => 'Usuarios',
+            'foreignKey' => 'criado_por',
+            'joinType' => 'LEFT',
+            'propertyName' => 'criador',
+        ]);
+        $this->belongsTo('Deletadores', [
+            'className' => 'Usuarios',
+            'foreignKey' => 'deletado_por',
+            'joinType' => 'LEFT',
+            'propertyName' => 'deletador',
         ]);
         $this->belongsTo('Raics', [
             'foreignKey' => 'raic_id',
@@ -177,11 +191,24 @@ class AvaliadorBolsistasTable extends Table
 
         $validator
             ->integer('ordem')
-            ->allowEmptyString('ordem');
+            ->notEmptyString('ordem', 'Informe a ordem do avaliador.')
+            ->greaterThanOrEqual('ordem', 1, 'A ordem do avaliador deve ser maior ou igual a 1.');
 
         $validator
             ->integer('banca_id')
             ->allowEmptyString('banca_id');
+
+        $validator
+            ->nonNegativeInteger('criado_por')
+            ->allowEmptyString('criado_por');
+
+        $validator
+            ->nonNegativeInteger('deletado_por')
+            ->allowEmptyString('deletado_por');
+
+        $validator
+            ->dateTime('deletado_em')
+            ->allowEmptyDateTime('deletado_em');
 
         return $validator;
     }
@@ -202,6 +229,62 @@ class AvaliadorBolsistasTable extends Table
         $rules->add($rules->existsIn(['projeto_bolsista_id'], 'ProjetoBolsistas'), ['errorField' => 'projeto_bolsista_id']);
         $rules->add($rules->existsIn(['editai_id'], 'Editais'), ['errorField' => 'editai_id']);
         $rules->add($rules->existsIn(['banca_id'], 'Bancas'), ['errorField' => 'banca_id']);
+        $rules->add($rules->existsIn(['criado_por'], 'Criadores'), ['errorField' => 'criado_por']);
+        $rules->add($rules->existsIn(['deletado_por'], 'Deletadores'), ['errorField' => 'deletado_por']);
+        $rules->add(
+            function ($entity) {
+                if ((int)($entity->deleted ?? 0) !== 0 || empty($entity->ordem)) {
+                    return true;
+                }
+
+                $query = $this->find()
+                    ->where([
+                        'AvaliadorBolsistas.deleted' => 0,
+                        'AvaliadorBolsistas.ordem' => (int)$entity->ordem,
+                    ]);
+
+                if (!$entity->isNew()) {
+                    $query->where(['AvaliadorBolsistas.id !=' => (int)$entity->id]);
+                }
+
+                foreach (['tipo', 'ano'] as $campo) {
+                    if ($entity->has($campo) && $entity->get($campo) !== null && $entity->get($campo) !== '') {
+                        $query->where(['AvaliadorBolsistas.' . $campo => $entity->get($campo)]);
+                    }
+                }
+
+                $referencias = [
+                    'projeto_bolsista_id',
+                    'raic_id',
+                    'workshop_id',
+                    'banca_id',
+                    'bolsista',
+                ];
+
+                $condicoesReferencia = [];
+                foreach ($referencias as $referencia) {
+                    $valorReferencia = (int)($entity->get($referencia) ?? 0);
+                    if ($valorReferencia > 0) {
+                        $condicoesReferencia[] = ['AvaliadorBolsistas.' . $referencia => $valorReferencia];
+                    }
+                }
+
+                if ($condicoesReferencia !== []) {
+                    return !$query
+                        ->andWhere(function ($exp) use ($condicoesReferencia) {
+                            return $exp->or($condicoesReferencia);
+                        })
+                        ->count();
+                }
+
+                return true;
+            },
+            'uniqueActiveOrderPerReference',
+            [
+                'errorField' => 'ordem',
+                'message' => 'Já existe avaliador ativo com esta ordem para esta referência.',
+            ]
+        );
 
         return $rules;
     }

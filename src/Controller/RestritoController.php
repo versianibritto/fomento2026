@@ -125,9 +125,212 @@ class RestritoController extends AppController
                 'class' => 'btn-outline-primary',
                 'icon' => 'fas fa-sync-alt',
             ],
+            [
+                'titulo' => 'Editar Projeto Bolsista',
+                'descricao' => 'Alteração técnica completa de projeto_bolsistas com histórico obrigatório',
+                'url' => ['controller' => 'Restrito', 'action' => 'editarProjetoBolsista'],
+                'class' => 'btn-outline-danger',
+                'icon' => 'fas fa-database',
+            ],
         ];
 
         $this->set(compact('atalhos'));
+    }
+
+    public function editarProjetoBolsista($id = null)
+    {
+        $tblProjetoBolsistas = $this->fetchTable('ProjetoBolsistas');
+        $schema = $tblProjetoBolsistas->getSchema();
+        $colunasPermitidas = [
+            'data_inicio',
+            'data_fim',
+            'sp_titulo',
+            'sp_resumo',
+            'palavras_chaves',
+            'cota',
+            'autorizacao',
+            'revista_orientador',
+            'revista_bolsista',
+            'heranca',
+        ];
+        $colunas = array_values(array_filter(
+            $colunasPermitidas,
+            static fn($coluna) => $schema->hasColumn($coluna)
+        ));
+        $metadados = [];
+        foreach ($colunas as $coluna) {
+            $metadados[$coluna] = [
+                'type' => (string)$schema->getColumnType($coluna),
+                'null' => (bool)($schema->getColumn($coluna)['null'] ?? false),
+                'length' => $schema->getColumn($coluna)['length'] ?? null,
+            ];
+        }
+
+        $buscaId = (int)($id ?? $this->request->getQuery('id', 0));
+        $inscricao = null;
+        if ($buscaId > 0) {
+            $inscricao = $tblProjetoBolsistas->find()
+                ->contain(['Bolsistas', 'Orientadores', 'Editais', 'Fases'])
+                ->where(['ProjetoBolsistas.id' => $buscaId])
+                ->first();
+
+            if (!$inscricao) {
+                $this->Flash->error('Inscrição não localizada.');
+                return $this->redirect(['controller' => 'Restrito', 'action' => 'editarProjetoBolsista']);
+            }
+        }
+
+        if ($this->request->is(['post', 'put', 'patch'])) {
+            $inscricaoId = (int)$this->request->getData('id');
+            $justificativa = trim((string)$this->request->getData('_justificativa_tecnica'));
+            if ($inscricaoId <= 0) {
+                $this->Flash->error('Informe a inscrição.');
+                return $this->redirect(['controller' => 'Restrito', 'action' => 'editarProjetoBolsista']);
+            }
+            if ($justificativa === '') {
+                $this->Flash->error('Informe a justificativa da alteração técnica.');
+                return $this->redirect(['controller' => 'Restrito', 'action' => 'editarProjetoBolsista', $inscricaoId]);
+            }
+
+            $inscricao = $tblProjetoBolsistas->get($inscricaoId);
+            $faseOriginal = (int)($inscricao->fase_id ?? 0);
+            $antes = [];
+            $dados = [];
+            foreach ($colunas as $coluna) {
+                $antes[$coluna] = $this->normalizarValorHistoricoProjetoBolsista($inscricao->get($coluna));
+                $valor = $this->request->getData($coluna);
+                $valorNormalizado = $this->normalizarInputProjetoBolsista(
+                    is_array($valor) ? '' : (string)$valor,
+                    $metadados[$coluna],
+                    $inscricao->get($coluna)
+                );
+                $depoisInput = $this->normalizarValorHistoricoProjetoBolsista($valorNormalizado);
+                if ($antes[$coluna] !== $depoisInput) {
+                    $dados[$coluna] = $valorNormalizado;
+                }
+            }
+
+            if ($dados === []) {
+                $this->Flash->info('Nenhuma alteração identificada.');
+                return $this->redirect(['controller' => 'Restrito', 'action' => 'editarProjetoBolsista', $inscricaoId]);
+            }
+
+            $inscricao = $tblProjetoBolsistas->patchEntity($inscricao, $dados, ['accessibleFields' => array_fill_keys($colunas, true)]);
+
+            $diff = [];
+            foreach ($colunas as $coluna) {
+                $depois = $this->normalizarValorHistoricoProjetoBolsista($inscricao->get($coluna));
+                if ($antes[$coluna] !== $depois) {
+                    $diff[$coluna] = [
+                        'de' => $antes[$coluna],
+                        'para' => $depois,
+                    ];
+                }
+            }
+
+            if ($diff === []) {
+                $this->Flash->info('Nenhuma alteração identificada.');
+                return $this->redirect(['controller' => 'Restrito', 'action' => 'editarProjetoBolsista', $inscricaoId]);
+            }
+
+            $faseAtual = (int)($inscricao->fase_id ?? $faseOriginal);
+            $historicos = $this->montarHistoricosProjetoBolsistaRestrito($justificativa, $diff);
+
+            try {
+                $tblProjetoBolsistas->getConnection()->transactional(function () use ($tblProjetoBolsistas, $inscricao, $inscricaoId, $faseOriginal, $faseAtual, $historicos) {
+                    $tblProjetoBolsistas->saveOrFail($inscricao);
+                    foreach ($historicos as $historico) {
+                        $this->historico($inscricaoId, $faseOriginal, $faseAtual, $historico, true);
+                    }
+                });
+                $this->Flash->success('Projeto bolsista atualizado com sucesso.');
+                return $this->redirect(['controller' => 'Padrao', 'action' => 'visualizar', $inscricaoId]);
+            } catch (\Throwable $e) {
+                $this->flashFriendlyException(
+                    $e,
+                    'Erro no Sistema - edição restrita de projeto_bolsistas',
+                    'Não foi possível salvar a alteração técnica.'
+                );
+                return $this->redirect(['controller' => 'Restrito', 'action' => 'editarProjetoBolsista', $inscricaoId]);
+            }
+        }
+
+        $this->set(compact('inscricao', 'colunas', 'metadados', 'buscaId'));
+    }
+
+    private function normalizarInputProjetoBolsista(string $valor, array $metadata, $valorAtual)
+    {
+        $valor = trim($valor);
+        if ($valor === '' && !empty($metadata['null'])) {
+            return null;
+        }
+        if ($valor === '' && empty($metadata['null'])) {
+            return $valorAtual;
+        }
+
+        return match ($metadata['type'] ?? '') {
+            'integer', 'biginteger' => $valor === '' ? null : (int)$valor,
+            'decimal', 'float' => $valor === '' ? null : (float)str_replace(',', '.', $valor),
+            'boolean' => $valor === '' ? null : (int)$valor,
+            default => $valor,
+        };
+    }
+
+    private function normalizarValorHistoricoProjetoBolsista($valor): string
+    {
+        if ($valor === null) {
+            return 'NULL';
+        }
+        if ($valor instanceof \DateTimeInterface) {
+            return $valor->format('Y-m-d H:i:s');
+        }
+        if (is_bool($valor)) {
+            return $valor ? '1' : '0';
+        }
+
+        return (string)$valor;
+    }
+
+    private function montarHistoricosProjetoBolsistaRestrito(string $justificativa, array $diff): array
+    {
+        $historicos = [];
+        foreach ($diff as $campo => $alteracao) {
+            $texto = 'Alteração técnica ' . $campo;
+            $texto .= '. De: ' . $this->resumirValorHistoricoProjetoBolsista((string)($alteracao['de'] ?? ''));
+            $texto .= '. Para: ' . $this->resumirValorHistoricoProjetoBolsista((string)($alteracao['para'] ?? ''));
+            $texto .= '. Justificativa: ' . $justificativa;
+            $historicos[] = $this->limitarHistoricoProjetoBolsista($texto);
+        }
+
+        return $historicos;
+    }
+
+    private function resumirValorHistoricoProjetoBolsista(string $valor): string
+    {
+        $valor = trim(preg_replace('/\s+/', ' ', $valor) ?? '');
+        if ($valor === '') {
+            return 'vazio';
+        }
+        if (function_exists('mb_strlen') && mb_strlen($valor) > 45) {
+            return mb_substr($valor, 0, 42) . '...';
+        }
+        if (strlen($valor) > 45) {
+            return substr($valor, 0, 42) . '...';
+        }
+
+        return $valor;
+    }
+
+    private function limitarHistoricoProjetoBolsista(string $texto): string
+    {
+        if (function_exists('mb_strlen') && mb_strlen($texto) > 255) {
+            return mb_substr($texto, 0, 252) . '...';
+        }
+        if (strlen($texto) > 255) {
+            return substr($texto, 0, 252) . '...';
+        }
+
+        return $texto;
     }
 
     public function cadastrarUsuario()

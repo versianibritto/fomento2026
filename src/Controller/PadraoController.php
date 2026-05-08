@@ -622,11 +622,16 @@ class PadraoController extends AppController
             ->all();
 
         $avaliacoes = $this->fetchTable('AvaliadorBolsistas')->find()
-            ->contain(['Avaliadors' => ['Usuarios']])
+            ->contain([
+                'Avaliadors' => ['Usuarios'],
+                'Criadores',
+                'Deletadores',
+            ])
             ->where([
                 'AvaliadorBolsistas.bolsista' => (int)$inscricao->id,
             ])
             ->orderBy([
+                'AvaliadorBolsistas.deleted' => 'ASC',
                 'AvaliadorBolsistas.ordem' => 'ASC',
                 'AvaliadorBolsistas.id' => 'ASC',
             ])
@@ -1307,5 +1312,147 @@ class PadraoController extends AppController
         }
 
         $this->set('id', (int)$inscricaoId);
+    }
+
+    public function addresultado($id = null, $resultado = null)
+    {
+        if (!$this->ehYoda()) {
+            $this->Flash->error('Restrito a administradores');
+            return $this->redirect(['controller' => 'Index', 'action' => 'index']);
+        }
+
+        if (empty($id)) {
+            $this->Flash->error('Inscrição não informada.');
+            return $this->redirect(['controller' => 'Index', 'action' => 'index']);
+        }
+
+        $tblProjetoBolsistas = $this->fetchTable('ProjetoBolsistas');
+        $inscricao = $tblProjetoBolsistas->find()
+            ->contain(['Bolsistas', 'Orientadores', 'Editais', 'Fases'])
+            ->where(['ProjetoBolsistas.id' => (int)$id])
+            ->first();
+
+        if (!$inscricao) {
+            $this->Flash->error('Inscrição não localizada.');
+            return $this->redirect(['controller' => 'Index', 'action' => 'index']);
+        }
+
+        $faseAtual = (int)($inscricao->fase_id ?? 0);
+        $homologado = strtoupper((string)($inscricao->homologado ?? ''));
+        $erros = [];
+
+        if ($inscricao->deleted !== null) {
+            $erros[] = 'Inscrições deletadas não podem ter o resultado alterado.';
+        }
+        if (!in_array($faseAtual, [4, 8, 9, 10], true)) {
+            $erros[] = 'A alteração de resultado só é permitida nas fases Finalizada, Banco Reserva, Aprovado ou Reprovado.';
+        }
+        if ($homologado === '') {
+            $erros[] = 'A homologação ainda não foi definida. Não é possível alterar o resultado.';
+        } elseif (!in_array($homologado, ['S', 'N'], true)) {
+            $erros[] = 'A homologação atual está inconsistente. Não é possível alterar o resultado.';
+        }
+
+        $resultadoOptions = [];
+        if ($homologado === 'S') {
+            $resultadoOptions = [
+                'A' => 'Aprovado',
+                'B' => 'Banco Reserva',
+                'R' => 'Reprovado',
+            ];
+        } elseif ($homologado === 'N') {
+            $resultadoOptions = [
+                'R' => 'Reprovado',
+            ];
+        }
+
+        $resultadoAtual = strtoupper((string)($resultado ?? $inscricao->resultado ?? ''));
+        if ($resultadoAtual !== '' && !isset($resultadoOptions[$resultadoAtual])) {
+            $resultadoAtual = '';
+        }
+
+        if (!empty($erros) && !$this->request->is(['post', 'put', 'patch'])) {
+            $this->set(compact('inscricao', 'resultadoOptions', 'resultadoAtual', 'erros'));
+            return;
+        }
+
+        if ($this->request->is(['post', 'put', 'patch'])) {
+            if (!empty($erros)) {
+                $this->set(compact('inscricao', 'resultadoOptions', 'resultadoAtual', 'erros'));
+                return;
+            }
+
+            $dados = $this->request->getData();
+            $resultadoEscolhido = strtoupper(trim((string)($dados['resultado'] ?? $resultadoAtual)));
+            $justificativa = trim((string)($dados['justificativa'] ?? ''));
+            $errosValidacao = [];
+
+            if (!isset($resultadoOptions[$resultadoEscolhido])) {
+                $errosValidacao[] = 'Informe um resultado permitido para a situação de homologação atual.';
+            }
+            if ($justificativa === '') {
+                $errosValidacao[] = 'Informe a justificativa da alteração de resultado.';
+            }
+
+            if (!empty($errosValidacao)) {
+                $erros = $errosValidacao;
+                $resultadoAtual = $resultadoEscolhido;
+                $this->set(compact('inscricao', 'resultadoOptions', 'resultadoAtual', 'erros'));
+                return;
+            }
+
+            $destinos = [
+                'A' => ['fase_id' => 9, 'texto' => 'Alteração de resultado para Inscrição aprovada'],
+                'B' => ['fase_id' => 8, 'texto' => 'Alteração de resultado para Inscrição no Banco de reserva'],
+                'R' => ['fase_id' => 10, 'texto' => 'Alteração de resultado para Inscrição Reprovada'],
+            ];
+            $destino = $destinos[$resultadoEscolhido];
+            $faseOriginal = (int)$inscricao->fase_id;
+            $historicoResultado = $destino['texto'] . '. Justificativa: ' . $justificativa;
+            $historicosDatas = [];
+
+            if ($inscricao->data_inicio !== null) {
+                $historicosDatas[] = 'Data de início deletada. Dado anterior para registro em histórico: ' . $inscricao->data_inicio;
+                $inscricao->data_inicio = null;
+            }
+            if ($inscricao->data_fim !== null) {
+                $historicosDatas[] = 'Data de fim deletada. Dado anterior para registro em histórico: ' . $inscricao->data_fim;
+                $inscricao->data_fim = null;
+            }
+
+            $inscricao->resultado = $resultadoEscolhido;
+            $inscricao->fase_id = $destino['fase_id'];
+            $inscricao->vigente = 0;
+
+            try {
+                $tblProjetoBolsistas->getConnection()->transactional(function () use ($tblProjetoBolsistas, $inscricao, $faseOriginal, $destino, $historicoResultado, $historicosDatas) {
+                    $tblProjetoBolsistas->saveOrFail($inscricao);
+
+                    foreach ($historicosDatas as $historicoData) {
+                        $this->historico((int)$inscricao->id, $faseOriginal, $faseOriginal, $historicoData, true);
+                    }
+
+                    $this->historico(
+                        (int)$inscricao->id,
+                        $faseOriginal,
+                        (int)$destino['fase_id'],
+                        $historicoResultado,
+                        true
+                    );
+                });
+            } catch (\Throwable $e) {
+                $this->flashFriendlyException(
+                    $e,
+                    'Erro no Sistema - alteração de resultado',
+                    'Não foi possível alterar o resultado. Por favor, tente novamente.'
+                );
+                return $this->redirect(['action' => 'addresultado', (int)$inscricao->id, $resultadoEscolhido]);
+            }
+
+            $this->Flash->success('Resultado registrado com sucesso.');
+            return $this->redirect(['action' => 'visualizar', (int)$inscricao->id]);
+        }
+
+        $this->set(compact('inscricao', 'resultadoOptions', 'resultadoAtual', 'erros'));
     }
 }

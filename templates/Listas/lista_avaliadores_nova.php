@@ -7,7 +7,57 @@
  */
 $grandesAreasOptions = ['__none' => 'Nenhuma'] + $grandesAreas;
 $areasOptions = ['__none' => 'Nenhuma'] + $areas;
+$paginationQuery = $this->request->getQueryParams();
+unset($paginationQuery['page'], $paginationQuery['exportar']);
 ?>
+<style>
+    .avaliadores-paginacao {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.4rem;
+    }
+    .avaliadores-paginacao ul,
+    .avaliadores-paginacao li {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+    }
+    .avaliadores-paginacao ul {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.35rem;
+    }
+    .avaliadores-paginacao a,
+    .avaliadores-paginacao .current {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 2.1rem;
+        height: 2.1rem;
+        padding: 0 0.65rem;
+        border: 1px solid #ced4da;
+        border-radius: 0.35rem;
+        background: #fff;
+        color: #0d6efd;
+        line-height: 1;
+        text-decoration: none;
+    }
+    .avaliadores-paginacao a:hover {
+        background: #e9f2ff;
+        border-color: #9ec5fe;
+    }
+    .avaliadores-paginacao .current {
+        background: #0d6efd;
+        border-color: #0d6efd;
+        color: #fff;
+        font-weight: 700;
+    }
+    .avaliadores-paginacao .disabled {
+        opacity: 0.55;
+        pointer-events: none;
+    }
+</style>
 <div class="container-fluid p-1 pt-1">
     <div class="row">
         <div class="col-12">
@@ -81,7 +131,7 @@ $areasOptions = ['__none' => 'Nenhuma'] + $areas;
                             Nenhum avaliador localizado com os filtros informados.
                         </div>
                     <?php else: ?>
-                        <?php $this->Paginator->options(['url' => $this->request->getQueryParams()]); ?>
+                        <?php $this->Paginator->options(['url' => ['?' => $paginationQuery]]); ?>
                         <div class="mb-3">
                             <?= $this->Html->link(
                                 'Exportar CSV',
@@ -119,7 +169,7 @@ $areasOptions = ['__none' => 'Nenhuma'] + $areas;
                                                 <?= $this->Html->link(
                                                     'Alterar competência',
                                                     [
-                                                        'controller' => 'Listas',
+                                                        'controller' => 'Avaliadores',
                                                         'action' => 'editarAreaAvaliadorNova',
                                                         (int)$avaliador->id,
                                                         '?' => ['retorno' => $this->request->getRequestTarget()],
@@ -133,18 +183,18 @@ $areasOptions = ['__none' => 'Nenhuma'] + $areas;
                             </table>
                         </div>
 
-                        <div class="mt-3 d-flex flex-wrap align-items-center gap-2">
-                            <?= $this->Paginator->prev('« Anterior', ['class' => 'btn btn-outline-secondary btn-sm']) ?>
-                            <?= $this->Paginator->numbers([
-                                'before' => '',
-                                'after' => '',
-                                'modulus' => 4,
-                            ]) ?>
-                            <?= $this->Paginator->next('Próxima »', ['class' => 'btn btn-outline-secondary btn-sm']) ?>
-                            <span class="ms-2 text-muted">
-                                <?= $this->Paginator->counter('Página {{page}} de {{pages}} | Total: {{count}}') ?>
-                            </span>
-                        </div>
+	                        <div class="mt-4 avaliadores-paginacao">
+	                            <?= $this->Paginator->prev('« Anterior', ['class' => 'btn btn-outline-secondary btn-sm']) ?>
+	                            <?= $this->Paginator->numbers([
+	                                'before' => '',
+	                                'after' => '',
+	                                'modulus' => 4,
+	                            ]) ?>
+	                            <?= $this->Paginator->next('Próxima »', ['class' => 'btn btn-outline-secondary btn-sm']) ?>
+	                            <span class="ms-2 text-muted">
+	                                <?= $this->Paginator->counter('Página {{page}} de {{pages}} | Total: {{count}}') ?>
+	                            </span>
+	                        </div>
                     <?php endif; ?>
                 </div>
             </div>

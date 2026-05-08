@@ -131,6 +131,11 @@ class GestaoController extends AppController
         if (!$this->ehYoda()) {
             $erros[] = 'Somente a gestão pode alterar a fonte pagadora';
         }
+        $usuarioLogadoId = (int)($this->identityLogado->id ?? $this->request->getAttribute('identity')['id'] ?? 0);
+        $ehTiEstrito = in_array($usuarioLogadoId, [1, 8088], true);
+        if (!$ehTiEstrito && (int)($bolsista->vigente ?? 0) !== 1) {
+            $erros[] = 'Somente bolsas vigentes podem ter a fonte pagadora alterada.';
+        }
 
         if (!empty($erros) && !$this->request->is(['post', 'put', 'patch'])) {
             $this->Flash->error(implode('<br>', $erros), ['escape' => false]);
@@ -210,6 +215,12 @@ class GestaoController extends AppController
 
         if ($this->request->is(['post', 'put', 'patch'])) {
             $dados = (array)$this->request->getData();
+            $justificativa = trim((string)($dados['justificativa'] ?? ''));
+
+            if ($justificativa === '') {
+                $this->Flash->error('Informe a justificativa da alteração/inserção de anexos.');
+                return $this->redirect(['controller' => 'Gestao', 'action' => 'addarquivo', $inscricaoId]);
+            }
 
             $acaoRapida = $this->processarAcaoRapidaAnexoInscricao(
                 $dados,
@@ -218,6 +229,12 @@ class GestaoController extends AppController
                 $tiposPermitidos
             );
             if ($acaoRapida !== null) {
+                $this->historico(
+                    $inscricaoId,
+                    (int)$inscricao->fase_id,
+                    (int)$inscricao->fase_id,
+                    'Alteração/Inserção de anexos pela gestão. Justificativa: ' . $justificativa
+                );
                 return $this->redirect(['controller' => 'Gestao', 'action' => 'addarquivo', $inscricaoId]);
             }
 
@@ -251,7 +268,7 @@ class GestaoController extends AppController
                         $inscricaoId,
                         (int)$inscricao->fase_id,
                         (int)$inscricao->fase_id,
-                        'Alteração/Inserção de anexos pela gestão'
+                        'Alteração/Inserção de anexos pela gestão. Justificativa: ' . $justificativa
                     );
                     $this->Flash->success('Anexos atualizados com sucesso.');
                 } else {
@@ -1787,5 +1804,131 @@ class GestaoController extends AppController
         }
 
         return compact('edital', 'aptas', 'recusadas');
+    }
+
+    public function ativarbolsasunitario($pbId)
+    {
+        if (!$this->ehYoda()) {
+            $this->Flash->error('Restrito a administradores');
+            return $this->redirect(['controller' => 'Index', 'action' => 'index']);
+        }
+
+        $tblProjetoBolsistas = $this->fetchTable('ProjetoBolsistas');
+        $bolsista = $tblProjetoBolsistas->find()
+            ->contain([
+                'Bolsistas',
+                'Orientadores' => ['Unidades'],
+                'Editais',
+                'Fases',
+                'Substitutos' => ['Bolsistas'],
+            ])
+            ->where(['ProjetoBolsistas.id' => (int)$pbId])
+            ->first();
+
+        if (!$bolsista) {
+            $this->Flash->error('Inscrição não localizada.');
+            return $this->redirect(['controller' => 'Index', 'action' => 'index']);
+        }
+
+        $original = (int)$bolsista->fase_id;
+        $usuarioLogadoId = (int)($this->identityLogado->id ?? $this->request->getAttribute('identity')['id'] ?? 0);
+        $ehTiEstrito = in_array($usuarioLogadoId, [1, 8088], true);
+        $erros = [];
+        if ($bolsista->deleted !== null) {
+            $erros[] = 'Esta inscrição está inativada.';
+        }
+        if (!$ehTiEstrito && !in_array((int)$bolsista->fase_id, [8, 9], true)) {
+            $erros[] = 'A implementação manual so pode ocorrer para status Banco de reserva e aprovado.';
+        }
+
+        $bolsistaUsuarioId = (int)($bolsista->bolsista ?? $bolsista->usuario_id ?? 0);
+        $bolsaVigenteAtual = null;
+        if ($bolsistaUsuarioId > 0) {
+            $bolsaVigenteAtual = $tblProjetoBolsistas->find()
+                ->contain(['Editais'])
+                ->where([
+                    'ProjetoBolsistas.id !=' => (int)$bolsista->id,
+                    'ProjetoBolsistas.bolsista' => $bolsistaUsuarioId,
+                    'ProjetoBolsistas.deleted IS' => null,
+                    'ProjetoBolsistas.fase_id IN' => [1, 2, 3, 4, 5, 8, 9, 11, 15, 16, 23],
+                ])
+                ->orderBy(['ProjetoBolsistas.id' => 'DESC'])
+                ->first();
+        }
+
+        if (!empty($erros) && !$this->request->is(['post', 'put', 'patch'])) {
+            $this->Flash->error(implode('<br>', $erros), ['escape' => false]);
+            return $this->redirect(['controller' => 'Padrao', 'action' => 'visualizar', (int)$bolsista->id]);
+        }
+
+        if ($this->request->is(['post', 'put', 'patch'])) {
+            if (!empty($erros)) {
+                $this->Flash->error(implode('<br>', $erros), ['escape' => false]);
+                return $this->redirect(['controller' => 'Gestao', 'action' => 'ativarbolsasunitario', (int)$bolsista->id]);
+            }
+
+            $dados = $this->request->getData();
+            $tipoBolsa = trim((string)($dados['tipo_bolsa'] ?? ''));
+            $dataInicio = trim((string)($dados['data_inicio'] ?? ''));
+            $justificativa = trim((string)($dados['justificativa'] ?? ''));
+            $errosValidacao = [];
+
+            if ($tipoBolsa === '' || !isset($this->fonte[$tipoBolsa])) {
+                $errosValidacao[] = 'Informe uma fonte pagadora válida.';
+            }
+            if ($dataInicio === '') {
+                $errosValidacao[] = 'Informe a data de implementação da bolsa.';
+            }
+            if ($justificativa === '') {
+                $errosValidacao[] = 'Informe a justificativa da implementação manual.';
+            }
+
+            if (!empty($errosValidacao)) {
+                $this->Flash->error(implode('<br>', $errosValidacao), ['escape' => false]);
+                return $this->redirect(['controller' => 'Gestao', 'action' => 'ativarbolsasunitario', (int)$bolsista->id]);
+            }
+
+            if ($dataInicio !== '') {
+                $bolsista->data_inicio = $this->acertaData($dataInicio);
+            } else {
+                $bolsista->data_inicio = null;
+            }
+
+            $bolsista->data_primeira = $bolsista->data_inicio;
+            $bolsista->tipo_bolsa = $tipoBolsa;
+
+            $temBolsaVigente = $bolsaVigenteAtual !== null;
+            if ($temBolsaVigente) {
+                $bolsista->fase_id = 16;
+                $bolsista->vigente = 0;
+                $historicoTexto = 'Implementação manual de bolsa. O(a) aluno(a) já possui uma bolsa vigente e precisa ser substituído(a). A bolsa foi ativada mas NÃO está vigente.';
+            } else {
+                $bolsista->fase_id = 11;
+                $bolsista->vigente = 1;
+                $historicoTexto = 'Implementação manual da bolsa.';
+            }
+            $historicoTexto .= ' Justificativa: ' . $justificativa;
+            $novaFase = (int)$bolsista->fase_id;
+
+            try {
+                $tblProjetoBolsistas->getConnection()->transactional(function () use ($tblProjetoBolsistas, $bolsista, $original, $novaFase, $historicoTexto) {
+                    $tblProjetoBolsistas->saveOrFail($bolsista);
+                    $this->historico((int)$bolsista->id, $original, $novaFase, $historicoTexto, true);
+                });
+                $this->Flash->success('Implementação realizada com sucesso!');
+            } catch (\Throwable $e) {
+                $this->flashFriendlyException(
+                    $e,
+                    'Erro no Sistema - implementação manual de bolsa',
+                    'Não foi possível concluir a implementação da bolsa. Por favor, tente novamente.'
+                );
+                return $this->redirect(['controller' => 'Gestao', 'action' => 'ativarbolsasunitario', (int)$bolsista->id]);
+            }
+
+            return $this->redirect(['controller' => 'Padrao', 'action' => 'visualizar', (int)$bolsista->id]);
+        }
+
+        $fontes = $this->fonte;
+        $this->set(compact('bolsista', 'fontes', 'erros', 'bolsaVigenteAtual'));
     }
 }

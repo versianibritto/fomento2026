@@ -546,89 +546,6 @@ class ListasController extends AppController
         $this->set(compact('avaliadores', 'anosOptions', 'editais', 'grandesAreas', 'areas', 'todasAreas', 'filtros'));
     }
 
-    public function editarAreaAvaliadorNova(int $id)
-    {
-        $this->request->allowMethod(['get', 'post', 'put', 'patch']);
-
-        if (!$this->ehYoda()) {
-            $this->Flash->error('Área restrita à Gestão de Fomento.');
-            return $this->redirect(['controller' => 'Index', 'action' => 'dashboard']);
-        }
-
-        $avaliadorsTable = $this->fetchTable('Avaliadors');
-        $avaliador = $avaliadorsTable->get($id, [
-            'contain' => ['Usuarios', 'Editais', 'GrandesAreas', 'Areas'],
-        ]);
-
-        if ((string)($avaliador->tipo_avaliador ?? '') !== 'N' || (int)($avaliador->deleted ?? 0) !== 0) {
-            $this->Flash->error('Avaliador não localizado na lista de avaliadores nova.');
-            return $this->redirect(['action' => 'listaAvaliadoresNova']);
-        }
-
-        $grandesAreas = $this->obterGrandesAreasRestritasAvaliadores();
-        $grandeAreaSelecionada = (int)$this->request->getData('grandes_area_id', (int)($avaliador->grandes_area_id ?? 0));
-        $areas = $this->obterAreasPorGrandeAreaAvaliadores($grandeAreaSelecionada);
-        $retorno = (string)$this->request->getData(
-            'retorno',
-            (string)$this->request->getQuery('retorno', $this->request->referer(true))
-        );
-
-        if ($this->request->is(['post', 'put', 'patch'])) {
-            $grandeAreaId = (int)$this->request->getData('grandes_area_id', 0);
-            $areaId = (int)$this->request->getData('area_id', 0);
-            $grandeAreaSalvar = $grandeAreaId > 0 ? $grandeAreaId : null;
-            $areaSalvar = $areaId > 0 ? $areaId : null;
-
-            $erros = [];
-            if ($grandeAreaSalvar !== null && !isset($grandesAreas[$grandeAreaSalvar])) {
-                $erros[] = 'Selecione uma grande área válida.';
-            }
-
-            $areasSelecionadas = $this->obterAreasPorGrandeAreaAvaliadores($grandeAreaSalvar ?? 0);
-            if ($areaSalvar !== null) {
-                if ($grandeAreaSalvar === null) {
-                    $erros[] = 'Selecione a grande área antes de selecionar a área.';
-                } elseif (!isset($areasSelecionadas[$areaSalvar])) {
-                    $erros[] = 'Selecione uma área correspondente à grande área informada.';
-                }
-            }
-
-            if ($erros === [] && $this->existeOutroAvaliadorNovaMesmaCompetencia(
-                (int)$avaliador->id,
-                (int)$avaliador->usuario_id,
-                (int)$avaliador->editai_id,
-                $grandeAreaSalvar,
-                $areaSalvar
-            )) {
-                $erros[] = 'Já existe cadastro deste avaliador para o mesmo edital com esta competência.';
-            }
-
-            if ($erros !== []) {
-                $this->Flash->error(implode('<br>', $erros), ['escape' => false]);
-                $areas = $areasSelecionadas;
-            } else {
-                $avaliador = $avaliadorsTable->patchEntity($avaliador, [
-                    'grandes_area_id' => $grandeAreaSalvar,
-                    'area_id' => $areaSalvar,
-                ]);
-
-                try {
-                    $avaliadorsTable->saveOrFail($avaliador);
-                    $this->Flash->success('Grande área e área atualizadas com sucesso.');
-                    return $this->redirect($retorno !== '' ? $retorno : ['action' => 'listaAvaliadoresNova']);
-                } catch (\Throwable $e) {
-                    $this->flashFriendlyException(
-                        $e,
-                        'Erro no Sistema - alterar area de avaliador nova',
-                        'Não foi possível atualizar a grande área e a área do avaliador.'
-                    );
-                }
-            }
-        }
-
-        $this->set(compact('avaliador', 'grandesAreas', 'areas', 'retorno'));
-    }
-
     public function listaInscricoesAvaliadores()
     {
         $this->request->allowMethod(['get']);
@@ -656,6 +573,7 @@ class ListasController extends AppController
 
         $statusOptions = [
             'vinculado' => 'Vinculado (2 avaliadores)',
+            'parcial' => 'Vinculação parcial (1 avaliador)',
             'nao_vinculado' => 'Não vinculado (0 avaliadores)',
         ];
         if ($filtros['status_vinculo'] !== '' && !isset($statusOptions[$filtros['status_vinculo']])) {
@@ -675,6 +593,174 @@ class ListasController extends AppController
         $inscricoes = $this->paginate($query, ['limit' => 12]);
 
         $this->set(compact('inscricoes', 'editais', 'grandesAreas', 'areas', 'filtros', 'statusOptions', 'homologadoOptions'));
+    }
+
+    public function listaVinculosAvaliadorBolsistas()
+    {
+        $this->request->allowMethod(['get']);
+
+        if (!$this->ehYoda()) {
+            $this->Flash->error('Área restrita à Gestão de Fomento.');
+            return $this->redirect(['controller' => 'Index', 'action' => 'dashboard']);
+        }
+
+        $filtros = [
+            'avaliador_nome' => trim((string)$this->request->getQuery('avaliador_nome', '')),
+            'ativo' => strtoupper(trim((string)$this->request->getQuery('ativo', ''))),
+            'status' => strtoupper(trim((string)$this->request->getQuery('status', ''))),
+            'unidade_id' => (int)$this->request->getQuery('unidade_id', 0),
+            'tipo' => strtoupper(trim((string)$this->request->getQuery('tipo', ''))),
+            'editai_id' => (int)$this->request->getQuery('editai_id', 0),
+        ];
+
+        $ativoOptions = [
+            'S' => 'Sim',
+            'N' => 'Não',
+        ];
+        if ($filtros['ativo'] !== '' && !isset($ativoOptions[$filtros['ativo']])) {
+            $filtros['ativo'] = '';
+        }
+
+        $statusOptions = [
+            'S' => 'Avaliado',
+            'N' => 'Não avaliado',
+        ];
+        if ($filtros['status'] !== '' && !isset($statusOptions[$filtros['status']])) {
+            $filtros['status'] = '';
+        }
+
+        $tipoOptions = [
+            'N' => 'Inscrições dos editais',
+            'R' => 'RAIC',
+            'W' => 'Workshop',
+        ];
+        if ($filtros['tipo'] !== '' && !isset($tipoOptions[$filtros['tipo']])) {
+            $filtros['tipo'] = '';
+        }
+
+        $unidades = $this->obterUnidadesDisponiveisAvaliadores();
+        if ($filtros['unidade_id'] !== 0 && !isset($unidades[$filtros['unidade_id']])) {
+            $filtros['unidade_id'] = 0;
+        }
+
+        $editais = $this->obterEditaisAbertosVinculosAvaliadores();
+        if ($filtros['editai_id'] !== 0 && !isset($editais[$filtros['editai_id']])) {
+            $filtros['editai_id'] = 0;
+        }
+        $editaisAbertosIds = array_keys($editais);
+
+        $query = $this->fetchTable('AvaliadorBolsistas')->find()
+            ->contain([
+                'Usuarios' => ['Unidades', 'Vinculos'],
+                'Avaliadors' => ['Usuarios' => ['Unidades', 'Vinculos'], 'Unidades'],
+                'ProjetoBolsistas' => ['Bolsistas', 'Orientadores' => ['Unidades'], 'Editais'],
+                'Raics' => ['Usuarios', 'Orientadores', 'Unidades', 'Editais'],
+                'Workshops' => ['Usuarios', 'Orientadores', 'Unidades', 'Editais'],
+                'Editais',
+                'Criadores',
+                'Deletadores',
+            ])
+            ->leftJoin(['AvaliadorsFiltro' => 'avaliadors'], 'AvaliadorsFiltro.id = AvaliadorBolsistas.avaliador_id')
+            ->leftJoin(['UsuariosAvaliadorDireto' => 'usuarios'], 'UsuariosAvaliadorDireto.id = AvaliadorBolsistas.usuario_id')
+            ->leftJoin(['UsuariosAvaliadorCadastro' => 'usuarios'], 'UsuariosAvaliadorCadastro.id = AvaliadorsFiltro.usuario_id')
+            ->leftJoin(
+                ['ProjetoBolsistasLegado' => 'projeto_bolsistas'],
+                [
+                    'ProjetoBolsistasLegado.id = AvaliadorBolsistas.bolsista',
+                    'AvaliadorBolsistas.projeto_bolsista_id IS' => null,
+                    'AvaliadorBolsistas.tipo' => 'N',
+                ]
+            )
+            ->leftJoin(
+                ['BolsistasLegado' => 'usuarios'],
+                'BolsistasLegado.id = ProjetoBolsistasLegado.bolsista'
+            )
+            ->leftJoin(
+                ['OrientadoresLegado' => 'usuarios'],
+                'OrientadoresLegado.id = ProjetoBolsistasLegado.orientador'
+            )
+            ->leftJoin(
+                ['UnidadesOrientadoresLegado' => 'unidades'],
+                'UnidadesOrientadoresLegado.id = OrientadoresLegado.unidade_id'
+            )
+            ->select([
+                'projeto_bolsista_legado_id' => 'ProjetoBolsistasLegado.id',
+                'bolsista_legado_nome' => 'BolsistasLegado.nome',
+                'orientador_legado_nome' => 'OrientadoresLegado.nome',
+                'unidade_orientador_legado_sigla' => 'UnidadesOrientadoresLegado.sigla',
+            ])
+            ->enableAutoFields(true)
+            ->orderBy([
+                'AvaliadorBolsistas.deleted' => 'ASC',
+                'AvaliadorBolsistas.created' => 'DESC',
+                'AvaliadorBolsistas.id' => 'DESC',
+            ]);
+
+        if ($editaisAbertosIds === []) {
+            $query->where(['1 = 0']);
+        } else {
+            $query->where([
+                'AvaliadorBolsistas.tipo IN' => ['N', 'V', 'Z', 'W'],
+                'AvaliadorBolsistas.editai_id IN' => $editaisAbertosIds,
+            ]);
+        }
+
+        if ($filtros['avaliador_nome'] !== '') {
+            $nome = '%' . str_replace(' ', '%', $filtros['avaliador_nome']) . '%';
+            $query->where(function ($exp) use ($nome) {
+                return $exp->or([
+                    'UsuariosAvaliadorDireto.nome LIKE' => $nome,
+                    'UsuariosAvaliadorCadastro.nome LIKE' => $nome,
+                ]);
+            });
+        }
+
+        if ($filtros['ativo'] === 'S') {
+            $query->where(['AvaliadorBolsistas.deleted' => 0]);
+        } elseif ($filtros['ativo'] === 'N') {
+            $query->where(['AvaliadorBolsistas.deleted' => 1]);
+        }
+
+        if ($filtros['status'] === 'S') {
+            $query->where(['AvaliadorBolsistas.situacao' => 'F']);
+        } elseif ($filtros['status'] === 'N') {
+            $query->where(function ($exp) {
+                return $exp->or([
+                    'AvaliadorBolsistas.situacao IS' => null,
+                    'AvaliadorBolsistas.situacao !=' => 'F',
+                ]);
+            });
+        }
+
+        if ($filtros['unidade_id'] !== 0) {
+            $query->where(function ($exp) use ($filtros) {
+                return $exp->or([
+                    'UsuariosAvaliadorDireto.unidade_id' => $filtros['unidade_id'],
+                    'UsuariosAvaliadorCadastro.unidade_id' => $filtros['unidade_id'],
+                    'AvaliadorsFiltro.unidade_id' => $filtros['unidade_id'],
+                ]);
+            });
+        }
+
+        if ($filtros['editai_id'] !== 0) {
+            $query->where(['AvaliadorBolsistas.editai_id' => $filtros['editai_id']]);
+        }
+
+        if ($filtros['tipo'] !== '') {
+            if ($filtros['tipo'] === 'R') {
+                $query->where(['AvaliadorBolsistas.tipo IN' => ['V', 'Z']]);
+            } else {
+                $query->where(['AvaliadorBolsistas.tipo' => $filtros['tipo']]);
+            }
+        }
+
+        if ((int)$this->request->getQuery('exportar', 0) === 1) {
+            return $this->exportarListaVinculosAvaliadorBolsistasCsv($query);
+        }
+
+        $vinculos = $this->paginate($query, ['limit' => 50]);
+
+        $this->set(compact('vinculos', 'filtros', 'ativoOptions', 'statusOptions', 'tipoOptions', 'unidades', 'editais'));
     }
 
     public function dashcountavaliadores()
@@ -1000,6 +1086,152 @@ class ListasController extends AppController
         return $anosOptions;
     }
 
+    protected function exportarListaVinculosAvaliadorBolsistasCsv($query)
+    {
+        $header = [
+            'id',
+            'referencia_tipo',
+            'referencia_id',
+            'edital',
+            'avaliador',
+            'ativo',
+            'status',
+            'orientador',
+            'bolsista',
+            'nota',
+            'nota_sumula',
+            'unidade_avaliador',
+            'unidade_referencia',
+            'ano',
+            'ordem',
+            'avaliador_telefone',
+            'avaliador_telefone_contato',
+            'avaliador_celular',
+            'avaliador_whatsapp',
+            'avaliador_email',
+            'avaliador_email_alternativo',
+            'avaliador_email_contato',
+            'avaliador_vinculo',
+        ];
+
+        $rows = [];
+        foreach ($query->all() as $vinculo) {
+            $dados = $this->montarDadosVinculoAvaliadorBolsista($vinculo);
+            $avaliadorUsuario = $vinculo->usuario ?? $vinculo->avaliador->usuario ?? null;
+
+            $rows[] = [
+                $vinculo->id ?? '',
+                $dados['referencia_tipo'],
+                $dados['referencia_id'],
+                $dados['edital_nome'],
+                $dados['avaliador_nome'],
+                $dados['ativo'],
+                $dados['status'],
+                $dados['orientador_nome'],
+                $dados['bolsista_nome'],
+                $dados['nota'],
+                $dados['nota_sumula'],
+                $dados['unidade_avaliador'],
+                $dados['unidade_referencia'],
+                $vinculo->ano ?? '',
+                $vinculo->ordem ?? '',
+                $avaliadorUsuario->telefone ?? '',
+                $avaliadorUsuario->telefone_contato ?? '',
+                $avaliadorUsuario->celular ?? '',
+                $avaliadorUsuario->whatsapp ?? '',
+                $avaliadorUsuario->email ?? '',
+                $avaliadorUsuario->email_alternativo ?? '',
+                $avaliadorUsuario->email_contato ?? '',
+                $avaliadorUsuario->vinculo->nome ?? '',
+            ];
+        }
+
+        return $this->downloadCsvResponse(
+            'vinculos_avaliadores_' . date('Ymd_His') . '.csv',
+            $header,
+            $rows
+        );
+    }
+
+    protected function montarDadosVinculoAvaliadorBolsista($vinculo): array
+    {
+        $naoInformado = 'Não informado';
+        $referenciaTipo = 'Referência não identificada';
+        $referenciaId = '';
+        $orientadorNome = $naoInformado;
+        $bolsistaNome = $naoInformado;
+        $unidadeReferencia = '';
+
+        if (!empty($vinculo->projeto_bolsista_id) || !empty($vinculo->projeto_bolsista_legado_id)) {
+            $referenciaTipo = 'Inscrição';
+            $referenciaId = (string)(int)($vinculo->projeto_bolsista_id ?: $vinculo->projeto_bolsista_legado_id);
+            $orientadorNome = $vinculo->projeto_bolsista->orientadore->nome
+                ?? $vinculo->orientador_legado_nome
+                ?? $naoInformado;
+            $bolsistaNome = $vinculo->projeto_bolsista->bolsista_usuario->nome
+                ?? $vinculo->bolsista_legado_nome
+                ?? $naoInformado;
+            $unidadeReferencia = $vinculo->projeto_bolsista->orientadore->unidade->sigla
+                ?? $vinculo->unidade_orientador_legado_sigla
+                ?? '';
+        } elseif (!empty($vinculo->raic_id)) {
+            $referenciaTipo = 'RAIC';
+            $referenciaId = (string)(int)$vinculo->raic_id;
+            $orientadorNome = $vinculo->raic->orientadore->nome ?? $naoInformado;
+            $bolsistaNome = $vinculo->raic->usuario->nome ?? $naoInformado;
+            $unidadeReferencia = $vinculo->raic->unidade->sigla ?? '';
+        } elseif (!empty($vinculo->workshop_id)) {
+            $referenciaTipo = 'Workshop';
+            $referenciaId = (string)(int)$vinculo->workshop_id;
+            $orientadorNome = $vinculo->workshop->orientadore->nome ?? $naoInformado;
+            $bolsistaNome = $vinculo->workshop->usuario->nome ?? $naoInformado;
+            $unidadeReferencia = $vinculo->workshop->unidade->sigla ?? '';
+        } elseif (!empty($vinculo->bolsista)) {
+            $referenciaTipo = 'Legado';
+            $referenciaId = (string)(int)$vinculo->bolsista;
+        }
+
+        $avaliadorNome = $vinculo->usuario->nome
+            ?? $vinculo->avaliador->usuario->nome
+            ?? $naoInformado;
+        $unidadeAvaliador = $vinculo->usuario->unidade->sigla
+            ?? $vinculo->avaliador->usuario->unidade->sigla
+            ?? $vinculo->avaliador->unidade->sigla
+            ?? '';
+        $deletado = (int)($vinculo->deleted ?? 0) === 1;
+        $avaliado = (string)($vinculo->situacao ?? '') === 'F';
+        $emEdicao = (string)($vinculo->situacao ?? '') === 'E';
+        $editalNome = $vinculo->editai->nome
+            ?? $vinculo->projeto_bolsista->editai->nome
+            ?? $vinculo->raic->editai->nome
+            ?? $vinculo->workshop->editai->nome
+            ?? '';
+
+        return [
+            'referencia_tipo' => $referenciaTipo,
+            'referencia_id' => $referenciaId,
+            'edital_nome' => $editalNome,
+            'avaliador_nome' => $avaliadorNome,
+            'ativo' => $deletado ? 'Não' : 'Sim',
+            'status' => $avaliado ? 'Avaliado' : 'Não avaliado',
+            'orientador_nome' => $orientadorNome,
+            'bolsista_nome' => $bolsistaNome,
+            'nota' => $emEdicao ? '-' : $this->formatarNotaVinculoAvaliadorBolsista($vinculo->nota ?? null),
+            'nota_sumula' => $emEdicao ? '-' : $this->formatarNotaVinculoAvaliadorBolsista($vinculo->nota_sumula ?? null),
+            'unidade_avaliador' => $unidadeAvaliador,
+            'unidade_referencia' => $unidadeReferencia,
+        ];
+    }
+
+    protected function formatarNotaVinculoAvaliadorBolsista($valor): string
+    {
+        if ($valor === null || $valor === '') {
+            return '-';
+        }
+
+        return number_format((float)$valor, 2, ',', '.');
+    }
+
     protected function exportarListaAvaliadoresRaicCsv($query)
     {
         $avaliadores = $query->all();
@@ -1159,6 +1391,21 @@ class ListasController extends AppController
             ->where([
                 'Editais.deleted' => 0,
                 'Editais.origem IN' => ['N', 'R'],
+                'Editais.inicio_avaliar < NOW()',
+                'Editais.fim_avaliar > NOW()',
+            ])
+            ->orderBy(['Editais.nome' => 'ASC'])
+            ->toArray();
+    }
+
+    protected function obterEditaisAbertosVinculosAvaliadores(): array
+    {
+        return $this->fetchTable('Editais')->find('list', [
+            'keyField' => 'id',
+            'valueField' => 'nome',
+        ])
+            ->where([
+                'Editais.deleted' => 0,
                 'Editais.inicio_avaliar < NOW()',
                 'Editais.fim_avaliar > NOW()',
             ])
@@ -1355,6 +1602,8 @@ class ListasController extends AppController
 
         if ($filtros['status_vinculo'] === 'vinculado') {
             $query->where(['COALESCE(av_vinculos.total_avaliadores, 0) = 2']);
+        } elseif ($filtros['status_vinculo'] === 'parcial') {
+            $query->where(['COALESCE(av_vinculos.total_avaliadores, 0) = 1']);
         } elseif ($filtros['status_vinculo'] === 'nao_vinculado') {
             $query->where(['COALESCE(av_vinculos.total_avaliadores, 0) = 0']);
         }

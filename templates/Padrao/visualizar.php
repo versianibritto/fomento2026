@@ -231,6 +231,12 @@ if (!$temDataInicio && !$temDataFim) {
         $controllerFluxo = (string)($controllerFluxo ?? ($isRenovacao ? 'Renovacoes' : 'Inscricoes'));
         $identityTela = $this->request->getAttribute('identity');
         $ehTIVisualizacao = in_array((int)($identityTela->id ?? 0), [1, 8088], true);
+        $podeImplementarBolsaManual = empty($inscricao->deleted)
+            && ($ehTIVisualizacao || in_array($faseAtual, [8, 9], true));
+        $homologadoAtualTela = strtoupper((string)($inscricao->homologado ?? ''));
+        $podeAlterarResultado = empty($inscricao->deleted)
+            && in_array($faseAtual, [4, 8, 9, 10], true)
+            && in_array($homologadoAtualTela, ['S', 'N'], true);
         $origemTela = strtoupper((string)($inscricao->origem ?? ''));
         $ehOrientadorTela = !empty($identityTela->id) && (int)$identityTela->id === (int)($inscricao->orientador ?? 0);
         $podeDesistirProcesso = !$isRenovacao
@@ -942,31 +948,55 @@ if (!$temDataInicio && !$temDataFim) {
                             <table class="table table-sm table-striped align-middle">
                                 <thead>
                                     <tr>
-                                        <th>Avaliador</th>
-                                        <th>Status</th>
-                                        <th>Nota</th>
-                                        <th>Nota súmula</th>
-                                        <th>Total</th>
+	                                        <th>Avaliador</th>
+	                                        <th>Status</th>
+                                            <th>Cadastro</th>
+                                            <th>Exclusão</th>
+	                                        <th>Nota</th>
+	                                        <th>Nota súmula</th>
                                         <th>Ações</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <?php foreach ($avaliacoes as $av): ?>
-                                        <tr>
-                                            <td>
-                                                <?php
-                                                    $ordemAvaliador = (int)($av->ordem ?? 0);
-                                                    if ($ehYoda) {
-                                                        echo !empty($av->avaliador->usuario->nome)
-                                                            ? h($av->avaliador->usuario->nome)
-                                                            : 'Avaliador #' . (int)$av->avaliador_id;
-                                                    } else {
-                                                        echo 'Avaliador';
-                                                        if ($ordemAvaliador > 0) {
-                                                            echo ' ' . h((string)$ordemAvaliador);
-                                                        }
-                                                    }
-                                                ?>
+                                            <?php
+                                                $avaliacaoDeletada = (int)($av->deleted ?? 0) === 1;
+                                                $dataCadastro = $av->created ?? null;
+                                                $dataCadastroTexto = $dataCadastro && method_exists($dataCadastro, 'format')
+                                                    ? $dataCadastro->format('d/m/Y H:i')
+                                                    : 'Não informado';
+                                                $usuarioCadastro = trim((string)($av->criador->nome ?? ''));
+                                                if ($usuarioCadastro === '') {
+                                                    $usuarioCadastro = 'Não informado';
+                                                }
+                                                $dataExclusao = $av->deletado_em ?? null;
+                                                $dataExclusaoTexto = $dataExclusao && method_exists($dataExclusao, 'format')
+                                                    ? $dataExclusao->format('d/m/Y H:i')
+                                                    : 'Não informado';
+                                                $usuarioExclusao = trim((string)($av->deletador->nome ?? ''));
+                                                if ($usuarioExclusao === '') {
+                                                    $usuarioExclusao = 'Não informado';
+                                                }
+                                            ?>
+	                                        <tr class="<?= $avaliacaoDeletada ? 'table-danger' : '' ?>">
+	                                            <td>
+	                                                <?php
+	                                                    $ordemAvaliador = (int)($av->ordem ?? 0);
+	                                                    if ($ehYoda) {
+	                                                        $nomeAvaliadorTela = !empty($av->avaliador->usuario->nome)
+	                                                            ? h($av->avaliador->usuario->nome)
+	                                                            : 'Avaliador #' . (int)$av->avaliador_id;
+                                                            echo $nomeAvaliadorTela;
+                                                            if ($ordemAvaliador > 0) {
+                                                                echo ' <span class="text-muted small">(AV ' . h((string)$ordemAvaliador) . ')</span>';
+                                                            }
+	                                                    } else {
+	                                                        echo 'Avaliador';
+	                                                        if ($ordemAvaliador > 0) {
+	                                                            echo ' <span class="text-muted small">(AV ' . h((string)$ordemAvaliador) . ')</span>';
+	                                                        }
+	                                                    }
+	                                                ?>
                                             </td>
                                             <td>
                                                 <?php
@@ -988,10 +1018,24 @@ if (!$temDataInicio && !$temDataFim) {
                                                 <?php if ($statusAvaliacao !== ''): ?>
                                                     <?= $statusAvaliacaoIcone ?><?= h($statusAvaliacao) ?>
                                                 <?php else: ?>
-                                                    <?= $naoInformado ?>
-                                                <?php endif; ?>
-                                            </td>
-                                            <td>
+	                                                    <?= $naoInformado ?>
+	                                                <?php endif; ?>
+	                                            </td>
+                                                <td>
+                                                    <div class="small">
+                                                        <?= h($dataCadastroTexto) ?><br>
+                                                        <span class="text-muted"><?= h($usuarioCadastro) ?></span>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <?php if ($avaliacaoDeletada): ?>
+                                                        <div class="small">
+                                                            <?= h($dataExclusaoTexto) ?><br>
+                                                            <span class="text-muted"><?= h($usuarioExclusao) ?></span>
+                                                        </div>
+                                                    <?php endif; ?>
+                                                </td>
+	                                            <td>
                                                 <?php
                                                     $situacaoAvaliacao = (string)($av->situacao ?? '');
                                                     if ($situacaoAvaliacao === 'F') {
@@ -1014,20 +1058,7 @@ if (!$temDataInicio && !$temDataFim) {
                                                     }
                                                 ?>
                                             </td>
-                                            <td>
-                                                <?php
-                                                    if ($situacaoAvaliacao === 'F') {
-                                                        $notaQuesitos = $av->nota !== null ? (float)$av->nota : 0.0;
-                                                        $notaSumula = $av->nota_sumula !== null ? (float)$av->nota_sumula : 0.0;
-                                                        echo h(number_format($notaQuesitos + $notaSumula, 2, ',', '.'));
-                                                    } elseif ($situacaoAvaliacao === 'E') {
-                                                        echo 'Não lançada';
-                                                    } else {
-                                                        echo $naoInformado;
-                                                    }
-                                                ?>
-                                            </td>
-                                            <td>
+	                                            <td>
                                                 <?php
                                                     $identityAtual = $this->request->getAttribute('identity');
                                                     $identityAtualId = is_array($identityAtual)
@@ -1150,6 +1181,28 @@ if (!$temDataInicio && !$temDataFim) {
                                 <hr class="my-3">
                                 <div class="row g-3 align-items-center">
                                     <div class="col-md-4">
+                                        <?php if ($podeImplementarBolsaManual): ?>
+                                            <?= $this->Html->link(
+                                                'Implementar Bolsa',
+                                                ['controller' => 'Gestao', 'action' => 'ativarbolsasunitario', (int)$inscricao->id],
+                                                ['class' => 'btn btn-outline-success w-100']
+                                            ) ?>
+                                        <?php else: ?>
+                                            <button type="button" class="btn btn-outline-secondary w-100" disabled>Implementar Bolsa</button>
+                                        <?php endif; ?>
+                                    </div>
+                                    <div class="col-md-8">
+                                        <p class="mb-1 text-muted">
+                                            <strong class="text-body">Situação atual: <?= !empty($inscricao->fase->nome) ? h($inscricao->fase->nome) : '-' ?></strong>
+                                        </p>
+                                        <p class="mb-0 text-muted">
+                                            Implementação manual da bolsa. Para gestão, disponível apenas em Banco Reserva ou Aprovado.
+                                        </p>
+                                    </div>
+                                </div>
+                                <hr class="my-3">
+                                <div class="row g-3 align-items-center">
+                                    <div class="col-md-4">
                                         <?= $this->Html->link(
                                             'Gerenciar Anexos',
                                             ['controller' => 'Gestao', 'action' => 'addarquivo', (int)$inscricao->id],
@@ -1197,6 +1250,33 @@ if (!$temDataInicio && !$temDataFim) {
                                         </div>
                                     </div>
                                 <?php endif; ?>
+                                <hr class="my-3">
+                                <div class="row g-3 align-items-center">
+                                    <div class="col-md-4">
+                                        <?php if ($podeAlterarResultado): ?>
+                                            <?= $this->Html->link(
+                                                'Alterar Resultado',
+                                                ['controller' => 'Padrao', 'action' => 'addresultado', (int)$inscricao->id],
+                                                ['class' => 'btn btn-outline-primary w-100']
+                                            ) ?>
+                                        <?php else: ?>
+                                            <button type="button" class="btn btn-outline-secondary w-100" disabled>Alterar Resultado</button>
+                                        <?php endif; ?>
+                                    </div>
+                                    <div class="col-md-8">
+                                        <p class="mb-1 text-muted">
+                                            <strong class="text-body">Homologação: <?= h($homologadoAtualTela === 'S' ? 'Homologada' : ($homologadoAtualTela === 'N' ? 'Não homologada' : 'Não definida')) ?></strong>
+                                        </p>
+                                        <p class="mb-0 text-muted">
+                                            <?php if ($homologadoAtualTela === ''): ?>
+                                                Homologação não definida não permite alteração de resultado.
+                                                Disponível apenas para as fases Finalizada, Banco Reserva, Aprovado ou Reprovado.
+                                            <?php else: ?>
+                                                Registra aprovação, banco reserva ou reprovação com justificativa no histórico.
+                                            <?php endif; ?>
+                                        </p>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>

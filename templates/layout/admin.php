@@ -355,6 +355,13 @@
                                * Vinculação de Avaliadores IC
                             </a>
                         </li>
+                        <?php if ((int)($usuario_logado['yoda'] ?? 0) === 1) { ?>
+                        <li class="sidebar-item">
+                            <a href="/listas/lista-vinculos-avaliador-bolsistas" class="sidebar-link <?=(($this->request->getParam('controller') == 'Listas' && $this->request->getParam('action') == 'listaVinculosAvaliadorBolsistas') ? 'active' : '')?>">
+                               * Vínculos de Avaliadores
+                            </a>
+                        </li>
+                        <?php } ?>
                         
                       
                         <?php if ((int)($usuario_logado['yoda'] ?? 0) === 1) { ?>

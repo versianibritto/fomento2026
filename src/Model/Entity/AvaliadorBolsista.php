@@ -32,6 +32,9 @@ use Cake\ORM\Entity;
  * @property string|null $parecer
  * @property int|null $ordem
  * @property int|null $banca_id
+ * @property int|null $criado_por
+ * @property int|null $deletado_por
+ * @property \Cake\I18n\DateTime|null $deletado_em
  *
  * @property \App\Model\Entity\Avaliador $avaliador
  * @property \App\Model\Entity\User $usuario
@@ -40,6 +43,8 @@ use Cake\ORM\Entity;
  * @property \App\Model\Entity\ProjetoBolsista $projeto_bolsista
  * @property \App\Model\Entity\Editai $editai
  * @property \App\Model\Entity\Banca $banca
+ * @property \App\Model\Entity\Usuarios $criador
+ * @property \App\Model\Entity\Usuarios $deletador
  * @property \App\Model\Entity\Avaliation[] $avaliations
  * @property \App\Model\Entity\AvaliationsSumula[] $avaliations_sumulas
  */
@@ -78,6 +83,9 @@ class AvaliadorBolsista extends Entity
         'parecer' => true,
         'ordem' => true,
         'banca_id' => true,
+        'criado_por' => true,
+        'deletado_por' => true,
+        'deletado_em' => true,
         'avaliador' => true,
         'usuario' => true,
         'raic' => true,
@@ -85,6 +93,8 @@ class AvaliadorBolsista extends Entity
         'projeto_bolsista' => true,
         'editai' => true,
         'banca' => true,
+        'criador' => true,
+        'deletador' => true,
         'avaliations' => true,
         'avaliations_sumulas' => true,
     ];

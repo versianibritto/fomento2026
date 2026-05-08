@@ -1527,6 +1527,89 @@ class AvaliadoresController extends AppController
         ]);
     }
 
+    public function editarAreaAvaliadorNova(int $id)
+    {
+        $this->request->allowMethod(['get', 'post', 'put', 'patch']);
+
+        if (!$this->ehYoda()) {
+            $this->Flash->error('Área restrita à Gestão de Fomento.');
+            return $this->redirect(['controller' => 'Index', 'action' => 'dashboard']);
+        }
+
+        $avaliadorsTable = $this->fetchTable('Avaliadors');
+        $avaliador = $avaliadorsTable->get($id, [
+            'contain' => ['Usuarios', 'Editais', 'GrandesAreas', 'Areas'],
+        ]);
+
+        if ((string)($avaliador->tipo_avaliador ?? '') !== 'N' || (int)($avaliador->deleted ?? 0) !== 0) {
+            $this->Flash->error('Avaliador não localizado na lista de avaliadores nova.');
+            return $this->redirect(['controller' => 'Listas', 'action' => 'listaAvaliadoresNova']);
+        }
+
+        $grandesAreas = $this->obterGrandesAreasRestritasAvaliadores();
+        $grandeAreaSelecionada = (int)$this->request->getData('grandes_area_id', (int)($avaliador->grandes_area_id ?? 0));
+        $areas = $this->obterAreasPorGrandeAreaAvaliadores($grandeAreaSelecionada);
+        $retorno = (string)$this->request->getData(
+            'retorno',
+            (string)$this->request->getQuery('retorno', $this->request->referer(true))
+        );
+
+        if ($this->request->is(['post', 'put', 'patch'])) {
+            $grandeAreaId = (int)$this->request->getData('grandes_area_id', 0);
+            $areaId = (int)$this->request->getData('area_id', 0);
+            $grandeAreaSalvar = $grandeAreaId > 0 ? $grandeAreaId : null;
+            $areaSalvar = $areaId > 0 ? $areaId : null;
+
+            $erros = [];
+            if ($grandeAreaSalvar !== null && !isset($grandesAreas[$grandeAreaSalvar])) {
+                $erros[] = 'Selecione uma grande área válida.';
+            }
+
+            $areasSelecionadas = $this->obterAreasPorGrandeAreaAvaliadores($grandeAreaSalvar ?? 0);
+            if ($areaSalvar !== null) {
+                if ($grandeAreaSalvar === null) {
+                    $erros[] = 'Selecione a grande área antes de selecionar a área.';
+                } elseif (!isset($areasSelecionadas[$areaSalvar])) {
+                    $erros[] = 'Selecione uma área correspondente à grande área informada.';
+                }
+            }
+
+            if ($erros === [] && $this->existeOutroAvaliadorNovaMesmaCompetencia(
+                (int)$avaliador->id,
+                (int)$avaliador->usuario_id,
+                (int)$avaliador->editai_id,
+                $grandeAreaSalvar,
+                $areaSalvar
+            )) {
+                $erros[] = 'Já existe cadastro deste avaliador para o mesmo edital com esta competência.';
+            }
+
+            if ($erros !== []) {
+                $this->Flash->error(implode('<br>', $erros), ['escape' => false]);
+                $areas = $areasSelecionadas;
+            } else {
+                $avaliador = $avaliadorsTable->patchEntity($avaliador, [
+                    'grandes_area_id' => $grandeAreaSalvar,
+                    'area_id' => $areaSalvar,
+                ]);
+
+                try {
+                    $avaliadorsTable->saveOrFail($avaliador);
+                    $this->Flash->success('Grande área e área atualizadas com sucesso.');
+                    return $this->redirect($retorno !== '' ? $retorno : ['controller' => 'Listas', 'action' => 'listaAvaliadoresNova']);
+                } catch (\Throwable $e) {
+                    $this->flashFriendlyException(
+                        $e,
+                        'Erro no Sistema - alterar area de avaliador nova',
+                        'Não foi possível atualizar a grande área e a área do avaliador.'
+                    );
+                }
+            }
+        }
+
+        $this->set(compact('avaliador', 'grandesAreas', 'areas', 'retorno'));
+    }
+
     public function vincularInscricao($id = null)
     {
         $this->request->allowMethod(['get', 'post', 'put', 'patch']);
@@ -1576,6 +1659,7 @@ class AvaliadoresController extends AppController
         $vinculosAtivos = $avaliadorBolsistasTable->find()
             ->contain([
                 'Avaliadors' => ['Usuarios', 'GrandesAreas', 'Areas'],
+                'Criadores',
             ])
             ->where([
                 'AvaliadorBolsistas.deleted' => 0,
@@ -1680,27 +1764,31 @@ class AvaliadoresController extends AppController
                 }
             }
 
-            if ($avaliador1 <= 0 || $avaliador2 <= 0) {
-                $this->Flash->error('Selecione os dois avaliadores.');
+            $avaliadoresInformados = array_filter([$avaliador1, $avaliador2], static function (int $avaliadorId): bool {
+                return $avaliadorId > 0;
+            });
+
+            if ($avaliadoresInformados === []) {
+                $this->Flash->error('Selecione pelo menos um avaliador.');
                 return $this->redirect(['action' => 'vincularInscricao', $inscricao->id]);
             }
 
-            if ($avaliador1 === $avaliador2) {
+            if ($avaliador1 > 0 && $avaliador2 > 0 && $avaliador1 === $avaliador2) {
                 $this->Flash->error('Não pode haver repetição entre os avaliadores.');
                 return $this->redirect(['action' => 'vincularInscricao', $inscricao->id]);
             }
 
-            if (in_array((int)($inscricao->orientador ?? 0), [$avaliador1, $avaliador2], true)) {
+            if (in_array((int)($inscricao->orientador ?? 0), $avaliadoresInformados, true)) {
                 $this->Flash->error('O orientador não pode ser vinculado como avaliador.');
                 return $this->redirect(['action' => 'vincularInscricao', $inscricao->id]);
             }
 
-            if (!empty($inscricao->coorientador) && in_array((int)$inscricao->coorientador, [$avaliador1, $avaliador2], true)) {
+            if (!empty($inscricao->coorientador) && in_array((int)$inscricao->coorientador, $avaliadoresInformados, true)) {
                 $this->Flash->error('O coorientador não pode ser vinculado como avaliador.');
                 return $this->redirect(['action' => 'vincularInscricao', $inscricao->id]);
             }
 
-            if (!empty($inscricao->bolsista) && in_array((int)$inscricao->bolsista, [$avaliador1, $avaliador2], true)) {
+            if (!empty($inscricao->bolsista) && in_array((int)$inscricao->bolsista, $avaliadoresInformados, true)) {
                 $this->Flash->error('O bolsista não pode ser vinculado como avaliador.');
                 return $this->redirect(['action' => 'vincularInscricao', $inscricao->id]);
             }
@@ -1733,7 +1821,7 @@ class AvaliadoresController extends AppController
                 ->select(['Avaliadors.id', 'Avaliadors.usuario_id', 'Usuarios.nome'])
                 ->leftJoinWith('Usuarios')
                 ->where([
-                    'Avaliadors.id IN' => [$avaliador1, $avaliador2],
+                    'Avaliadors.id IN' => $avaliadoresInformados,
                     'Avaliadors.deleted' => 0,
                 ])
                 ->enableHydration(false)
@@ -1741,14 +1829,22 @@ class AvaliadoresController extends AppController
                 ->indexBy('id')
                 ->toArray();
 
-            if (count($avaliadoresSelecionados) !== 2) {
+            if (count($avaliadoresSelecionados) !== count($avaliadoresInformados)) {
                 $this->Flash->error('Um ou mais avaliadores selecionados não estão mais disponíveis.');
                 return $this->redirect(['action' => 'vincularInscricao', $inscricao->id]);
             }
 
-            $usuarioAvaliador1 = (int)($avaliadoresSelecionados[$avaliador1]['usuario_id'] ?? 0);
-            $usuarioAvaliador2 = (int)($avaliadoresSelecionados[$avaliador2]['usuario_id'] ?? 0);
-            if ($usuarioAvaliador1 <= 0 || $usuarioAvaliador2 <= 0 || $usuarioAvaliador1 === $usuarioAvaliador2) {
+            $usuariosSelecionados = array_map(static function (array $avaliadorSelecionado): int {
+                return (int)($avaliadorSelecionado['usuario_id'] ?? 0);
+            }, $avaliadoresSelecionados);
+            $usuariosSelecionados = array_filter($usuariosSelecionados, static function (int $usuarioId): bool {
+                return $usuarioId > 0;
+            });
+
+            if (
+                count($usuariosSelecionados) !== count($avaliadoresInformados)
+                || count($usuariosSelecionados) !== count(array_unique($usuariosSelecionados))
+            ) {
                 $this->Flash->error('Não pode haver repetição entre os avaliadores.');
                 return $this->redirect(['action' => 'vincularInscricao', $inscricao->id]);
             }
@@ -1776,13 +1872,18 @@ class AvaliadoresController extends AppController
                 $normalizarNome((string)($inscricao->bolsista_usuario->nome ?? '')),
             ])));
 
-            foreach ([$avaliador1, $avaliador2] as $avaliadorIdSelecionado) {
+            foreach ($avaliadoresInformados as $avaliadorIdSelecionado) {
                 $nomeAvaliador = $normalizarNome((string)($avaliadoresSelecionados[$avaliadorIdSelecionado]['Usuarios__nome'] ?? ''));
                 if ($nomeAvaliador !== '' && in_array($nomeAvaliador, $nomesBloqueados, true)) {
                     $this->Flash->error('Não é permitido vincular avaliador com o mesmo nome do orientador, do coorientador ou do bolsista.');
                     return $this->redirect(['action' => 'vincularInscricao', $inscricao->id]);
                 }
             }
+
+            $identityAtual = $this->getIdentityAtual();
+            $usuarioHistoricoId = is_array($identityAtual)
+                ? (int)($identityAtual['id'] ?? 0)
+                : (int)($identityAtual->id ?? 0);
 
             try {
                 $avaliadorBolsistasTable->getConnection()->transactional(function () use (
@@ -1791,8 +1892,8 @@ class AvaliadoresController extends AppController
                     $avaliador1,
                     $avaliador2,
                     $avaliadoresSelecionados,
-                    $id,
-                    $vinculoAtualPorOrdem
+                    $vinculoAtualPorOrdem,
+                    $usuarioHistoricoId
                 ): void {
                     $dadosVinculo = [
                         ['avaliador_id' => $avaliador1, 'ordem' => 1],
@@ -1810,9 +1911,15 @@ class AvaliadoresController extends AppController
 
                         if ($vinculoAtual !== null) {
                             $vinculoAtual->deleted = 1;
+                            $vinculoAtual->deletado_por = $usuarioHistoricoId > 0 ? $usuarioHistoricoId : null;
+                            $vinculoAtual->deletado_em = \Cake\I18n\DateTime::now();
                             if (!$avaliadorBolsistasTable->save($vinculoAtual)) {
                                 throw new \RuntimeException('Erro ao inativar o vínculo anterior do avaliador.');
                             }
+                        }
+
+                        if ($avaliadorId <= 0) {
+                            continue;
                         }
 
                         $novo = $avaliadorBolsistasTable->newEmptyEntity();
@@ -1827,6 +1934,9 @@ class AvaliadoresController extends AppController
                         $novo->usuario_id = (int)($avaliadoresSelecionados[$avaliadorId]['usuario_id'] ?? 0);
                         $novo->ordem = $ordem;
                         $novo->deleted = 0;
+                        $novo->criado_por = $usuarioHistoricoId > 0 ? $usuarioHistoricoId : null;
+                        $novo->deletado_por = null;
+                        $novo->deletado_em = null;
 
                         if (!$avaliadorBolsistasTable->save($novo)) {
                             throw new \RuntimeException('Erro ao gravar o vínculo do avaliador.');
@@ -1951,6 +2061,64 @@ class AvaliadoresController extends AppController
         }
 
         return $query;
+    }
+
+    protected function obterGrandesAreasRestritasAvaliadores(): array
+    {
+        return $this->fetchTable('GrandesAreas')->find('list', [
+            'keyField' => 'id',
+            'valueField' => 'nome',
+        ])
+            ->where(['GrandesAreas.id <' => 10])
+            ->orderBy(['GrandesAreas.nome' => 'ASC'])
+            ->toArray();
+    }
+
+    protected function obterAreasPorGrandeAreaAvaliadores(int $grandeAreaId): array
+    {
+        if ($grandeAreaId <= 0) {
+            return [];
+        }
+
+        return $this->fetchTable('Areas')->find('list', [
+            'keyField' => 'id',
+            'valueField' => 'nome',
+        ])
+            ->where(['Areas.grandes_area_id' => $grandeAreaId])
+            ->orderBy(['Areas.nome' => 'ASC'])
+            ->toArray();
+    }
+
+    protected function existeOutroAvaliadorNovaMesmaCompetencia(
+        int $avaliadorId,
+        int $usuarioId,
+        int $editaiId,
+        ?int $grandeAreaId,
+        ?int $areaId
+    ): bool {
+        $condicoes = [
+            'Avaliadors.id !=' => $avaliadorId,
+            'Avaliadors.usuario_id' => $usuarioId,
+            'Avaliadors.editai_id' => $editaiId,
+            'Avaliadors.tipo_avaliador' => 'N',
+            'Avaliadors.deleted' => 0,
+        ];
+
+        if ($grandeAreaId === null) {
+            $condicoes['Avaliadors.grandes_area_id IS'] = null;
+        } else {
+            $condicoes['Avaliadors.grandes_area_id'] = $grandeAreaId;
+        }
+
+        if ($areaId === null) {
+            $condicoes['Avaliadors.area_id IS'] = null;
+        } else {
+            $condicoes['Avaliadors.area_id'] = $areaId;
+        }
+
+        return $this->fetchTable('Avaliadors')->find()
+            ->where($condicoes)
+            ->count() > 0;
     }
 
     protected function obterAnosListaRaic(): array

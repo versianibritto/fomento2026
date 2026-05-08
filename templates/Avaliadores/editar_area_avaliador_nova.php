@@ -17,7 +17,7 @@
                         Atualize a grande área e a área do cadastro de avaliador nova.
                     </p>
                 </div>
-                <?= $this->Html->link('Voltar', $retorno ?: ['action' => 'listaAvaliadoresNova'], ['class' => 'btn btn-sm btn-outline-secondary']) ?>
+                <?= $this->Html->link('Voltar', $retorno ?: ['controller' => 'Listas', 'action' => 'listaAvaliadoresNova'], ['class' => 'btn btn-sm btn-outline-secondary']) ?>
             </div>
 
             <div class="border rounded p-3 mb-3 bg-light">
@@ -64,7 +64,7 @@
                 </div>
                 <div class="col-12 d-flex flex-wrap gap-2">
                     <?= $this->Form->button('Salvar', ['class' => 'btn btn-primary']) ?>
-                    <?= $this->Html->link('Cancelar', $retorno ?: ['action' => 'listaAvaliadoresNova'], ['class' => 'btn btn-outline-secondary']) ?>
+                    <?= $this->Html->link('Cancelar', $retorno ?: ['controller' => 'Listas', 'action' => 'listaAvaliadoresNova'], ['class' => 'btn btn-outline-secondary']) ?>
                 </div>
             <?= $this->Form->end() ?>
         </div>

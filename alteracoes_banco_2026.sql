@@ -1891,8 +1891,7 @@ ALTER TABLE `editais_sumulas` ADD COLUMN `fator` DOUBLE(4,2) NULL AFTER `editais
 ALTER TABLE `editais_sumulas` ADD COLUMN `max` DOUBLE(4,2) NULL AFTER `fator`;
 
 
-ALTER TABLE `editais_sumulas_blocos` 
-ADD COLUMN `max` DOUBLE(4,2) NULL AFTER `modified`;
+ALTER TABLE `editais_sumulas_blocos` ADD COLUMN `max` DOUBLE(4,2) NULL AFTER `modified`;
 
 
 CREATE TABLE `avaliations_sumulas` (
@@ -1911,5 +1910,10 @@ CREATE TABLE `avaliations_sumulas` (
   PRIMARY KEY (`id`));
 
 
-ALTER TABLE `avaliador_bolsistas` 
-ADD COLUMN `nota_sumula` DOUBLE(5,2) NULL AFTER `projeto_bolsista_id`;
+ALTER TABLE `avaliador_bolsistas` ADD COLUMN `nota_sumula` DOUBLE(5,2) NULL AFTER `projeto_bolsista_id`;
+
+
+ALTER TABLE avaliador_bolsistas
+  ADD COLUMN criado_por INT NULL COMMENT 'usuario que criou o vinculo',
+  ADD COLUMN deletado_por INT NULL COMMENT 'usuario que deletou/inativou o vinculo',
+  ADD COLUMN deletado_em DATETIME NULL COMMENT 'data de delecao/inativacao';

@@ -81,12 +81,17 @@ class RaicNewController extends AppController
         $lista = $this->fetchTable('AvaliadorBolsistas')->find('all')
             ->contain([
                 'Avaliadors' => 'Usuarios',
+                'Criadores',
+                'Deletadores',
             ])
             ->where([
                 'AvaliadorBolsistas.bolsista' => (int)$id,
                 'AvaliadorBolsistas.tipo' => $tipoAvaliacaoLista,
             ])
-            ->orderBy(['AvaliadorBolsistas.ordem' => 'ASC']);
+            ->orderBy([
+                'AvaliadorBolsistas.deleted' => 'ASC',
+                'AvaliadorBolsistas.ordem' => 'ASC',
+            ]);
 
         $anexoRelatorio = $this->fetchTable('Anexos')->find()
             ->contain(['AnexosTipos', 'Usuarios'])
@@ -138,6 +143,7 @@ class RaicNewController extends AppController
         }
         $ehYoda = !empty($identity['yoda']);
         $ehTi = in_array((int)($identity['id'] ?? 0), [1, 8088], true);
+        $usuarioLogId = (int)($identity['id'] ?? 0);
         $ehJediDaUnidade = in_array((string)$raic->unidade_id, $jediArray, true);
 
         if (!$ehYoda && !$ehJediDaUnidade && !$ehTi) {
@@ -318,7 +324,8 @@ class RaicNewController extends AppController
                     $avaliadoresSelecionados,
                     $vinculoAtualPorOrdem,
                     $historicoAlteracao,
-                    $historicoJustificativa
+                    $historicoJustificativa,
+                    $usuarioLogId
                 ): void {
                     $raic->data_apresentacao = $dados['data_apresentacao'];
                     $raic->tipo_apresentacao = $dados['tipo_apresentacao'];
@@ -343,6 +350,8 @@ class RaicNewController extends AppController
 
                         if ($vinculoAtual !== null) {
                             $vinculoAtual->deleted = 1;
+                            $vinculoAtual->deletado_por = $usuarioLogId > 0 ? $usuarioLogId : null;
+                            $vinculoAtual->deletado_em = \Cake\I18n\DateTime::now();
                             if (!$avaliadorBolsistasTable->save($vinculoAtual)) {
                                 throw new \RuntimeException('Erro ao inativar o vínculo anterior da banca da RAIC.');
                             }
@@ -360,6 +369,9 @@ class RaicNewController extends AppController
                         $novo->usuario_id = (int)($avaliadoresSelecionados[$avaliadorId]['usuario_id'] ?? 0);
                         $novo->ordem = $ordem;
                         $novo->deleted = 0;
+                        $novo->criado_por = $usuarioLogId > 0 ? $usuarioLogId : null;
+                        $novo->deletado_por = null;
+                        $novo->deletado_em = null;
 
                         if (!$avaliadorBolsistasTable->save($novo)) {
                             throw new \RuntimeException('Erro ao salvar a banca da RAIC.');

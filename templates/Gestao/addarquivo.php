@@ -33,6 +33,16 @@
                 <?= $this->Form->hidden('anexo_tipo', ['value' => '', 'id' => 'anexo-tipo']) ?>
                 <?= $this->Form->hidden('alterar_anexo_tipo', ['value' => '', 'id' => 'alterar-anexo-tipo']) ?>
 
+                <div class="mb-3">
+                    <?= $this->Form->control('justificativa', [
+                        'label' => 'Justificativa',
+                        'type' => 'textarea',
+                        'class' => 'form-control',
+                        'rows' => 3,
+                        'required' => true,
+                    ]) ?>
+                </div>
+
                 <div class="table-responsive">
                     <table class="table table-sm align-middle">
                         <thead>
@@ -122,6 +132,13 @@ document.querySelectorAll('.gestao-editar-anexo').forEach(function (input) {
         }
         const form = document.getElementById('form-gestao-anexos');
         if (!form) {
+            return;
+        }
+        const justificativa = form.querySelector('[name="justificativa"]');
+        if (justificativa && justificativa.value.trim() === '') {
+            alert('Informe a justificativa antes de alterar o anexo.');
+            justificativa.focus();
+            this.value = '';
             return;
         }
         const tipo = this.getAttribute('data-tipo') || '';

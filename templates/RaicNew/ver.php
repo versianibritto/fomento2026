@@ -399,7 +399,41 @@ if ($tipoBolsaCodigo === 'R') {
         <div class="tab-pane fade raic-tab-pane" id="tab-raic-avaliacao">
             <div class="card shadow-sm">
                 <div class="card-body">
-                    <h5 class="mb-3">Avaliadores</h5>
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                        <h5 class="mb-0">Avaliadores</h5>
+                        <?php
+                            $identityAtual = $this->request->getAttribute('identity');
+                            $identityAtualId = is_array($identityAtual)
+                                ? (int)($identityAtual['id'] ?? 0)
+                                : (int)($identityAtual->id ?? 0);
+                            $identityAtualYoda = is_array($identityAtual)
+                                ? !empty($identityAtual['yoda'])
+                                : !empty($identityAtual->yoda);
+                            $identityAtualJedi = is_array($identityAtual)
+                                ? (string)($identityAtual['jedi'] ?? '')
+                                : (string)($identityAtual->jedi ?? '');
+                            $identityAtualTi = in_array($identityAtualId, [1, 8088], true);
+                            $unidadesJedi = array_filter(array_map('trim', explode(',', $identityAtualJedi)));
+                            $podeGerenciarAgendamento = $identityAtualYoda
+                                || $identityAtualTi
+                                || in_array((string)($raic->unidade_id ?? ''), $unidadesJedi, true);
+                            $podeReagendarPorData = true;
+                            if (!empty($raic->data_apresentacao) && $raic->data_apresentacao instanceof \DateTimeInterface) {
+                                $podeReagendarPorData = $raic->data_apresentacao->format('Y-m-d') > date('Y-m-d') || $identityAtualTi;
+                            }
+                            $podeVerNotas = $identityAtualYoda
+                                || in_array($identityAtualId, [1, 8088], true)
+                                || $identityAtualId === (int)($raic->orientador ?? 0)
+                                || $identityAtualId === (int)($raic->usuario_id ?? 0);
+                        ?>
+                        <?php if ($podeGerenciarAgendamento && $podeReagendarPorData): ?>
+                            <?= $this->Html->link(
+                                '<i class="fas fa-user-edit"></i> Alterar banca',
+                                ['controller' => 'RaicNew', 'action' => 'agendar', (int)$raic->id],
+                                ['class' => 'btn btn-sm btn-outline-success', 'escape' => false]
+                            ) ?>
+                        <?php endif; ?>
+                    </div>
                     <?php if (empty($lista) || $lista->count() === 0): ?>
                         <p class="text-muted mb-0">Nenhum avaliador vinculado.</p>
                     <?php else: ?>
@@ -409,9 +443,9 @@ if ($tipoBolsaCodigo === 'R') {
                                     <tr>
                                         <th>Nome</th>
                                         <th>Deletado?</th>
-                                        <th>Avaliado?</th>
-                                        <th>Ordem</th>
                                         <th>Situação</th>
+                                        <th>Cadastro</th>
+                                        <th>Exclusão</th>
                                         <th class="text-end"></th>
                                     </tr>
                                 </thead>
@@ -420,50 +454,50 @@ if ($tipoBolsaCodigo === 'R') {
                                         <?php
                                         $deletado = (int)($b->deleted ?? 0) === 1;
                                         $avaliado = !$deletado && (string)($b->situacao ?? '') === 'F';
+                                        $dataCadastro = $b->created ?? null;
+                                        $dataCadastroTexto = $dataCadastro && method_exists($dataCadastro, 'format')
+                                            ? $dataCadastro->format('d/m/Y H:i')
+                                            : 'Não informado';
+                                        $usuarioCadastro = trim((string)($b->criador->nome ?? ''));
+                                        if ($usuarioCadastro === '') {
+                                            $usuarioCadastro = 'Não informado';
+                                        }
+                                        $dataExclusao = $b->deletado_em ?? null;
+                                        $dataExclusaoTexto = $dataExclusao && method_exists($dataExclusao, 'format')
+                                            ? $dataExclusao->format('d/m/Y H:i')
+                                            : 'Não informado';
+                                        $usuarioExclusao = trim((string)($b->deletador->nome ?? ''));
+                                        if ($usuarioExclusao === '') {
+                                            $usuarioExclusao = 'Não informado';
+                                        }
                                         ?>
-                                        <tr class="<?= $deletado ? 'text-danger' : ($avaliado ? 'text-success' : '') ?>">
-                                            <td><?= h($b->avaliador->usuario->nome ?? 'Não informado') ?></td>
+                                        <tr class="<?= $deletado ? 'table-danger' : ($avaliado ? 'table-success' : '') ?>">
+                                            <td>
+                                                <?= h($b->avaliador->usuario->nome ?? 'Não informado') ?>
+                                                <span class="text-muted small">(AV <?= h((string)($b->ordem ?? '-')) ?>)</span>
+                                            </td>
                                             <td><?= $deletado ? 'Sim' : 'Não' ?></td>
-                                            <td><?= $avaliado ? 'Sim' : 'Não' ?></td>
-                                            <td><?= h((string)($b->ordem ?? '-')) ?></td>
                                             <td><?= h($deletado ? 'Deletado' : ($avaliado ? 'Avaliado' : 'Aguardando')) ?></td>
+                                            <td>
+                                                <div class="small">
+                                                    <?= h($dataCadastroTexto) ?><br>
+                                                    <span class="text-muted"><?= h($usuarioCadastro) ?></span>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <?php if ($deletado): ?>
+                                                    <div class="small">
+                                                        <?= h($dataExclusaoTexto) ?><br>
+                                                        <span class="text-muted"><?= h($usuarioExclusao) ?></span>
+                                                    </div>
+                                                <?php endif; ?>
+                                            </td>
                                             <td class="text-end">
-                                                <?php
-                                                    $identityAtual = $this->request->getAttribute('identity');
-                                                    $identityAtualId = is_array($identityAtual)
-                                                        ? (int)($identityAtual['id'] ?? 0)
-                                                        : (int)($identityAtual->id ?? 0);
-                                                    $identityAtualYoda = is_array($identityAtual)
-                                                        ? !empty($identityAtual['yoda'])
-                                                        : !empty($identityAtual->yoda);
-                                                    $identityAtualJedi = is_array($identityAtual)
-                                                        ? (string)($identityAtual['jedi'] ?? '')
-                                                        : (string)($identityAtual->jedi ?? '');
-                                                    $identityAtualTi = in_array($identityAtualId, [1, 8088], true);
-                                                    $unidadesJedi = array_filter(array_map('trim', explode(',', $identityAtualJedi)));
-                                                    $podeGerenciarAgendamento = $identityAtualYoda
-                                                        || $identityAtualTi
-                                                        || in_array((string)($raic->unidade_id ?? ''), $unidadesJedi, true);
-                                                    $podeReagendarPorData = true;
-                                                    if (!empty($raic->data_apresentacao) && $raic->data_apresentacao instanceof \DateTimeInterface) {
-                                                        $podeReagendarPorData = $raic->data_apresentacao->format('Y-m-d') > date('Y-m-d') || $identityAtualTi;
-                                                    }
-                                                    $podeVerNotas = $identityAtualYoda
-                                                        || in_array($identityAtualId, [1, 8088], true)
-                                                        || $identityAtualId === (int)($raic->orientador ?? 0)
-                                                        || $identityAtualId === (int)($raic->usuario_id ?? 0);
-                                                ?>
                                                 <?php if ($avaliado && $podeVerNotas): ?>
                                                     <?= $this->Html->link(
                                                         '<i class="fas fa-file-alt"></i> Ver notas',
                                                         ['controller' => 'Avaliadores', 'action' => 'verNotas', (int)$b->id],
                                                         ['class' => 'btn btn-xs btn-outline-primary py-0 px-1', 'escape' => false]
-                                                    ) ?>
-                                                <?php elseif ((string)($b->situacao ?? '') !== 'F' && !$deletado && $podeGerenciarAgendamento && $podeReagendarPorData): ?>
-                                                    <?= $this->Html->link(
-                                                        '<i class="fas fa-user-edit"></i> Alterar',
-                                                        ['controller' => 'RaicNew', 'action' => 'alterarAvaliador', (int)$b->id],
-                                                        ['class' => 'btn btn-xs btn-outline-success py-0 px-1', 'escape' => false]
                                                     ) ?>
                                                 <?php endif; ?>
                                             </td>

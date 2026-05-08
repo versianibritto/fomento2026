@@ -127,6 +127,22 @@ foreach ($vinculosAtivos as $vinculoAtivo) {
                                     ?>
                                     <?= h($statusNota) ?>
                                 </div>
+                                <div class="small mt-1">
+                                    <strong>Cadastrado em:</strong>
+                                    <?php
+                                        $dataCadastro = $vinculo->created ?? null;
+                                        $dataCadastroTexto = $dataCadastro && method_exists($dataCadastro, 'format')
+                                            ? $dataCadastro->format('d/m/Y H:i')
+                                            : 'Não informado';
+                                        $usuarioCadastro = trim((string)($vinculo->criador->nome ?? ''));
+                                        if ($usuarioCadastro === '') {
+                                            $usuarioCadastro = 'Não informado';
+                                        }
+                                    ?>
+                                    <?= h($dataCadastroTexto) ?>
+                                    <br>
+                                    <strong>Cadastrado por:</strong> <?= h($usuarioCadastro) ?>
+                                </div>
                             </div>
                         </div>
                     <?php endforeach; ?>
@@ -138,7 +154,7 @@ foreach ($vinculosAtivos as $vinculoAtivo) {
     <div class="card shadow-sm">
         <div class="card-body">
             <div class="alert alert-light border">
-                Os filtros de grande área e área servem apenas para facilitar a busca. Eles não limitam a regra de negócio: você pode limpar os filtros e escolher qualquer avaliador disponível no edital.
+                Selecione pelo menos um avaliador. O Avaliador 1 sempre será gravado com ordem 1 e o Avaliador 2 sempre será gravado com ordem 2.
             </div>
 
             <?= $this->Form->create(null) ?>
@@ -178,7 +194,6 @@ foreach ($vinculosAtivos as $vinculoAtivo) {
                                         'options' => $avaliadoresAvaliador1,
                                         'empty' => 'Selecione',
                                         'value' => $avaliador1Atual,
-                                        'required' => true,
                                         'class' => 'form-select js-avaliador',
                                         'data-bloco' => '1',
                                         'disabled' => $avaliador1Bloqueado,
@@ -225,7 +240,6 @@ foreach ($vinculosAtivos as $vinculoAtivo) {
                                         'options' => $avaliadoresAvaliador2,
                                         'empty' => 'Selecione',
                                         'value' => $avaliador2Atual,
-                                        'required' => true,
                                         'class' => 'form-select js-avaliador',
                                         'data-bloco' => '2',
                                         'disabled' => $avaliador2Bloqueado,
