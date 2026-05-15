@@ -5,6 +5,7 @@ namespace App\Controller;
 
 use App\Model\Entity\AvaliadorBolsista;
 use Cake\Event\EventInterface;
+use Cake\Routing\Router;
 
 class AvaliadoresController extends AppController
 {
@@ -1622,6 +1623,8 @@ class AvaliadoresController extends AppController
         $projetoBolsistasTable = $this->fetchTable('ProjetoBolsistas');
         $avaliadorBolsistasTable = $this->fetchTable('AvaliadorBolsistas');
         $avaliadorsTable = $this->fetchTable('Avaliadors');
+        $retornoLista = $this->obterRetornoListaVincularInscricao();
+        $urlTelaVinculo = ['action' => 'vincularInscricao', (int)$id, '?' => ['retorno' => $retornoLista]];
 
         $inscricao = $projetoBolsistasTable->get((int)$id, [
             'contain' => [
@@ -1635,12 +1638,12 @@ class AvaliadoresController extends AppController
 
         if ($inscricao->deleted !== null) {
             $this->Flash->error('Não é permitido vincular avaliadores a uma inscrição deletada.');
-            return $this->redirect(['controller' => 'Listas', 'action' => 'listaInscricoesAvaliadores']);
+            return $this->redirect($retornoLista);
         }
 
         if ($inscricao->homologado === null) {
             $this->Flash->error('Não é permitido vincular avaliadores a uma inscrição sem homologação definida.');
-            return $this->redirect(['controller' => 'Listas', 'action' => 'listaInscricoesAvaliadores']);
+            return $this->redirect($retornoLista);
         }
 
         $editalAberto = !empty($inscricao->editai)
@@ -1653,7 +1656,7 @@ class AvaliadoresController extends AppController
 
         if (!$editalAberto) {
             $this->Flash->error('O edital desta inscrição não está com avaliação aberta para vinculação de avaliadores.');
-            return $this->redirect(['controller' => 'Listas', 'action' => 'listaInscricoesAvaliadores']);
+            return $this->redirect($retornoLista);
         }
 
         $vinculosAtivos = $avaliadorBolsistasTable->find()
@@ -1754,6 +1757,7 @@ class AvaliadoresController extends AppController
 
         if ($this->request->is(['post', 'put', 'patch'])) {
             $dados = $this->request->getData();
+            $destinoAposSalvar = (string)($dados['destino_apos_salvar'] ?? 'lista');
             $avaliador1 = (int)($dados['avaliador_1'] ?? 0);
             $avaliador2 = (int)($dados['avaliador_2'] ?? 0);
             $vinculoAtualPorOrdem = [];
@@ -1770,38 +1774,38 @@ class AvaliadoresController extends AppController
 
             if ($avaliadoresInformados === [] && empty($vinculosAtivos)) {
                 $this->Flash->error('Selecione pelo menos um avaliador.');
-                return $this->redirect(['action' => 'vincularInscricao', $inscricao->id]);
+                return $this->redirect($urlTelaVinculo);
             }
 
             if ($avaliador1 > 0 && $avaliador2 > 0 && $avaliador1 === $avaliador2) {
                 $this->Flash->error('Não pode haver repetição entre os avaliadores.');
-                return $this->redirect(['action' => 'vincularInscricao', $inscricao->id]);
+                return $this->redirect($urlTelaVinculo);
             }
 
             if (in_array((int)($inscricao->orientador ?? 0), $avaliadoresInformados, true)) {
                 $this->Flash->error('O orientador não pode ser vinculado como avaliador.');
-                return $this->redirect(['action' => 'vincularInscricao', $inscricao->id]);
+                return $this->redirect($urlTelaVinculo);
             }
 
             if (!empty($inscricao->coorientador) && in_array((int)$inscricao->coorientador, $avaliadoresInformados, true)) {
                 $this->Flash->error('O coorientador não pode ser vinculado como avaliador.');
-                return $this->redirect(['action' => 'vincularInscricao', $inscricao->id]);
+                return $this->redirect($urlTelaVinculo);
             }
 
             if (!empty($inscricao->bolsista) && in_array((int)$inscricao->bolsista, $avaliadoresInformados, true)) {
                 $this->Flash->error('O bolsista não pode ser vinculado como avaliador.');
-                return $this->redirect(['action' => 'vincularInscricao', $inscricao->id]);
+                return $this->redirect($urlTelaVinculo);
             }
 
             if ($avaliador1Atual !== null && $avaliador2Atual !== null) {
                 if ((int)$avaliador1Atual === $avaliador1 && (int)$avaliador2Atual === $avaliador2) {
                     $this->Flash->error('Nenhuma alteração foi realizada nos avaliadores vinculados.');
-                    return $this->redirect(['action' => 'vincularInscricao', $inscricao->id]);
+                    return $this->redirect($urlTelaVinculo);
                 }
 
                 if ((int)$avaliador1Atual === $avaliador2 && (int)$avaliador2Atual === $avaliador1) {
                     $this->Flash->error('Não é permitido apenas inverter a ordem dos mesmos avaliadores.');
-                    return $this->redirect(['action' => 'vincularInscricao', $inscricao->id]);
+                    return $this->redirect($urlTelaVinculo);
                 }
             }
 
@@ -1813,7 +1817,7 @@ class AvaliadoresController extends AppController
                     && (int)($vinculoAtual->avaliador_id ?? 0) !== (int)$avaliadorSelecionado
                 ) {
                     $this->Flash->error('Não é permitido substituir avaliador que já lançou nota.');
-                    return $this->redirect(['action' => 'vincularInscricao', $inscricao->id]);
+                    return $this->redirect($urlTelaVinculo);
                 }
             }
 
@@ -1834,7 +1838,7 @@ class AvaliadoresController extends AppController
 
             if (count($avaliadoresSelecionados) !== count($avaliadoresInformados)) {
                 $this->Flash->error('Um ou mais avaliadores selecionados não estão mais disponíveis.');
-                return $this->redirect(['action' => 'vincularInscricao', $inscricao->id]);
+                return $this->redirect($urlTelaVinculo);
             }
 
             $usuariosSelecionados = array_map(static function (array $avaliadorSelecionado): int {
@@ -1849,7 +1853,7 @@ class AvaliadoresController extends AppController
                 || count($usuariosSelecionados) !== count(array_unique($usuariosSelecionados))
             ) {
                 $this->Flash->error('Não pode haver repetição entre os avaliadores.');
-                return $this->redirect(['action' => 'vincularInscricao', $inscricao->id]);
+                return $this->redirect($urlTelaVinculo);
             }
 
             $normalizarNome = static function (?string $nome): string {
@@ -1879,7 +1883,7 @@ class AvaliadoresController extends AppController
                 $nomeAvaliador = $normalizarNome((string)($avaliadoresSelecionados[$avaliadorIdSelecionado]['Usuarios__nome'] ?? ''));
                 if ($nomeAvaliador !== '' && in_array($nomeAvaliador, $nomesBloqueados, true)) {
                     $this->Flash->error('Não é permitido vincular avaliador com o mesmo nome do orientador, do coorientador ou do bolsista.');
-                    return $this->redirect(['action' => 'vincularInscricao', $inscricao->id]);
+                    return $this->redirect($urlTelaVinculo);
                 }
             }
 
@@ -1952,14 +1956,19 @@ class AvaliadoresController extends AppController
                         ? 'Avaliadores vinculados com sucesso.'
                         : 'Avaliadores substituídos com sucesso.'
                 );
-                return $this->redirect(['controller' => 'Listas', 'action' => 'listaInscricoesAvaliadores']);
+
+                if ($destinoAposSalvar === 'sair') {
+                    return $this->redirect(['controller' => 'Padrao', 'action' => 'visualizar', (int)$inscricao->id]);
+                }
+
+                return $this->redirect($retornoLista);
             } catch (\Throwable $e) {
                 $this->flashFriendlyException(
                     $e,
                     'Erro no Sistema - vincular avaliadores a inscricao',
                     'Não foi possível salvar a vinculação dos avaliadores.'
                 );
-                return $this->redirect(['action' => 'vincularInscricao', $inscricao->id]);
+                return $this->redirect($urlTelaVinculo);
             }
         }
 
@@ -1974,8 +1983,40 @@ class AvaliadoresController extends AppController
             'avaliador2Atual',
             'vinculosAtivos',
             'filtrosAvaliador1',
-            'filtrosAvaliador2'
+            'filtrosAvaliador2',
+            'retornoLista'
         ));
+    }
+
+    protected function obterRetornoListaVincularInscricao(): string
+    {
+        $retorno = trim((string)(
+            $this->request->getData('retorno_lista')
+            ?: $this->request->getQuery('retorno', '')
+        ));
+
+        if ($this->retornoListaVincularInscricaoValido($retorno)) {
+            return $retorno;
+        }
+
+        return Router::url(['controller' => 'Listas', 'action' => 'listaInscricoesAvaliadores']);
+    }
+
+    protected function retornoListaVincularInscricaoValido(string $retorno): bool
+    {
+        if ($retorno === '' || substr($retorno, 0, 2) === '//' || preg_match('/^https?:\/\//i', $retorno)) {
+            return false;
+        }
+
+        $path = parse_url($retorno, PHP_URL_PATH);
+        if (!is_string($path)) {
+            return false;
+        }
+
+        return in_array($path, [
+            '/listas/lista-inscricoes-avaliadores',
+            '/listas/lista-vinculos-avaliador-bolsistas',
+        ], true);
     }
 
     protected function montarQueryListaRaic(array $filtros)

@@ -280,10 +280,16 @@
                         </div>
                     <?php else: ?>
                         <?php
-                        $paginationQuery = array_intersect_key(
-                            $this->request->getQueryParams(),
-                            array_flip(['editai_id', 'homologado', 'status_vinculo', 'grandes_area_id', 'area_id'])
-                        );
+                        $paginationQuery = [
+                            'editai_id' => (int)($filtros['editai_id'] ?? 0) ?: null,
+                            'homologado' => ($filtros['homologado'] ?? '') ?: null,
+                            'status_vinculo' => ($filtros['status_vinculo'] ?? '') ?: null,
+                            'grandes_area_id' => (int)($filtros['grandes_area_id'] ?? 0) ?: null,
+                            'area_id' => (int)($filtros['area_id'] ?? 0) ?: null,
+                        ];
+                        $paginationQuery = array_filter($paginationQuery, static function ($valor): bool {
+                            return $valor !== null && $valor !== '';
+                        });
                         $this->Paginator->options(['url' => ['?' => $paginationQuery]]);
                         ?>
 
@@ -391,7 +397,12 @@
                                                 <?php else: ?>
                                                     <?= $this->Html->link(
                                                         $totalAvaliadores === 0 ? 'Vincular avaliadores' : 'Gerenciar avaliadores',
-                                                        ['controller' => 'Avaliadores', 'action' => 'vincularInscricao', $inscricao->id],
+                                                        [
+                                                            'controller' => 'Avaliadores',
+                                                            'action' => 'vincularInscricao',
+                                                            $inscricao->id,
+                                                            '?' => ['retorno' => $this->request->getRequestTarget()],
+                                                        ],
                                                         ['class' => 'btn btn-sm btn-outline-secondary']
                                                     ) ?>
                                                 <?php endif; ?>

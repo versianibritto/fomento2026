@@ -253,7 +253,12 @@ $formatarNota = static function ($valor): string {
                                                 : null;
                                             $inscricaoVinculoId = (int)($vinculo->projeto_bolsista_id ?: $vinculo->projeto_bolsista_legado_id ?: 0);
                                             $urlVincularInscricao = ($tipoVinculo === 'N' && $inscricaoVinculoId > 0)
-                                                ? ['controller' => 'Avaliadores', 'action' => 'vincularInscricao', $inscricaoVinculoId]
+                                                ? [
+                                                    'controller' => 'Avaliadores',
+                                                    'action' => 'vincularInscricao',
+                                                    $inscricaoVinculoId,
+                                                    '?' => ['retorno' => $this->request->getRequestTarget()],
+                                                ]
                                                 : null;
                                             $raicVinculoId = (int)($vinculo->raic_id ?? 0);
                                             $urlAgendarRaic = (in_array($tipoVinculo, ['V', 'Z'], true) && $raicVinculoId > 0)

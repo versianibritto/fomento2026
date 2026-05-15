@@ -12,6 +12,7 @@
  * @var \Cake\Datasource\ResultSetInterface|\Cake\Collection\CollectionInterface|array $vinculosAtivos
  * @var array{grandes_area_id?: int, area_id?: int} $filtrosAvaliador1
  * @var array{grandes_area_id?: int, area_id?: int} $filtrosAvaliador2
+ * @var string $retornoLista
  */
 $vinculoExistente = !empty($vinculosAtivos);
 $projetoTitulo = trim((string)($inscricao->projeto->titulo ?? ''));
@@ -62,7 +63,7 @@ foreach ($vinculosAtivos as $vinculoAtivo) {
             <h4 class="mb-0"><?= $vinculoExistente ? 'Substituir' : 'Vincular' ?> Avaliadores da Inscrição #<?= (int)$inscricao->id ?></h4>
             <span class="badge bg-<?= h($homologadoClasse) ?>"><?= h($homologadoTexto) ?></span>
         </div>
-        <?= $this->Html->link('Voltar', ['controller' => 'Listas', 'action' => 'listaInscricoesAvaliadores'], ['class' => 'btn btn-sm btn-outline-secondary']) ?>
+        <?= $this->Html->link('Voltar', $retornoLista, ['class' => 'btn btn-sm btn-outline-secondary']) ?>
     </div>
 
     <div class="card shadow-sm mb-3">
@@ -263,10 +264,24 @@ foreach ($vinculosAtivos as $vinculoAtivo) {
                 <?php if ($avaliador2Bloqueado): ?>
                     <?= $this->Form->hidden('avaliador_2', ['value' => $avaliador2Atual]) ?>
                 <?php endif; ?>
+                <?= $this->Form->hidden('destino_apos_salvar', [
+                    'value' => 'lista',
+                    'id' => 'destino-apos-salvar',
+                ]) ?>
+                <?= $this->Form->hidden('retorno_lista', ['value' => $retornoLista]) ?>
 
                 <div class="mt-4 d-flex gap-2">
-                    <?= $this->Form->button($vinculoExistente ? 'Salvar substituição' : 'Salvar vinculação', ['class' => 'btn btn-primary']) ?>
-                    <?= $this->Html->link('Cancelar', ['controller' => 'Listas', 'action' => 'listaInscricoesAvaliadores'], ['class' => 'btn btn-outline-secondary']) ?>
+                    <?= $this->Form->button('Salvar e voltar para lista', [
+                        'class' => 'btn btn-primary',
+                        'type' => 'submit',
+                        'onclick' => "document.getElementById('destino-apos-salvar').value = 'lista';",
+                    ]) ?>
+                    <?= $this->Form->button('Salvar e sair', [
+                        'class' => 'btn btn-outline-primary',
+                        'type' => 'submit',
+                        'onclick' => "document.getElementById('destino-apos-salvar').value = 'sair';",
+                    ]) ?>
+                    <?= $this->Html->link('Cancelar', $retornoLista, ['class' => 'btn btn-outline-secondary']) ?>
                 </div>
             <?= $this->Form->end() ?>
         </div>

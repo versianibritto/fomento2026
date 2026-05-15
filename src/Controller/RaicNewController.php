@@ -571,6 +571,7 @@ class RaicNewController extends AppController
                         if (!$this->anexarInscricao([13 => $arquivoRelatorio], null, null, (int)$raic->id, true)) {
                             throw new \RuntimeException('Erro ao atualizar o relatório da RAIC.');
                         }
+                        $this->replicarRelatorioRaic((int)$raic->id);
                     }
 
                     $justificativa = 'Atualização manual da RAIC: ' . implode(', ', $alteracoes);
@@ -700,6 +701,29 @@ class RaicNewController extends AppController
         $this->set(compact('raic'));
     }
 
+    protected function replicarRelatorioRaic(int $raicId): void
+    {
+        $anexoRelatorio = $this->fetchTable('Anexos')->find()
+            ->select(['Anexos.anexo'])
+            ->where([
+                'Anexos.raic_id' => $raicId,
+                'Anexos.anexos_tipo_id' => 13,
+                'Anexos.deleted IS' => null,
+            ])
+            ->orderBy(['Anexos.id' => 'DESC'])
+            ->first();
+
+        $arquivoRelatorio = trim((string)($anexoRelatorio->anexo ?? ''));
+        if ($arquivoRelatorio === '') {
+            throw new \RuntimeException('Erro ao localizar o relatório anexado da RAIC.');
+        }
+
+        $this->fetchTable('Raics')->updateAll(
+            ['relatorio' => $arquivoRelatorio],
+            ['id' => $raicId]
+        );
+    }
+
     public function historico($id, $original, $atual, $just, bool $throw = true): bool
     {
         $raicHistoricos = $this->fetchTable('RaicHistoricos');
@@ -784,12 +808,17 @@ class RaicNewController extends AppController
                     if (!$this->anexarInscricao($anexosRelatorio, null, null, (int)$raic->id, true)) {
                         throw new \RuntimeException('Erro ao fazer o upload do relatório. A RAIC não foi gravada');
                     }
+                    $this->replicarRelatorioRaic((int)$raic->id);
                     if (!$this->historico((int)$raic->id, 'criação', 'criação', 'cadastro manual da Raic')) {
                         throw new \RuntimeException('Erro ao gravar o histórico da RAIC manual.');
                     }
 
                     $raicCriada = $raic;
                 });
+
+                if ($raicCriada === null || empty($raicCriada->id)) {
+                    throw new \RuntimeException('Erro ao recuperar a RAIC cadastrada.');
+                }
 
                 $this->Flash->success('RAIC CADASTRADA COM SUCESSO PARA O ALUNO ' . $bolsistaNome . ', sob numero #' . $raicCriada->id);
                 return $this->redirect(['action' => 'voluntarias']);

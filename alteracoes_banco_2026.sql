@@ -1913,7 +1913,4 @@ CREATE TABLE `avaliations_sumulas` (
 ALTER TABLE `avaliador_bolsistas` ADD COLUMN `nota_sumula` DOUBLE(5,2) NULL AFTER `projeto_bolsista_id`;
 
 
-ALTER TABLE avaliador_bolsistas
-  ADD COLUMN criado_por INT NULL COMMENT 'usuario que criou o vinculo',
-  ADD COLUMN deletado_por INT NULL COMMENT 'usuario que deletou/inativou o vinculo',
-  ADD COLUMN deletado_em DATETIME NULL COMMENT 'data de delecao/inativacao';
+ALTER TABLE avaliador_bolsistas ADD COLUMN criado_por INT NULL COMMENT 'usuario que criou o vinculo', ADD COLUMN deletado_por INT NULL COMMENT 'usuario que deletou/inativou o vinculo', ADD COLUMN deletado_em DATETIME NULL COMMENT 'data de delecao/inativacao';
