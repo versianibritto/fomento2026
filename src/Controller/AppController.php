@@ -131,26 +131,52 @@ class AppController extends Controller
 
     protected function downloadCsvResponse(string $filename, array $header, iterable $rows, string $delimiter = ';')
     {
-        $fh = fopen('php://temp', 'r+');
-        fwrite($fh, "\xEF\xBB\xBF");
-
-        foreach ([$header, ...is_array($rows) ? $rows : iterator_to_array($rows, false)] as $row) {
-            $escaped = array_map(function ($value): string {
-                $text = $this->normalizeCsvValue($value);
-                return '"' . str_replace('"', '""', $text) . '"';
-            }, $row);
-            fwrite($fh, implode($delimiter, $escaped) . "\r\n");
+        $tmpFile = tempnam(sys_get_temp_dir(), 'csv_export_');
+        if ($tmpFile === false) {
+            throw new \RuntimeException('Não foi possível criar arquivo temporário para a exportação.');
         }
 
-        rewind($fh);
-        $csv = (string)stream_get_contents($fh);
+        $fh = fopen($tmpFile, 'wb');
+        if ($fh === false) {
+            @unlink($tmpFile);
+            throw new \RuntimeException('Não foi possível abrir o arquivo temporário para a exportação.');
+        }
+
+        $writeRow = function (iterable $row) use ($fh, $delimiter): void {
+            $escaped = [];
+            foreach ($row as $value) {
+                $text = $this->normalizeCsvValue($value);
+                $escaped[] = '"' . str_replace('"', '""', $text) . '"';
+            }
+            fwrite($fh, implode($delimiter, $escaped) . "\r\n");
+        };
+
+        try {
+            fwrite($fh, "\xEF\xBB\xBF");
+            $writeRow($header);
+            foreach ($rows as $row) {
+                $writeRow($row);
+            }
+        } catch (\Throwable $e) {
+            fclose($fh);
+            @unlink($tmpFile);
+            throw $e;
+        }
+
         fclose($fh);
+        register_shutdown_function(static function ($path): void {
+            if (is_string($path) && is_file($path)) {
+                @unlink($path);
+            }
+        }, $tmpFile);
 
         return $this->response
+            ->withFile($tmpFile, [
+                'download' => true,
+                'name' => $filename,
+            ])
             ->withType('csv')
-            ->withCharset('UTF-8')
-            ->withStringBody($csv)
-            ->withDownload($filename);
+            ->withCharset('UTF-8');
     }
 
     protected function ajustarDataBancoParaTela($value, int $offsetHoras = -3): ?FrozenTime

@@ -1467,6 +1467,89 @@ class ListasController extends AppController
 
     protected function exportarListaVinculosAvaliadorBolsistasCsv($query)
     {
+        $query
+            ->contain([], true)
+            ->select([], true)
+            ->enableAutoFields(false)
+            ->enableHydration(false)
+            ->disableBufferedResults()
+            ->leftJoin(['UsuariosAvaliadorDiretoExport' => 'usuarios'], 'UsuariosAvaliadorDiretoExport.id = AvaliadorBolsistas.usuario_id')
+            ->leftJoin(['UnidadesAvaliadorDiretoExport' => 'unidades'], 'UnidadesAvaliadorDiretoExport.id = UsuariosAvaliadorDiretoExport.unidade_id')
+            ->leftJoin(['VinculosAvaliadorDiretoExport' => 'vinculos'], 'VinculosAvaliadorDiretoExport.id = UsuariosAvaliadorDiretoExport.vinculo_id')
+            ->leftJoin(['AvaliadorsExport' => 'avaliadors'], 'AvaliadorsExport.id = AvaliadorBolsistas.avaliador_id')
+            ->leftJoin(['UsuariosAvaliadorCadastroExport' => 'usuarios'], 'UsuariosAvaliadorCadastroExport.id = AvaliadorsExport.usuario_id')
+            ->leftJoin(['UnidadesAvaliadorCadastroExport' => 'unidades'], 'UnidadesAvaliadorCadastroExport.id = UsuariosAvaliadorCadastroExport.unidade_id')
+            ->leftJoin(['UnidadesAvaliadorExport' => 'unidades'], 'UnidadesAvaliadorExport.id = AvaliadorsExport.unidade_id')
+            ->leftJoin(['VinculosAvaliadorCadastroExport' => 'vinculos'], 'VinculosAvaliadorCadastroExport.id = UsuariosAvaliadorCadastroExport.vinculo_id')
+            ->leftJoin(['ProjetoBolsistasExport' => 'projeto_bolsistas'], 'ProjetoBolsistasExport.id = AvaliadorBolsistas.projeto_bolsista_id')
+            ->leftJoin(['BolsistasExport' => 'usuarios'], 'BolsistasExport.id = ProjetoBolsistasExport.bolsista')
+            ->leftJoin(['OrientadoresExport' => 'usuarios'], 'OrientadoresExport.id = ProjetoBolsistasExport.orientador')
+            ->leftJoin(['UnidadesOrientadoresExport' => 'unidades'], 'UnidadesOrientadoresExport.id = OrientadoresExport.unidade_id')
+            ->leftJoin(['EditaisProjetoBolsistasExport' => 'editais'], 'EditaisProjetoBolsistasExport.id = ProjetoBolsistasExport.editai_id')
+            ->leftJoin(['RaicsExport' => 'raics'], 'RaicsExport.id = AvaliadorBolsistas.raic_id')
+            ->leftJoin(['UsuariosRaicsExport' => 'usuarios'], 'UsuariosRaicsExport.id = RaicsExport.usuario_id')
+            ->leftJoin(['OrientadoresRaicsExport' => 'usuarios'], 'OrientadoresRaicsExport.id = RaicsExport.orientador')
+            ->leftJoin(['UnidadesRaicsExport' => 'unidades'], 'UnidadesRaicsExport.id = RaicsExport.unidade_id')
+            ->leftJoin(['EditaisRaicsExport' => 'editais'], 'EditaisRaicsExport.id = RaicsExport.editai_id')
+            ->leftJoin(['WorkshopsExport' => 'workshops'], 'WorkshopsExport.id = AvaliadorBolsistas.workshop_id')
+            ->leftJoin(['UsuariosWorkshopsExport' => 'usuarios'], 'UsuariosWorkshopsExport.id = WorkshopsExport.bolsista')
+            ->leftJoin(['OrientadoresWorkshopsExport' => 'usuarios'], 'OrientadoresWorkshopsExport.id = WorkshopsExport.orientador')
+            ->leftJoin(['UnidadesWorkshopsExport' => 'unidades'], 'UnidadesWorkshopsExport.id = WorkshopsExport.unidade_id')
+            ->leftJoin(['EditaisWorkshopsExport' => 'editais'], 'EditaisWorkshopsExport.id = WorkshopsExport.editai_id')
+            ->leftJoin(['EditaisExport' => 'editais'], 'EditaisExport.id = AvaliadorBolsistas.editai_id')
+            ->select([
+                'id' => 'AvaliadorBolsistas.id',
+                'tipo' => 'AvaliadorBolsistas.tipo',
+                'bolsista' => 'AvaliadorBolsistas.bolsista',
+                'projeto_bolsista_id' => 'AvaliadorBolsistas.projeto_bolsista_id',
+                'raic_id' => 'AvaliadorBolsistas.raic_id',
+                'workshop_id' => 'AvaliadorBolsistas.workshop_id',
+                'deleted' => 'AvaliadorBolsistas.deleted',
+                'situacao' => 'AvaliadorBolsistas.situacao',
+                'nota' => 'AvaliadorBolsistas.nota',
+                'nota_sumula' => 'AvaliadorBolsistas.nota_sumula',
+                'ano' => 'AvaliadorBolsistas.ano',
+                'ordem' => 'AvaliadorBolsistas.ordem',
+                'projeto_bolsista_legado_id' => 'ProjetoBolsistasLegado.id',
+                'bolsista_legado_nome' => 'BolsistasLegado.nome',
+                'orientador_legado_nome' => 'OrientadoresLegado.nome',
+                'unidade_orientador_legado_sigla' => 'UnidadesOrientadoresLegado.sigla',
+                'avaliador_direto_nome' => 'UsuariosAvaliadorDiretoExport.nome',
+                'avaliador_cadastro_nome' => 'UsuariosAvaliadorCadastroExport.nome',
+                'unidade_avaliador_direto' => 'UnidadesAvaliadorDiretoExport.sigla',
+                'unidade_avaliador_cadastro' => 'UnidadesAvaliadorCadastroExport.sigla',
+                'unidade_avaliador' => 'UnidadesAvaliadorExport.sigla',
+                'avaliador_telefone' => 'UsuariosAvaliadorDiretoExport.telefone',
+                'avaliador_cadastro_telefone' => 'UsuariosAvaliadorCadastroExport.telefone',
+                'avaliador_telefone_contato' => 'UsuariosAvaliadorDiretoExport.telefone_contato',
+                'avaliador_cadastro_telefone_contato' => 'UsuariosAvaliadorCadastroExport.telefone_contato',
+                'avaliador_celular' => 'UsuariosAvaliadorDiretoExport.celular',
+                'avaliador_cadastro_celular' => 'UsuariosAvaliadorCadastroExport.celular',
+                'avaliador_whatsapp' => 'UsuariosAvaliadorDiretoExport.whatsapp',
+                'avaliador_cadastro_whatsapp' => 'UsuariosAvaliadorCadastroExport.whatsapp',
+                'avaliador_email' => 'UsuariosAvaliadorDiretoExport.email',
+                'avaliador_cadastro_email' => 'UsuariosAvaliadorCadastroExport.email',
+                'avaliador_email_alternativo' => 'UsuariosAvaliadorDiretoExport.email_alternativo',
+                'avaliador_cadastro_email_alternativo' => 'UsuariosAvaliadorCadastroExport.email_alternativo',
+                'avaliador_email_contato' => 'UsuariosAvaliadorDiretoExport.email_contato',
+                'avaliador_cadastro_email_contato' => 'UsuariosAvaliadorCadastroExport.email_contato',
+                'avaliador_vinculo' => 'VinculosAvaliadorDiretoExport.nome',
+                'avaliador_cadastro_vinculo' => 'VinculosAvaliadorCadastroExport.nome',
+                'bolsista_nome' => 'BolsistasExport.nome',
+                'orientador_nome' => 'OrientadoresExport.nome',
+                'unidade_orientador_sigla' => 'UnidadesOrientadoresExport.sigla',
+                'edital_projeto_nome' => 'EditaisProjetoBolsistasExport.nome',
+                'raic_usuario_nome' => 'UsuariosRaicsExport.nome',
+                'raic_orientador_nome' => 'OrientadoresRaicsExport.nome',
+                'raic_unidade_sigla' => 'UnidadesRaicsExport.sigla',
+                'raic_edital_nome' => 'EditaisRaicsExport.nome',
+                'workshop_usuario_nome' => 'UsuariosWorkshopsExport.nome',
+                'workshop_orientador_nome' => 'OrientadoresWorkshopsExport.nome',
+                'workshop_unidade_sigla' => 'UnidadesWorkshopsExport.sigla',
+                'workshop_edital_nome' => 'EditaisWorkshopsExport.nome',
+                'edital_nome' => 'EditaisExport.nome',
+            ]);
+
         $header = [
             'id',
             'referencia_tipo',
@@ -1493,43 +1576,113 @@ class ListasController extends AppController
             'avaliador_vinculo',
         ];
 
-        $rows = [];
-        foreach ($query->all() as $vinculo) {
-            $dados = $this->montarDadosVinculoAvaliadorBolsista($vinculo);
-            $avaliadorUsuario = $vinculo->usuario ?? $vinculo->avaliador->usuario ?? null;
+        $rows = function () use ($query): \Generator {
+            $limit = 1000;
+            $page = 0;
 
-            $rows[] = [
-                $vinculo->id ?? '',
-                $dados['referencia_tipo'],
-                $dados['referencia_id'],
-                $dados['edital_nome'],
-                $dados['avaliador_nome'],
-                $dados['ativo'],
-                $dados['status'],
-                $dados['orientador_nome'],
-                $dados['bolsista_nome'],
-                $dados['nota'],
-                $dados['nota_sumula'],
-                $dados['unidade_avaliador'],
-                $dados['unidade_referencia'],
-                $vinculo->ano ?? '',
-                $vinculo->ordem ?? '',
-                $avaliadorUsuario->telefone ?? '',
-                $avaliadorUsuario->telefone_contato ?? '',
-                $avaliadorUsuario->celular ?? '',
-                $avaliadorUsuario->whatsapp ?? '',
-                $avaliadorUsuario->email ?? '',
-                $avaliadorUsuario->email_alternativo ?? '',
-                $avaliadorUsuario->email_contato ?? '',
-                $avaliadorUsuario->vinculo->nome ?? '',
-            ];
-        }
+            do {
+                $batchCount = 0;
+                $batchQuery = (clone $query)
+                    ->limit($limit)
+                    ->offset($page * $limit);
+
+                foreach ($batchQuery as $vinculo) {
+                    $batchCount++;
+                    $dados = $this->montarDadosVinculoAvaliadorBolsistaExportacao($vinculo);
+
+                    yield [
+                        $vinculo['id'] ?? '',
+                        $dados['referencia_tipo'],
+                        $dados['referencia_id'],
+                        $dados['edital_nome'],
+                        $dados['avaliador_nome'],
+                        $dados['ativo'],
+                        $dados['status'],
+                        $dados['orientador_nome'],
+                        $dados['bolsista_nome'],
+                        $dados['nota'],
+                        $dados['nota_sumula'],
+                        $dados['unidade_avaliador'],
+                        $dados['unidade_referencia'],
+                        $vinculo['ano'] ?? '',
+                        $vinculo['ordem'] ?? '',
+                        $vinculo['avaliador_telefone'] ?? $vinculo['avaliador_cadastro_telefone'] ?? '',
+                        $vinculo['avaliador_telefone_contato'] ?? $vinculo['avaliador_cadastro_telefone_contato'] ?? '',
+                        $vinculo['avaliador_celular'] ?? $vinculo['avaliador_cadastro_celular'] ?? '',
+                        $vinculo['avaliador_whatsapp'] ?? $vinculo['avaliador_cadastro_whatsapp'] ?? '',
+                        $vinculo['avaliador_email'] ?? $vinculo['avaliador_cadastro_email'] ?? '',
+                        $vinculo['avaliador_email_alternativo'] ?? $vinculo['avaliador_cadastro_email_alternativo'] ?? '',
+                        $vinculo['avaliador_email_contato'] ?? $vinculo['avaliador_cadastro_email_contato'] ?? '',
+                        $vinculo['avaliador_vinculo'] ?? $vinculo['avaliador_cadastro_vinculo'] ?? '',
+                    ];
+                }
+
+                $page++;
+            } while ($batchCount === $limit);
+        };
 
         return $this->downloadCsvResponse(
             'vinculos_avaliadores_' . date('Ymd_His') . '.csv',
             $header,
-            $rows
+            $rows()
         );
+    }
+
+    protected function montarDadosVinculoAvaliadorBolsistaExportacao(array $vinculo): array
+    {
+        $naoInformado = 'Não informado';
+        $referenciaTipo = 'Referência não identificada';
+        $referenciaId = '';
+        $orientadorNome = $naoInformado;
+        $bolsistaNome = $naoInformado;
+        $unidadeReferencia = '';
+
+        if (!empty($vinculo['projeto_bolsista_id']) || !empty($vinculo['projeto_bolsista_legado_id'])) {
+            $referenciaTipo = 'Inscrição';
+            $referenciaId = (string)(int)($vinculo['projeto_bolsista_id'] ?: $vinculo['projeto_bolsista_legado_id']);
+            $orientadorNome = $vinculo['orientador_nome'] ?? $vinculo['orientador_legado_nome'] ?? $naoInformado;
+            $bolsistaNome = $vinculo['bolsista_nome'] ?? $vinculo['bolsista_legado_nome'] ?? $naoInformado;
+            $unidadeReferencia = $vinculo['unidade_orientador_sigla'] ?? $vinculo['unidade_orientador_legado_sigla'] ?? '';
+        } elseif (!empty($vinculo['raic_id'])) {
+            $referenciaTipo = 'RAIC';
+            $referenciaId = (string)(int)$vinculo['raic_id'];
+            $orientadorNome = $vinculo['raic_orientador_nome'] ?? $naoInformado;
+            $bolsistaNome = $vinculo['raic_usuario_nome'] ?? $naoInformado;
+            $unidadeReferencia = $vinculo['raic_unidade_sigla'] ?? '';
+        } elseif (!empty($vinculo['workshop_id'])) {
+            $referenciaTipo = 'Workshop';
+            $referenciaId = (string)(int)$vinculo['workshop_id'];
+            $orientadorNome = $vinculo['workshop_orientador_nome'] ?? $naoInformado;
+            $bolsistaNome = $vinculo['workshop_usuario_nome'] ?? $naoInformado;
+            $unidadeReferencia = $vinculo['workshop_unidade_sigla'] ?? '';
+        } elseif (!empty($vinculo['bolsista'])) {
+            $referenciaTipo = 'Legado';
+            $referenciaId = (string)(int)$vinculo['bolsista'];
+        }
+
+        $emEdicao = (string)($vinculo['situacao'] ?? '') === 'E';
+
+        return [
+            'referencia_tipo' => $referenciaTipo,
+            'referencia_id' => $referenciaId,
+            'edital_nome' => $vinculo['edital_nome']
+                ?? $vinculo['edital_projeto_nome']
+                ?? $vinculo['raic_edital_nome']
+                ?? $vinculo['workshop_edital_nome']
+                ?? '',
+            'avaliador_nome' => $vinculo['avaliador_direto_nome'] ?? $vinculo['avaliador_cadastro_nome'] ?? $naoInformado,
+            'ativo' => (int)($vinculo['deleted'] ?? 0) === 1 ? 'Não' : 'Sim',
+            'status' => (string)($vinculo['situacao'] ?? '') === 'F' ? 'Avaliado' : 'Não avaliado',
+            'orientador_nome' => $orientadorNome,
+            'bolsista_nome' => $bolsistaNome,
+            'nota' => $emEdicao ? '-' : $this->formatarNotaVinculoAvaliadorBolsista($vinculo['nota'] ?? null),
+            'nota_sumula' => $emEdicao ? '-' : $this->formatarNotaVinculoAvaliadorBolsista($vinculo['nota_sumula'] ?? null),
+            'unidade_avaliador' => $vinculo['unidade_avaliador_direto']
+                ?? $vinculo['unidade_avaliador_cadastro']
+                ?? $vinculo['unidade_avaliador']
+                ?? '',
+            'unidade_referencia' => $unidadeReferencia,
+        ];
     }
 
     protected function montarDadosVinculoAvaliadorBolsista($vinculo): array
