@@ -220,7 +220,11 @@ document.addEventListener('DOMContentLoaded', function () {
                         </h6>
 
                         <div class="d-flex gap-2">
-                            <a href="<?= $this->Url->build(['controller' => 'Gestao', 'action' => 'listahomologacao']) ?>"
+                            <a href="<?= $this->Url->build([
+                                'controller' => 'Gestao',
+                                'action' => 'resultadoHomologacao',
+                                '?' => ['homologado' => 'P'],
+                            ]) ?>"
                             class="btn btn-outline-warning btn-sm">
                                 <i class="bi bi-check2-square me-1"></i>Homologar
                             </a>
@@ -232,7 +236,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
                             <a href="<?= $this->Url->build([
                                 'controller' => 'Gestao',
-                                'action' => 'listahomologacao',
+                                'action' => 'resultadoHomologacao',
                                 '?' => [
                                     'programa_id' => 0,
                                     'fase_id' => 0,
@@ -251,9 +255,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
                         <!-- Falta / Total (AÇÃO CONTEXTUAL) -->
                         <div>
-                            <h3 class="fw-bold text-warning mb-1">
-                                <a href="<?= $this->Url->build(['controller' => 'Gestao', 'action' => 'listahomologacao']) ?>"
-                                class="text-warning text-decoration-none">
+	                            <h3 class="fw-bold text-warning mb-1">
+	                                <a href="<?= $this->Url->build([
+                                        'controller' => 'Gestao',
+                                        'action' => 'resultadoHomologacao',
+                                        '?' => ['homologado' => 'P'],
+                                    ]) ?>"
+	                                class="text-warning text-decoration-none">
                                     <?= $dashboard['homologacaoPendente'] ?? 0 ?>
                                     /
                                     <?= $dashboard['homologacaoTotal'] ?? 0 ?>

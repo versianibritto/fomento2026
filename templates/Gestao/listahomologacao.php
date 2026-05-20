@@ -1,6 +1,6 @@
 <?php
     $programaId = (int)($programaId ?? 0);
-    $homologado = (string)($homologado ?? 'P');
+    $homologado = (string)($homologado ?? '');
     $orientadorNome = (string)($orientadorNome ?? '');
     $identity = $this->request->getAttribute('identity');
     $usuarioLogadoId = (int)($identity['id'] ?? 0);
@@ -9,7 +9,7 @@
 
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h4 class="fw-bold">Lista de Homologação</h4>
+        <h4 class="fw-bold"><?= isset($inscricoes) ? 'Resultado - Homologação' : 'Filtros - Homologação' ?></h4>
         <a href="<?= $this->Url->build(['controller' => 'Index', 'action' => 'dashyoda']) ?>"
            class="btn btn-outline-secondary btn-sm rounded-pill px-3">
             <i class="fa fa-arrow-left me-1"></i> Voltar para o Dashboard
@@ -18,7 +18,11 @@
 
     <div class="card mb-3 shadow-sm">
         <div class="card-body">
-            <?= $this->Form->create(null, ['type' => 'get', 'class' => 'row g-2 align-items-end']) ?>
+            <?= $this->Form->create(null, [
+                'type' => 'get',
+                'url' => ['controller' => 'Gestao', 'action' => 'resultadoHomologacao'],
+                'class' => 'row g-2 align-items-end',
+            ]) ?>
                 <div class="col-md-3">
                     <?= $this->Form->control('programa_id', [
                         'label' => 'Programa',
@@ -46,25 +50,28 @@
                 </div>
                 <div class="col-md-3 d-flex gap-2">
                     <?= $this->Form->button('Filtrar', ['class' => 'btn btn-primary']) ?>
-                    <a class="btn btn-outline-success"
-                       href="<?= $this->Url->build([
-                           'controller' => 'Gestao',
-                           'action' => 'listahomologacao',
-                           '?' => [
-                               'programa_id' => $programaId > 0 ? $programaId : '',
-                               'homologado' => $homologado,
-                               'orientador_nome' => $orientadorNome,
-                               'acao' => 'excel',
-                               'origem' => 'gestao',
-                           ],
-                       ]) ?>">
-                        Exportar Excel
-                    </a>
+                    <?php if (isset($inscricoes)): ?>
+                        <a class="btn btn-outline-success"
+                           href="<?= $this->Url->build([
+                               'controller' => 'Gestao',
+                               'action' => 'resultadoHomologacao',
+                               '?' => [
+                                   'programa_id' => $programaId > 0 ? $programaId : '',
+                                   'homologado' => $homologado,
+                                   'orientador_nome' => $orientadorNome,
+                                   'acao' => 'excel',
+                                   'origem' => 'gestao',
+                               ],
+                           ]) ?>">
+                            Exportar Excel
+                        </a>
+                    <?php endif; ?>
                 </div>
             <?= $this->Form->end() ?>
         </div>
     </div>
 
+    <?php if (isset($inscricoes)): ?>
     <div class="card shadow-sm">
         <div class="card-body">
             <table class="table table-hover align-middle">
@@ -152,4 +159,5 @@
                     </ul>
                 </nav>
             </div>
+    <?php endif; ?>
 </div>

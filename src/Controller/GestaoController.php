@@ -717,9 +717,25 @@ class GestaoController extends AppController
 
     public function listahomologacao()
     {
+        $programaId = 0;
+        $homologado = '';
+        $orientadorNome = '';
+        $programas = $this->fetchTable('Programas')->find('list', ['limit' => 200])->toArray();
+        $statusHomologacaoOptions = [
+            '' => 'Todos',
+            'P' => 'Não verificadas',
+            'S' => 'Homologadas',
+            'N' => 'Não homologadas',
+        ];
+
+        $this->set(compact('programas', 'programaId', 'homologado', 'orientadorNome', 'statusHomologacaoOptions'));
+    }
+
+    public function resultadoHomologacao()
+    {
         $programaId = (int)($this->request->getQuery('programa_id') ?? 0);
-        $homologadoParam = trim((string)($this->request->getQuery('homologado') ?? 'P'));
-        $homologado = in_array($homologadoParam, ['', 'P', 'S', 'N'], true) ? $homologadoParam : 'P';
+        $homologadoParam = trim((string)($this->request->getQuery('homologado') ?? ''));
+        $homologado = in_array($homologadoParam, ['', 'P', 'S', 'N'], true) ? $homologadoParam : '';
         $orientadorNome = trim((string)($this->request->getQuery('orientador_nome') ?? ''));
         $agora = FrozenTime::now();
         $conditions = [
@@ -883,7 +899,22 @@ class GestaoController extends AppController
             );
         }
 
-        $inscricoes = $this->paginate($query, ['limit' => 20]);
+        try {
+            $inscricoes = $this->paginate($query, ['limit' => 20]);
+        } catch (\Cake\Http\Exception\NotFoundException $e) {
+            if ((int)$this->request->getQuery('page', 1) > 1) {
+                $queryParams = $this->request->getQueryParams();
+                unset($queryParams['page']);
+
+                return $this->redirect([
+                    'controller' => 'Gestao',
+                    'action' => 'resultadoHomologacao',
+                    '?' => $queryParams,
+                ]);
+            }
+
+            throw $e;
+        }
         $statusHomologacaoOptions = [
             '' => 'Todos',
             'P' => 'Não verificadas',
@@ -891,6 +922,7 @@ class GestaoController extends AppController
             'N' => 'Não homologadas',
         ];
         $this->set(compact('inscricoes', 'programas', 'programaId', 'homologado', 'orientadorNome', 'statusHomologacaoOptions'));
+        $this->render('listahomologacao');
     }
 
     public function telahomologacao($id)
