@@ -1929,8 +1929,7 @@ UPDATE `anexos_tipos` SET `programa` = NULL WHERE (`id` = '16');
 UPDATE `anexos_tipos` SET `programa` = NULL WHERE (`id` = '15');
 
 
-ALTER TABLE `projeto_bolsistas` 
-ADD COLUMN `filhos_menor_bolsista` CHAR(1) NULL AFTER `homologado_justificativa`;
+ALTER TABLE `projeto_bolsistas` ADD COLUMN `filhos_menor_bolsista` CHAR(1) NULL AFTER `homologado_justificativa`;
 
 
 
@@ -1940,22 +1939,16 @@ UPDATE `vinculos` SET `nome` = 'Aluno de Mestrado' WHERE (`id` = '12');
 UPDATE `vinculos` SET `deleted` = '1' WHERE (`id` = '14');
 UPDATE `vinculos` SET `nome` = 'Candidato Bolsista PDJ' WHERE (`id` = '13');
 
-ALTER TABLE `fomento2026`.`inscricao_sumulas` 
-ADD COLUMN `bolsista` TINYINT(1) NULL AFTER `quantidade`;
+ALTER TABLE `inscricao_sumulas` ADD COLUMN `bolsista` TINYINT(1) NULL AFTER `quantidade`;
 
 
-ALTER TABLE `fomento2026`.`editais` 
-ADD COLUMN `cpf_invalidos` TEXT NULL AFTER `controller`;
+ALTER TABLE `editais` ADD COLUMN `cpf_invalidos` TEXT NULL AFTER `controller`;
 
 
-ALTER TABLE `fomento2026`.`workshops` 
-ADD COLUMN `projeto_bolsista_id` INT NULL AFTER `pdj_inscricoe_id`,
-CHANGE COLUMN `usuario_id` `bolsista` INT NULL DEFAULT NULL ;
+ALTER TABLE `workshops` ADD COLUMN `projeto_bolsista_id` INT NULL AFTER `pdj_inscricoe_id`, CHANGE COLUMN `usuario_id` `bolsista` INT NULL DEFAULT NULL ;
 
 
-ALTER TABLE `fomento2026`.`avaliador_bolsistas` 
-ADD COLUMN `nota_sumula_bolsista` DOUBLE(5,2) NULL AFTER `deletado_em`;
+ALTER TABLE `avaliador_bolsistas` ADD COLUMN `nota_sumula_bolsista` DOUBLE(5,2) NULL AFTER `deletado_em`;
 
-ALTER TABLE `fomento2026`.`avaliations_sumulas` 
-ADD COLUMN `bolsista` TINYINT(1) NULL AFTER `quantidade_avaliada`;
+ALTER TABLE `avaliations_sumulas` ADD COLUMN `bolsista` TINYINT(1) NULL AFTER `quantidade_avaliada`;
 

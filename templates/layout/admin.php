@@ -54,17 +54,37 @@
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
         }
         .sidebar-subpanel .sidebar-link {
-            padding: 0.45rem 0.65rem;
+            padding: 0.42rem 0.65rem 0.42rem 1.1rem;
             margin: 0.1rem 0;
             border-radius: 0.35rem;
             font-size: 0.88rem;
             background: transparent;
             color: #111827 !important;
+            border-left: 2px solid #d0d7de;
         }
         .sidebar-subpanel .sidebar-link:hover,
         .sidebar-subpanel .sidebar-link.active {
             background: #e9ecef;
             color: #000 !important;
+        }
+        .sidebar-link.sidebar-expansivel {
+            font-weight: 700;
+            letter-spacing: .01em;
+        }
+        .sidebar-link.sidebar-expansivel .fa-folder,
+        .sidebar-link.sidebar-expansivel .fa-folder-open {
+            margin-right: .45rem;
+        }
+        .sidebar-link.sidebar-expansivel[aria-expanded="true"] .fa-folder::before {
+            content: "\f07c";
+        }
+        .sidebar-expansivel-indicador {
+            float: right;
+            font-size: .8rem;
+            opacity: .85;
+        }
+        .sidebar-link.sidebar-expansivel[aria-expanded="true"] .sidebar-expansivel-indicador {
+            transform: rotate(90deg);
         }
     </style>
     
@@ -203,12 +223,10 @@
                         </li>-->
                     
                         <?php if ((int)($usuario_logado['yoda'] ?? 0) === 1 || (int)($usuario_logado['escolaridade_id'] ?? 0) === 10) { ?>
-                            <li class="sidebar-header">
-                                Banco de talentos
-                            </li>
+                          
                             <li class="sidebar-item">
                                 <a href="/users/talentos/1" class="sidebar-link">
-                                    * Busca de Talentos
+                                    Busca de Talentos
                                 </a>
                             </li>
                         <?php } ?>
@@ -229,12 +247,12 @@
                     </li>
                     <li class="sidebar-item">
                         <a href="/users/index" class="sidebar-link">
-                            * Usuários
+                            Usuários
                         </a>
                     </li>
                     <li class="sidebar-item">
                         <a href="/listas/busca/V" class="sidebar-link">
-                            * Bolsas ativas
+                            Bolsas ativas
                             <span class="badge badge-info right">IC: <?=$atv?></span>
                             <span class="badge badge-info right">PDJ:<?=$atv_pdj?></span>
 
@@ -242,27 +260,22 @@
                     </li>
                     <li class="sidebar-item">
                         <a href="/listas/busca/A" class="sidebar-link">
-                           * Inscrições em andamento
+                           Inscrições em andamento
                         </a>
                     </li>
                     <li class="sidebar-item">
                         <a href="/listas/busca/T" class="sidebar-link">
-                           * Lista por Status
+                           Lista por Status
                         </a>
                     </li>
                     
                     
                     <li class="sidebar-item">
                         <a href="/listas/limpar/buscaMensal/listamensal" class="sidebar-link">
-                           * Lista Egressos/Ativados
+                           Lista Egressos/Ativados
                         </a>
                     </li>
                   
-                    <?php /*
-                        Bloco expansivo RAIC preservado como referencia.
-                        Desativado para retornar o menu ao modelo antigo com itens simples.
-                    */ ?>
-                    <?php if (false): ?>
                     <?php
                         $raicAdminAberto = (
                             ($this->request->getParam('controller') == 'Avaliadores' && $this->request->getParam('action') == 'cadastroRaic')
@@ -271,8 +284,8 @@
                         );
                     ?>
                     <li class="sidebar-item <?= $raicAdminAberto ? 'active' : '' ?>">
-                        <a data-bs-target="#menu-raic-admin" data-bs-toggle="collapse" class="sidebar-link <?= $raicAdminAberto ? '' : 'collapsed' ?>" href="#">
-                            RAIC
+                        <a data-bs-target="#menu-raic-admin" data-bs-toggle="collapse" class="sidebar-link sidebar-expansivel <?= $raicAdminAberto ? '' : 'collapsed' ?>" href="#">
+                            <i class="fa fa-folder"></i> RAIC <i class="fa fa-chevron-right sidebar-expansivel-indicador"></i>
                         </a>
                         <ul id="menu-raic-admin" class="sidebar-dropdown sidebar-subpanel list-unstyled collapse <?= $raicAdminAberto ? 'show' : '' ?>" data-bs-parent="#sidebar">
                             <li class="sidebar-item">
@@ -299,30 +312,6 @@
                             <?php endif; ?>
                         </ul>
                     </li>
-                    <?php endif; ?>
-
-                    <li class="sidebar-item">
-                        <a href="/avaliadores/cadastro-raic" class="sidebar-link <?=(($this->request->getParam('controller') == 'Avaliadores' && $this->request->getParam('action') == 'cadastroRaic') ? 'active' : '')?>">
-                           Cadastro Massivo Avaliadores RAIC
-                        </a>
-                    </li>
-                    <li class="sidebar-item">
-                        <a href="/listas/lista-avaliadores-raic" class="sidebar-link <?=(($this->request->getParam('controller') == 'Listas' && $this->request->getParam('action') == 'listaAvaliadoresRaic') ? 'active' : '')?>">
-                           Lista de Avaliadores RAIC
-                        </a>
-                    </li>
-                    <li class="sidebar-item">
-                        <a href="/raic-new/voluntarias" class="sidebar-link <?=(($this->request->getParam('controller') == 'RaicNew' && $this->request->getParam('action') == 'voluntarias') ? 'active' : '')?>">
-                           Cadastro da Raic
-                        </a>
-                    </li>
-                    <?php if (!empty($usuario_logado['yoda']) || !empty($usuario_logado['jedi'])): ?>
-                        <li class="sidebar-item">
-                            <a href="/listas/busca-raic" class="sidebar-link <?=(($this->request->getParam('controller') == 'Listas' && in_array($this->request->getParam('action'), ['buscaRaic', 'resultadoRaic'], true)) ? 'active' : '')?>">
-                                Listagem Raic
-                            </a>
-                        </li>
-                    <?php endif; ?>
                     
                     
                                       
@@ -390,55 +379,84 @@
                             </a>
                         </li>
                         -->
-                        <li class="sidebar-item">
-                            <a href="/gestao/lancarresultados" class="sidebar-link <?=(($this->request->getParam('controller') == 'Gestao' && $this->request->getParam('action') == 'lancarresultados') ? 'active' : '')?>">
-                            * Lançar resultados
+                        <?php
+                            $resultadosGestaoAberto = (
+                                ($this->request->getParam('controller') == 'Gestao' && $this->request->getParam('action') == 'lancarresultados')
+                                || (
+                                    $this->request->getParam('controller') == 'Gestao'
+                                    && $this->request->getParam('action') == 'vigencias'
+                                    && in_array(($this->request->getParam('pass')[0] ?? ''), ['A', 'E'], true)
+                                )
+                            );
+                        ?>
+                        <li class="sidebar-item <?= $resultadosGestaoAberto ? 'active' : '' ?>">
+                            <a data-bs-target="#menu-resultados-gestao" data-bs-toggle="collapse" class="sidebar-link sidebar-expansivel <?= $resultadosGestaoAberto ? '' : 'collapsed' ?>" href="#">
+                                <i class="fa fa-folder"></i> Resultados <i class="fa fa-chevron-right sidebar-expansivel-indicador"></i>
                             </a>
+                            <ul id="menu-resultados-gestao" class="sidebar-dropdown sidebar-subpanel list-unstyled collapse <?= $resultadosGestaoAberto ? 'show' : '' ?>" data-bs-parent="#sidebar">
+                                <li class="sidebar-item">
+                                    <a href="/gestao/lancarresultados" class="sidebar-link <?=(($this->request->getParam('controller') == 'Gestao' && $this->request->getParam('action') == 'lancarresultados') ? 'active' : '')?>">
+                                        Lançar resultados
+                                    </a>
+                                </li>
+                                <li class="sidebar-item">
+                                    <a href="/gestao/vigencias/A" class="sidebar-link <?=(($this->request->getParam('controller') == 'Gestao' && $this->request->getParam('action') == 'vigencias' && (($this->request->getParam('pass')[0] ?? '') === 'A')) ? 'active' : '')?>">
+                                        Ativar Bolsas
+                                    </a>
+                                </li>
+                                <li class="sidebar-item">
+                                    <a href="/gestao/vigencias/E" class="sidebar-link <?=(($this->request->getParam('controller') == 'Gestao' && $this->request->getParam('action') == 'vigencias' && (($this->request->getParam('pass')[0] ?? '') === 'E')) ? 'active' : '')?>">
+                                        Encerrar Bolsas
+                                    </a>
+                                </li>
+                            </ul>
                         </li>
-	                        <li class="sidebar-item">
-	                            <a href="/avaliadores/cadastro-nova" class="sidebar-link <?=(($this->request->getParam('controller') == 'Avaliadores' && $this->request->getParam('action') == 'cadastroNova') ? 'active' : '')?>">
-	                               * Cadastro Massivo Avaliadores Editais
-	                            </a>
-	                        </li>
-	                        <li class="sidebar-item">
-	                            <a href="/listas/lista-avaliadores-nova" class="sidebar-link <?=(($this->request->getParam('controller') == 'Listas' && $this->request->getParam('action') == 'listaAvaliadoresNova') ? 'active' : '')?>">
-	                               * Lista de Avaliadores Editais
+
+                        <?php
+                            $avaliacoesGestaoAberto = (
+                                ($this->request->getParam('controller') == 'Avaliadores' && $this->request->getParam('action') == 'cadastroNova')
+                                || ($this->request->getParam('controller') == 'Listas' && in_array($this->request->getParam('action'), [
+                                    'listaAvaliadoresNova',
+                                    'dashcountavaliadores',
+                                    'listaInscricoesAvaliadores',
+                                    'listaVinculosAvaliadorBolsistas',
+                                ], true))
+                            );
+                        ?>
+                        <li class="sidebar-item <?= $avaliacoesGestaoAberto ? 'active' : '' ?>">
+                            <a data-bs-target="#menu-avaliacoes-gestao" data-bs-toggle="collapse" class="sidebar-link sidebar-expansivel <?= $avaliacoesGestaoAberto ? '' : 'collapsed' ?>" href="#">
+                                <i class="fa fa-folder"></i> Avaliações <i class="fa fa-chevron-right sidebar-expansivel-indicador"></i>
                             </a>
+                            <ul id="menu-avaliacoes-gestao" class="sidebar-dropdown sidebar-subpanel list-unstyled collapse <?= $avaliacoesGestaoAberto ? 'show' : '' ?>" data-bs-parent="#sidebar">
+                                <li class="sidebar-item">
+                                    <a href="/avaliadores/cadastro-nova" class="sidebar-link <?=(($this->request->getParam('controller') == 'Avaliadores' && $this->request->getParam('action') == 'cadastroNova') ? 'active' : '')?>">
+                                        Cadastro Massivo Avaliadores Editais
+                                    </a>
+                                </li>
+                                <li class="sidebar-item">
+                                    <a href="/listas/lista-avaliadores-nova" class="sidebar-link <?=(($this->request->getParam('controller') == 'Listas' && $this->request->getParam('action') == 'listaAvaliadoresNova') ? 'active' : '')?>">
+                                        Lista de Avaliadores Editais
+                                    </a>
+                                </li>
+                                <li class="sidebar-item">
+                                    <a href="/listas/dashcountavaliadores" class="sidebar-link <?=(($this->request->getParam('controller') == 'Listas' && $this->request->getParam('action') == 'dashcountavaliadores') ? 'active' : '')?>">
+                                        Carga por Avaliador/Edital
+                                    </a>
+                                </li>
+                                <li class="sidebar-item">
+                                    <a href="/listas/lista-inscricoes-avaliadores" class="sidebar-link <?=(($this->request->getParam('controller') == 'Listas' && $this->request->getParam('action') == 'listaInscricoesAvaliadores') ? 'active' : '')?>">
+                                        Vinculação de Avaliadores IC
+                                    </a>
+                                </li>
+                                <li class="sidebar-item">
+                                    <a href="/listas/lista-vinculos-avaliador-bolsistas" class="sidebar-link <?=(($this->request->getParam('controller') == 'Listas' && $this->request->getParam('action') == 'listaVinculosAvaliadorBolsistas') ? 'active' : '')?>">
+                                        Vínculos de Avaliadores
+                                    </a>
+                                </li>
+                            </ul>
                         </li>
-                        <li class="sidebar-item">
-                            <a href="/listas/dashcountavaliadores" class="sidebar-link <?=(($this->request->getParam('controller') == 'Listas' && $this->request->getParam('action') == 'dashcountavaliadores') ? 'active' : '')?>">
-                               * Carga por Avaliador/Edital
-                            </a>
-                        </li>
-                        <li class="sidebar-item">
-                            <a href="/listas/lista-inscricoes-avaliadores" class="sidebar-link <?=(($this->request->getParam('controller') == 'Listas' && $this->request->getParam('action') == 'listaInscricoesAvaliadores') ? 'active' : '')?>">
-                               * Vinculação de Avaliadores IC
-                            </a>
-                        </li>
-                        <?php if ((int)($usuario_logado['yoda'] ?? 0) === 1) { ?>
-                        <li class="sidebar-item">
-                            <a href="/listas/lista-vinculos-avaliador-bolsistas" class="sidebar-link <?=(($this->request->getParam('controller') == 'Listas' && $this->request->getParam('action') == 'listaVinculosAvaliadorBolsistas') ? 'active' : '')?>">
-                               * Vínculos de Avaliadores
-                            </a>
-                        </li>
-                        <?php } ?>
                         
                       
-                        <?php if ((int)($usuario_logado['yoda'] ?? 0) === 1) { ?>
-                        <li class="sidebar-item">
-                            <a href="/gestao/vigencias/E" class="sidebar-link <?=(($this->request->getParam('controller') == 'Gestao' && $this->request->getParam('action') == 'vigencias' && (($this->request->getParam('pass')[0] ?? '') === 'E')) ? 'active' : '')?>">
-                                Encerrar Bolsas
-                            <span class="badge badge-info right"></span>
-                            </a>
-                        </li>
-                        <li class="sidebar-item">
-                            <a href="/gestao/vigencias/A" class="sidebar-link <?=(($this->request->getParam('controller') == 'Gestao' && $this->request->getParam('action') == 'vigencias' && (($this->request->getParam('pass')[0] ?? '') === 'A')) ? 'active' : '')?>">
-                                Ativar Bolsas
-                            <span class="badge badge-info right"></span>
-                            </a>
-                        </li>
-                        <?php } ?>
-
                         <?php
                             $workshopGestaoAberto = (
                                 (
@@ -456,8 +474,8 @@
 	                            );
                         ?>
                         <li class="sidebar-item <?= $workshopGestaoAberto ? 'active' : '' ?>">
-                            <a data-bs-target="#menu-workshop-gestao" data-bs-toggle="collapse" class="sidebar-link <?= $workshopGestaoAberto ? '' : 'collapsed' ?>" href="#">
-                                Workshop
+                            <a data-bs-target="#menu-workshop-gestao" data-bs-toggle="collapse" class="sidebar-link sidebar-expansivel <?= $workshopGestaoAberto ? '' : 'collapsed' ?>" href="#">
+                                <i class="fa fa-folder"></i> Workshop <i class="fa fa-chevron-right sidebar-expansivel-indicador"></i>
                             </a>
 	                            <ul id="menu-workshop-gestao" class="sidebar-dropdown sidebar-subpanel list-unstyled collapse <?= $workshopGestaoAberto ? 'show' : '' ?>" data-bs-parent="#sidebar">
 	                                <?php if ((int)($usuario_logado['yoda'] ?? 0) === 1) { ?>
@@ -578,6 +596,36 @@
                     window.location.href = destino;
                 }
             }, true);
+        })();
+    </script>
+    <script>
+        (function () {
+            function obterContainerRolagemSidebar() {
+                return document.querySelector('.sidebar-content .simplebar-content-wrapper')
+                    || document.querySelector('.sidebar-content');
+            }
+
+            document.addEventListener('shown.bs.collapse', function (event) {
+                var painel = event.target;
+                if (!painel || !painel.classList || !painel.classList.contains('sidebar-subpanel')) {
+                    return;
+                }
+
+                window.setTimeout(function () {
+                    var container = obterContainerRolagemSidebar();
+                    if (!container) return;
+
+                    var painelRect = painel.getBoundingClientRect();
+                    var containerRect = container.getBoundingClientRect();
+                    var margem = 72;
+
+                    if (painelRect.bottom > containerRect.bottom - margem) {
+                        container.scrollTop += painelRect.bottom - containerRect.bottom + margem;
+                    } else if (painelRect.top < containerRect.top + margem) {
+                        container.scrollTop -= containerRect.top - painelRect.top + margem;
+                    }
+                }, 80);
+            });
         })();
     </script>
     <script>

@@ -19,6 +19,7 @@
                     <div class="alert alert-warning border border-warning-subtle mb-0 sumula-alerta">
                         <div class="fw-semibold mb-1">Atenção ao preenchimento da súmula</div>
                         <div>Bolsistas com filhos; Bolsistas recém-doutores, considerar a produção científica e tecnológica dos últimos 8 anos.</div>
+                        <div>Bolsistas com filhos; Bolsistas recém-doutores, considerar a produção científica e tecnológica dos últimos 8 anos.</div>
                         <div>Para os demais, será considerada a produção científica e tecnológica dos últimos 5 anos.</div>
                         <div>OBS. Detalhes no anexo II do Edital</div>
                         <div class="mt-3">Todos os campos desta tela serão exigidos na finalização da inscrição.</div>
