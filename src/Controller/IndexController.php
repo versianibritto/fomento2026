@@ -225,7 +225,7 @@ class IndexController extends AppController
             ->enableHydration(false)
             ->toArray();
 
-        $hoje = FrozenTime::now();
+        $hoje = FrozenTime::now()->format('Y-m-d H:i:s');
 
         
         $dashboard = [
@@ -249,7 +249,11 @@ class IndexController extends AppController
        
         foreach ($rows as $r) {
             $qtd = (int)$r['qtd'];
-            $vigenciaNaoIniciada = !empty($r['inicio_vigencia']) && $r['inicio_vigencia'] > $hoje;
+            $inicioVigencia = $r['inicio_vigencia'] ?? null;
+            if ($inicioVigencia instanceof \DateTimeInterface) {
+                $inicioVigencia = $inicioVigencia->format('Y-m-d H:i:s');
+            }
+            $vigenciaNaoIniciada = !empty($inicioVigencia) && (string)$inicioVigencia > $hoje;
             $ehFinalizada = $vigenciaNaoIniciada && in_array($r['bloco'], ['F', 'H', 'R'], true);
             $statusHomologacao = trim((string)($r['homologado'] ?? ''));
 
