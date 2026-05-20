@@ -2045,13 +2045,13 @@ class ListasController extends AppController
 
         $lista = $this->Geral->find('all')
             ->where([$conditions])
-            ->orderBy(['nome_orientador' => 'ASC']);
+            ->order(['nome_orientador' => 'ASC']);
         $listas = $this->paginate($lista, ['limit'=>10]);
 
         if ($this->request->getQuery('acao') === 'excel') {
             $excelQuery = $this->Geral->find('all')
                 ->where([$conditions])
-                ->orderBy(['nome_orientador' => 'ASC']);
+                ->order(['nome_orientador' => 'ASC']);
             $excelQuery->limit(null);
             $rows = $excelQuery->all();
 

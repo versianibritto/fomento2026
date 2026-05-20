@@ -38,19 +38,6 @@ class GeralTable extends Table
         $this->setTable('geral');
         $this->setDisplayField('id');
         $this->setPrimaryKey('id');
-        $this->setSchema([
-            'id' => 'integer',
-            'programa_id' => 'integer',
-            'fase_id' => 'integer',
-            'origem' => 'string',
-            'cota' => 'string',
-            'homologado' => 'string',
-            'heranca' => 'integer',
-            'vigente' => 'integer',
-            'nome_orientador' => 'string',
-            'inicio_vigencia' => 'string',
-            'fim_vigencia' => 'string',
-        ]);
     }
 
     /**
