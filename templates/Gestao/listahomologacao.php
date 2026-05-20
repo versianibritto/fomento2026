@@ -1,6 +1,7 @@
 <?php
     $programaId = (int)($programaId ?? 0);
     $homologado = (string)($homologado ?? 'P');
+    $orientadorNome = (string)($orientadorNome ?? '');
     $identity = $this->request->getAttribute('identity');
     $usuarioLogadoId = (int)($identity['id'] ?? 0);
     $ehTi = in_array($usuarioLogadoId, [1, 8088], true);
@@ -18,7 +19,7 @@
     <div class="card mb-3 shadow-sm">
         <div class="card-body">
             <?= $this->Form->create(null, ['type' => 'get', 'class' => 'row g-2 align-items-end']) ?>
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <?= $this->Form->control('programa_id', [
                         'label' => 'Programa',
                         'options' => $programas,
@@ -27,7 +28,7 @@
                         'class' => 'form-select',
                     ]) ?>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <?= $this->Form->control('homologado', [
                         'label' => 'Situação de homologação',
                         'options' => $statusHomologacaoOptions,
@@ -35,7 +36,15 @@
                         'class' => 'form-select',
                     ]) ?>
                 </div>
-                <div class="col-md-4 d-flex gap-2">
+                <div class="col-md-3">
+                    <?= $this->Form->control('orientador_nome', [
+                        'label' => 'Nome do orientador',
+                        'value' => $orientadorNome,
+                        'class' => 'form-control',
+                        'placeholder' => 'Digite parte do nome',
+                    ]) ?>
+                </div>
+                <div class="col-md-3 d-flex gap-2">
                     <?= $this->Form->button('Filtrar', ['class' => 'btn btn-primary']) ?>
                     <a class="btn btn-outline-success"
                        href="<?= $this->Url->build([
@@ -44,6 +53,7 @@
                            '?' => [
                                'programa_id' => $programaId > 0 ? $programaId : '',
                                'homologado' => $homologado,
+                               'orientador_nome' => $orientadorNome,
                                'acao' => 'excel',
                                'origem' => 'gestao',
                            ],

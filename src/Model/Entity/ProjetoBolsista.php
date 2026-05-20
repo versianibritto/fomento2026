@@ -100,6 +100,7 @@ use Cake\ORM\Entity;
  * @property \Cake\I18n\DateTime|null $homologado_data
  * @property int|null $homologado_por
  * @property string|null $homologado_justificativa
+ * @property string|null $filhos_menor_bolsista
  *
  * @property \App\Model\Entity\Editai $editai
  * @property \App\Model\Entity\Projeto $projeto
@@ -222,6 +223,7 @@ class ProjetoBolsista extends Entity
         'homologado_data' => true,
         'homologado_por' => true,
         'homologado_justificativa' => true,
+        'filhos_menor_bolsista' => true,
         'editai' => true,
         'projeto' => true,
         'usuario' => true,

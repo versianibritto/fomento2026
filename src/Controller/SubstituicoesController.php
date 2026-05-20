@@ -173,7 +173,7 @@ class SubstituicoesController extends AppController
                 $liberadoPeloInicio = FrozenTime::now() <= $limiteInicio;
             }
 
-            if (!$liberadoPeloInicio && !$this->loadPeriodo($edital, $identity, 4, [], [(int)$inscricao->id])) {
+            if (!$liberadoPeloInicio && !$this->loadPeriodo($edital, $identity, 4, null, (int)$inscricao->id)) {
                 $this->Flash->error('Substituicao fora do periodo permitido para este edital.');
                 return $this->redirect(['controller' => 'Padrao', 'action' => 'visualizar', (int)$inscricao->id]);
             }

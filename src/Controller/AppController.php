@@ -736,8 +736,7 @@ class AppController extends Controller
             $this->Flash->error('Faça login para continuar.');
             return $this->contextCache[$cacheKey] = ['redirect' => $this->redirect(['controller' => 'Users', 'action' => 'login'])];
         }
-        $identityId = (int)($identity->id ?? 0);
-        $ehTI = in_array($identityId, [1, 8088], true);
+        $ehTI = $this->ehTi();
 
         if ($editalId === null) {
             $this->Flash->error('Edital não informado.');
@@ -753,56 +752,59 @@ class AppController extends Controller
             return $this->contextCache[$cacheKey] = ['redirect' => $this->redirect(['controller' => 'Index', 'action' => 'index'])];
         }
 
-        $inscricoesFiltroPeriodo = [];
+        $inscricaoFiltroPeriodo = 0;
         if (!empty($inscricaoId) && (int)$inscricaoId > 0) {
-            $inscricoesFiltroPeriodo[] = (int)$inscricaoId;
+            $inscricaoFiltroPeriodo = (int)$inscricaoId;
         } else {
             $pass = (array)$this->request->getParam('pass');
             if (isset($pass[1]) && is_numeric((string)$pass[1]) && (int)$pass[1] > 0) {
-                $inscricoesFiltroPeriodo[] = (int)$pass[1];
+                $inscricaoFiltroPeriodo = (int)$pass[1];
             }
         }
 
-        if (!$ehTI && !$this->loadPeriodo($edital, $identity, 1, [], $inscricoesFiltroPeriodo)) {
+        if (!$ehTI && !$this->loadPeriodo($edital, $identity, 1, null, $inscricaoFiltroPeriodo)) {
             $this->Flash->error('Fora do período de inscrição.');
             return $this->contextCache[$cacheKey] = ['redirect' => $this->redirect(['controller' => 'Index', 'action' => 'index'])];
         }
 
-        if (empty($identity->escolaridade_id) || (int)$identity->escolaridade_id !== 10) {
-            $this->Flash->error('Inscrições restritas aos orientadores com doutorado.');
-            return $this->contextCache[$cacheKey] = ['redirect' => $this->redirect(['controller' => 'Index', 'action' => 'index'])];
-        }
+        if (!$ehTI) {
 
-        if (!empty($edital->unidades_permitidas)) {
-            $permitidas = array_filter(array_map('intval', explode(',', (string)$edital->unidades_permitidas)));
-            if (empty($identity->unidade_id) || !in_array((int)$identity->unidade_id, $permitidas, true)) {
-                $this->Flash->error('Edital restrito a orientadores das unidades permitidas.');
+            if (empty($identity->escolaridade_id) || (int)$identity->escolaridade_id !== 10) {
+                $this->Flash->error('Inscrições restritas aos orientadores com doutorado.');
                 return $this->contextCache[$cacheKey] = ['redirect' => $this->redirect(['controller' => 'Index', 'action' => 'index'])];
             }
-        }
 
-        if (!empty($edital->vinculos_permitidos)) {
-            $permitidos = array_filter(array_map('intval', explode(',', (string)$edital->vinculos_permitidos)));
-            if (empty($identity->vinculo_id) || !in_array((int)$identity->vinculo_id, $permitidos, true)) {
-                $this->Flash->error('Edital restrito a orientadores com vínculo permitido.');
-                return $this->contextCache[$cacheKey] = ['redirect' => $this->redirect(['controller' => 'Index', 'action' => 'index'])];
-            }
-        }
-
-        if (!empty($edital->cpf_permitidos)) {
-            $cpf = preg_replace('/\D+/', '', (string)$identity->cpf);
-            $lista = preg_split('/[\s,;]+/', (string)$edital->cpf_permitidos, -1, PREG_SPLIT_NO_EMPTY);
-            $permitidos = [];
-            foreach ($lista as $item) {
-                $digits = preg_replace('/\D+/', '', (string)$item);
-                if ($digits !== '') {
-                    $permitidos[] = $digits;
+            if (!empty($edital->unidades_permitidas)) {
+                $permitidas = array_filter(array_map('intval', explode(',', (string)$edital->unidades_permitidas)));
+                if (empty($identity->unidade_id) || !in_array((int)$identity->unidade_id, $permitidas, true)) {
+                    $this->Flash->error('Edital restrito a orientadores das unidades permitidas.');
+                    return $this->contextCache[$cacheKey] = ['redirect' => $this->redirect(['controller' => 'Index', 'action' => 'index'])];
                 }
             }
 
-            if ($cpf === '' || !in_array($cpf, $permitidos, true)) {
-                $this->Flash->error('Edital restrito a curadores de Coleções Biológicas.');
-                return $this->contextCache[$cacheKey] = ['redirect' => $this->redirect(['controller' => 'Index', 'action' => 'index'])];
+            if (!empty($edital->vinculos_permitidos)) {
+                $permitidos = array_filter(array_map('intval', explode(',', (string)$edital->vinculos_permitidos)));
+                if (empty($identity->vinculo_id) || !in_array((int)$identity->vinculo_id, $permitidos, true)) {
+                    $this->Flash->error('Edital restrito a orientadores com vínculo permitido.');
+                    return $this->contextCache[$cacheKey] = ['redirect' => $this->redirect(['controller' => 'Index', 'action' => 'index'])];
+                }
+            }
+
+            if (!empty($edital->cpf_permitidos)) {
+                $cpf = preg_replace('/\D+/', '', (string)$identity->cpf);
+                $lista = preg_split('/[\s,;]+/', (string)$edital->cpf_permitidos, -1, PREG_SPLIT_NO_EMPTY);
+                $permitidos = [];
+                foreach ($lista as $item) {
+                    $digits = preg_replace('/\D+/', '', (string)$item);
+                    if ($digits !== '') {
+                        $permitidos[] = $digits;
+                    }
+                }
+
+                if ($cpf === '' || !in_array($cpf, $permitidos, true)) {
+                    $this->Flash->error('Edital restrito a curadores de Coleções Biológicas.');
+                    return $this->contextCache[$cacheKey] = ['redirect' => $this->redirect(['controller' => 'Index', 'action' => 'index'])];
+                }
             }
         }
 
@@ -813,77 +815,62 @@ class AppController extends Controller
         ];
     }
 
-    protected function loadPeriodo($edital, $identity, ?int $editaisWkId = null, array $usuarioIds = [], array $inscricoes = []): bool
+    protected function loadPeriodo($edital, $identity, ?int $editaisWkId = null, ?int $usuarioId = null, ?int $inscricaoId = null): bool
     {
         $agora = FrozenTime::now();
         $wkId = (int)$editaisWkId;
-        $periodoValido = false;
-        $temPrazoPadrao = in_array($wkId, [1, 8], true);
+        $usuarioFiltro = (int)($usuarioId ?? $identity->id ?? 0);
+        $inscricaoFiltro = (int)($inscricaoId ?? 0);
 
-        if ($temPrazoPadrao && $wkId === 1) {
-            $periodoValido = !empty($edital->inicio_inscricao) && !empty($edital->fim_inscricao)
+        /* editais_wks
+        '1', 'Inscrição'
+        '2', 'Resultado'
+        '3', 'Avaliação'
+        '4', 'Substituição'
+        */
+
+        if ($wkId === 1) {
+            if (!empty($edital->inicio_inscricao) && !empty($edital->fim_inscricao)
                 && $agora >= $edital->inicio_inscricao
-                && $agora <= $edital->fim_inscricao;
+                && $agora <= $edital->fim_inscricao
+            ) {
+                return true;
+            }
         }
-        if ($temPrazoPadrao && $wkId === 8) {
-            $periodoValido = !empty($edital->inicio_avaliar) && !empty($edital->fim_avaliar)
+
+        if ($wkId === 3) {
+            return !empty($edital->inicio_avaliar) && !empty($edital->fim_avaliar)
                 && $agora >= $edital->inicio_avaliar
                 && $agora <= $edital->fim_avaliar;
         }
-        if ($periodoValido) {
-            return true;
-        }
-
-        $usuarioLogadoId = (int)($identity->id ?? 0);
-        $usuariosFiltro = array_values(array_unique(array_map('intval', array_filter($usuarioIds, fn($v) => (int)$v > 0))));
-        if ($usuarioLogadoId > 0 && !in_array($usuarioLogadoId, $usuariosFiltro, true)) {
-            $usuariosFiltro[] = $usuarioLogadoId;
-        }
-        $inscricoesFiltro = array_values(array_unique(array_map('intval', array_filter($inscricoes, fn($v) => (int)$v > 0))));
 
         $condicoes = [
             'EditaisPrazos.editai_id' => (int)$edital->id,
             'EditaisPrazos.deleted IS' => null,
             'EditaisPrazos.inicio <=' => $agora,
             'EditaisPrazos.fim >=' => $agora,
+            'EditaisPrazos.editais_wk_id' => $wkId,
         ];
-        if ($editaisWkId !== null) {
-            $condicoes['EditaisPrazos.editais_wk_id'] = $editaisWkId;
+
+        $filtroExcecao = [];
+
+        if ($wkId === 1) {
+            if ($usuarioFiltro > 0) {
+                $filtroExcecao[] = ['EditaisPrazos.usuario_id' => $usuarioFiltro];
+            }
+            if ($inscricaoFiltro > 0) {
+                $filtroExcecao[] = ['EditaisPrazos.inscricao' => (string)$inscricaoFiltro];
+            }
+        }
+
+        if (empty($filtroExcecao)) {
+            return false;
         }
 
         $excecao = $this->fetchTable('EditaisPrazos')->find()
             ->select(['EditaisPrazos.id'])
             ->where($condicoes)
-            ->andWhere(function ($exp, $q) use ($usuariosFiltro, $inscricoesFiltro) {
-                $or = [];
-
-                // Excecao geral: sem usuario e sem inscricao.
-                $or[] = [
-                    'EditaisPrazos.usuario_id IS' => null,
-                    'OR' => [
-                        ['EditaisPrazos.inscricao IS' => null],
-                        ['EditaisPrazos.inscricao' => ''],
-                    ],
-                ];
-
-                // Excecao especifica por usuario.
-                if (!empty($usuariosFiltro)) {
-                    $or[] = ['EditaisPrazos.usuario_id IN' => $usuariosFiltro];
-                }
-
-                // Excecao especifica por inscricao (valor unico ou CSV).
-                if (!empty($inscricoesFiltro)) {
-                    foreach ($inscricoesFiltro as $inscricaoId) {
-                        $inscricaoStr = (string)$inscricaoId;
-                        $or[] = ['EditaisPrazos.inscricao' => $inscricaoStr];
-                        $or[] = $q->newExpr(
-                            'FIND_IN_SET(' . (int)$inscricaoId . ", REPLACE(COALESCE(EditaisPrazos.inscricao, ''), ' ', '')) > 0"
-                        );
-                    }
-                }
-
-                return ['OR' => $or];
-            })
+            ->where(['OR' => $filtroExcecao])
             ->first();
 
         return (bool)$excecao;
@@ -893,15 +880,14 @@ class AppController extends Controller
     {
         $edital = $context['edital'];
         $identity = $context['identity'];
-        $identityId = (int)($identity->id ?? 0);
-        $ehTI = in_array($identityId, [1, 8088], true);
+        $ehTI = $this->ehTi();
 
-        $inscricaoFiltroPeriodo = [];
+        $inscricaoFiltroPeriodo = null;
         if (!empty($inscricaoId)) {
-            $inscricaoFiltroPeriodo[] = (int)$inscricaoId;
+            $inscricaoFiltroPeriodo = (int)$inscricaoId;
         }
 
-        if (!$ehTI && !$this->loadPeriodo($edital, $identity, 1, [], $inscricaoFiltroPeriodo)) {
+        if (!$ehTI && !$this->loadPeriodo($edital, $identity, 1, null, $inscricaoFiltroPeriodo)) {
             $this->Flash->error('Fora do período de inscrição.');
             return ['redirect' => $this->redirect(['controller' => 'Index', 'action' => 'index'])];
         }

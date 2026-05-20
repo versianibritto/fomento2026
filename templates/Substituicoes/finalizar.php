@@ -8,9 +8,9 @@
     <div class="card shadow-sm">
         <div class="card-body">
             <div class="p-3 mb-4 bg-light border rounded text-center">
-                <h3 class="mb-2">Finalizar</h3>
+                <h3 class="mb-2">Anexar Termo</h3>
                 <div class="fw-semibold">Substituição - <?= h($edital->nome) ?></div>
-                <div class="text-muted mt-1">Etapa final do fluxo de substituição.</div>
+                <div class="text-muted mt-1">Esta etapa anexa o termo assinado da substituição.</div>
             </div>
         </div>
     </div>

@@ -510,7 +510,7 @@ class UsersController extends AppController
         $dashboardService = new \App\Service\DashboardUserService();
         $bolsas = $dashboardService
             ->detalhes(null, $id, $identityObj)
-            ->orderBy(['vigente' => 'DESC', 'id' => 'DESC'])
+            ->orderBy(['id' => 'DESC'])
             ->all();
 
         $raicQuery = $this->fetchTable('RaicGeral')->find()
@@ -520,7 +520,7 @@ class UsersController extends AppController
                     'RaicGeral.orientador' => $id,
                 ]);
             })
-            ->orderBy(['RaicGeral.data_apresentacao' => 'DESC', 'RaicGeral.id' => 'DESC']);
+            ->orderBy(['RaicGeral.id' => 'DESC']);
 
         if (!$temYoda && !$temJedi && !$temPadauan) {
             $raicQuery->where(['RaicGeral.raic_deleted' => 0]);
@@ -530,6 +530,22 @@ class UsersController extends AppController
             ->disableHydration()
             ->all()
             ->toList();
+
+        $workshopsQuery = $this->fetchTable('Workshops')->find()
+            ->contain(['Bolsistas', 'Orientadores', 'Projetos', 'Editais' => ['Programas'], 'Unidades'])
+            ->where(function ($exp) use ($id) {
+                return $exp->or([
+                    'Workshops.bolsista' => $id,
+                    'Workshops.orientador' => $id,
+                ]);
+            })
+            ->orderBy(['Workshops.id' => 'DESC']);
+
+        if (!$temYoda && !$temJedi && !$temPadauan) {
+            $workshopsQuery->where(['Workshops.deleted' => 0]);
+        }
+
+        $workshopsPerfil = $workshopsQuery->all();
 
         $this->set(compact(
             'unidades',
@@ -546,7 +562,8 @@ class UsersController extends AppController
             'enderecoCompleto',
             'temJediPerfil',
             'temPadauanPerfil',
-            'raicsPerfil'
+            'raicsPerfil',
+            'workshopsPerfil'
         ));
 
     }
@@ -808,6 +825,7 @@ class UsersController extends AppController
         $vinculosServidorIds = $this->obterVinculosServidorIds();
         
         $condicoesInscricaoBase = [];
+        $inscricaoTableName = 'ProjetoBolsistas';
 
         if (!$isTi) {
             if (!in_array($papel, ['B', 'C'], true)) {
@@ -829,7 +847,6 @@ class UsersController extends AppController
                 $this->Flash->error('Edital inválido para este cadastro.');
                 return $this->redirect(['controller' => 'Index', 'action' => 'index']);
             }
-            $inscricaoTableName = $edital->programa_id===1 ? 'PdjInscricoes' : 'ProjetoBolsistas';
         }
 
         if ($inscricaoId !=null) {
@@ -934,10 +951,11 @@ class UsersController extends AppController
                                 }
                             }
 
-                            $inscricao = $this->fetchTable($inscricaoTableName)->patchEntity($inscricao, [
+                            $inscricaoTable = $this->fetchTable($inscricaoTableName);
+                            $inscricao = $inscricaoTable->patchEntity($inscricao, [
                                 $campo => (int)$user->id,
                             ]);
-                            $this->fetchTable($inscricaoTableName)->saveOrFail($inscricao);
+                            $inscricaoTable->saveOrFail($inscricao);
                             if ($inscricaoTableName === 'ProjetoBolsistas' && $faseOriginal > 0) {
                                 $this->historico(
                                     (int)$inscricao->id,
@@ -958,7 +976,8 @@ class UsersController extends AppController
                         if ($fluxo === 'S') {
                             return $this->redirect(['controller' => 'Substituicoes', 'action' => $acaoRetorno, $inscricaoId]);
                         }
-                        return $this->redirect(['controller' => 'Inscricoes', 'action' => $acaoRetorno, $editalId, $inscricaoId]);
+                        $controllerRetorno = $fluxo === 'P' ? 'PdjInscricoes' : 'Inscricoes';
+                        return $this->redirect(['controller' => $controllerRetorno, 'action' => $acaoRetorno, $editalId, $inscricaoId]);
                     }
                     return $this->redirect(['action' => 'ver', $user->id]);
                 }
@@ -969,7 +988,8 @@ class UsersController extends AppController
                     if ($fluxo === 'S') {
                         return $this->redirect(['controller' => 'Substituicoes', 'action' => $acaoRetorno, $inscricaoId]);
                     }
-                    return $this->redirect(['controller' => 'Inscricoes', 'action' => $acaoRetorno, $editalId, $inscricaoId]);
+                    $controllerRetorno = $fluxo === 'P' ? 'PdjInscricoes' : 'Inscricoes';
+                    return $this->redirect(['controller' => $controllerRetorno, 'action' => $acaoRetorno, $editalId, $inscricaoId]);
                 }
                 return $this->redirect(['action' => 'ver', $user->id]);
             } catch (\Throwable $e) {

@@ -12,9 +12,11 @@ use Cake\Validation\Validator;
  * Workshops Model
  *
  * @property \App\Model\Table\UsuariosTable&\Cake\ORM\Association\BelongsTo $Usuarios
+ * @property \App\Model\Table\UsuariosTable&\Cake\ORM\Association\BelongsTo $Bolsistas
  * @property \App\Model\Table\UnidadesTable&\Cake\ORM\Association\BelongsTo $Unidades
  * @property \App\Model\Table\EditaisTable&\Cake\ORM\Association\BelongsTo $Editais
  * @property \App\Model\Table\PdjInscricoesTable&\Cake\ORM\Association\BelongsTo $PdjInscricoes
+ * @property \App\Model\Table\ProjetoBolsistasTable&\Cake\ORM\Association\BelongsTo $ProjetoBolsistas
  * @property \App\Model\Table\WorkshopHistoricosTable&\Cake\ORM\Association\HasMany $WorkshopHistoricos
  *
  * @method \App\Model\Entity\Workshop newEmptyEntity()
@@ -52,7 +54,14 @@ class WorkshopsTable extends Table
         $this->addBehavior('Timestamp');
 
         $this->belongsTo('Usuarios', [
-            'foreignKey' => 'usuario_id',
+            'foreignKey' => 'bolsista',
+            'joinType' => 'LEFT',
+        ]);
+        $this->belongsTo('Bolsistas', [
+            'className' => 'Usuarios',
+            'foreignKey' => 'bolsista',
+            'joinType' => 'LEFT',
+            'propertyName' => 'bolsista_usuario',
         ]);
         $this->belongsTo('Orientadores', [
             'className' => 'Usuarios',
@@ -68,6 +77,20 @@ class WorkshopsTable extends Table
         $this->belongsTo('PdjInscricoes', [
             'foreignKey' => 'pdj_inscricoe_id',
         ]);
+        $this->belongsTo('ProjetoBolsistas', [
+            'foreignKey' => 'projeto_bolsista_id',
+        ]);
+        $this->belongsTo('Projetos', [
+            'foreignKey' => 'projeto_orientador',
+        ]);
+        $this->belongsTo('Cadastro', [
+            'className' => 'Usuarios',
+            'foreignKey' => 'usuario_cadastro',
+        ]);
+        $this->belongsTo('Libera', [
+            'className' => 'Usuarios',
+            'foreignKey' => 'usuario_libera',
+        ]);
         $this->hasMany('WorkshopHistoricos', [
             'foreignKey' => 'workshop_id',
         ]);
@@ -82,8 +105,8 @@ class WorkshopsTable extends Table
     public function validationDefault(Validator $validator): Validator
     {
         $validator
-            ->integer('usuario_id')
-            ->allowEmptyString('usuario_id');
+            ->integer('bolsista')
+            ->allowEmptyString('bolsista');
 
         $validator
             ->integer('orientador')
@@ -159,6 +182,10 @@ class WorkshopsTable extends Table
             ->integer('pdj_inscricoe_id')
             ->allowEmptyString('pdj_inscricoe_id');
 
+        $validator
+            ->integer('projeto_bolsista_id')
+            ->allowEmptyString('projeto_bolsista_id');
+
         return $validator;
     }
 
@@ -171,11 +198,12 @@ class WorkshopsTable extends Table
      */
     public function buildRules(RulesChecker $rules): RulesChecker
     {
-        $rules->add($rules->existsIn(['usuario_id'], 'Usuarios'), ['errorField' => 'usuario_id']);
+        $rules->add($rules->existsIn(['bolsista'], 'Bolsistas'), ['errorField' => 'bolsista']);
         $rules->add($rules->existsIn(['orientador'], 'Orientadores'), ['errorField' => 'orientador']);
         $rules->add($rules->existsIn(['unidade_id'], 'Unidades'), ['errorField' => 'unidade_id']);
         $rules->add($rules->existsIn(['editai_id'], 'Editais'), ['errorField' => 'editai_id']);
         $rules->add($rules->existsIn(['pdj_inscricoe_id'], 'PdjInscricoes'), ['errorField' => 'pdj_inscricoe_id']);
+        $rules->add($rules->existsIn(['projeto_bolsista_id'], 'ProjetoBolsistas'), ['errorField' => 'projeto_bolsista_id']);
 
         return $rules;
     }

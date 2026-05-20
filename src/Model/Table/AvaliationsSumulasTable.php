@@ -108,6 +108,10 @@ class AvaliationsSumulasTable extends Table
             ->nonNegativeInteger('quantidade_avaliada')
             ->allowEmptyString('quantidade_avaliada');
 
+        $validator
+            ->boolean('bolsista')
+            ->allowEmptyString('bolsista');
+
         return $validator;
     }
 

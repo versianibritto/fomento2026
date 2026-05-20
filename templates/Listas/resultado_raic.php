@@ -59,11 +59,11 @@ $temRelatorioLabel = ($filtros['tem_relatorio'] ?? '') === 'S' ? 'Sim' : (($filt
                 <thead class="table-light">
                     <tr>
                         <th><?= $this->Paginator->sort('Raics.id', 'ID') ?></th>
-                        <th>Bolsista</th>
-                        <th>Orientador</th>
-                        <th><?= $this->Paginator->sort('Raics.unidade_id', 'Unidade') ?></th>
+                        <th><?= $this->Paginator->sort('bolsista_nome_ordenacao', 'Bolsista') ?></th>
+                        <th><?= $this->Paginator->sort('orientador_nome_ordenacao', 'Orientador') ?></th>
+                        <th><?= $this->Paginator->sort('Unidades.sigla', 'Unidade') ?></th>
                         <th><?= $this->Paginator->sort('Raics.tipo_bolsa', 'Tipo') ?></th>
-                        <th title="Relatório">Rel.</th>
+                        <th title="Relatório"><?= $this->Paginator->sort('Raics.relatorio', 'Rel.') ?></th>
                         <th><?= $this->Paginator->sort('Raics.data_apresentacao', 'Agendada') ?></th>
                         <th><?= $this->Paginator->sort('Raics.presenca', 'Certificado') ?></th>
                         <th><?= $this->Paginator->sort('Raics.deleted', 'Status') ?></th>

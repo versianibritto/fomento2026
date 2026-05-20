@@ -455,16 +455,16 @@ if ($tipoBolsaCodigo === 'R') {
                                         $deletado = (int)($b->deleted ?? 0) === 1;
                                         $avaliado = !$deletado && (string)($b->situacao ?? '') === 'F';
                                         $dataCadastro = $b->created ?? null;
-                                        $dataCadastroTexto = $dataCadastro && method_exists($dataCadastro, 'format')
-                                            ? $dataCadastro->format('d/m/Y H:i')
+                                        $dataCadastroTexto = $dataCadastro && method_exists($dataCadastro, 'i18nFormat')
+                                            ? $dataCadastro->i18nFormat('dd/MM/yyyy HH:mm')
                                             : 'Não informado';
                                         $usuarioCadastro = trim((string)($b->criador->nome ?? ''));
                                         if ($usuarioCadastro === '') {
                                             $usuarioCadastro = 'Não informado';
                                         }
                                         $dataExclusao = $b->deletado_em ?? null;
-                                        $dataExclusaoTexto = $dataExclusao && method_exists($dataExclusao, 'format')
-                                            ? $dataExclusao->format('d/m/Y H:i')
+                                        $dataExclusaoTexto = $dataExclusao && method_exists($dataExclusao, 'i18nFormat')
+                                            ? $dataExclusao->i18nFormat('dd/MM/yyyy HH:mm')
                                             : 'Não informado';
                                         $usuarioExclusao = trim((string)($b->deletador->nome ?? ''));
                                         if ($usuarioExclusao === '') {

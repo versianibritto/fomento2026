@@ -598,6 +598,12 @@ class RaicNewController extends AppController
 
     public function liberacertificado($id = null)
     {
+
+        if (!$this->ehTi()) {
+            $this->Flash->error('Funcionalidade temporariamente indisponivel. (OS 365)');
+            return $this->redirect(['controller' => 'Index', 'action' => 'index']);
+        }
+
         $raicsTable = $this->fetchTable('Raics');
         $raic = $raicsTable->get($id);
 

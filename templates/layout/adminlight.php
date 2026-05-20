@@ -5,13 +5,12 @@
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <meta name="description" content="Responsive Admin &amp; Dashboard Template based on Bootstrap 5">
-    <meta name="author" content="AdminKit">
-    <meta name="keywords"
-        content="adminkit, bootstrap, bootstrap 5, admin, dashboard, template, responsive, css, sass, html, theme, front-end, ui kit, web">
+    <meta name="description" content="Sistema de gerenciamento de bolsas e inscrições da Fiocruz">
+    <meta name="author" content="Fiocruz">
+    <meta name="keywords" content="pibic, pibiti, bolsas, iniciação científica, iniciação tecnológica, Fiocruz, Formação continuada">
     <link rel="preconnect" href="https://fonts.gstatic.com">
-    <link rel="canonical" href="https://demo-basic.adminkit.io/pages-blank.html" />
-    <title>Blank Page | AdminKit Demo</title>
+    <title>Fomento à Pesquisa</title>
+    <link rel="icon" href="/img/favicon-fomento.svg" type="image/svg+xml">
     <link href="/css/admin.css" rel="stylesheet">
     <link href="/css/all.min.css" rel="stylesheet">
     <?=$this->Html->script("app")?>

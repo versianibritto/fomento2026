@@ -11,7 +11,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <link rel="icon" href="/favicon.ico" type="image/x-icon">
+    <link rel="icon" href="/img/favicon-fomento.svg" type="image/svg+xml">
     <meta name="description" content="Sistema de gerenciamento de bolsas e inscrições da Fiocruz" />
     <meta name="keywords" content="pibic, pibiti, bolsas, iniciação científica, iniciação tecnológica, Fiocruz, Formação continuada" />    
     <link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">

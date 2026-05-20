@@ -53,6 +53,12 @@ class ProjetoBolsistasTable extends Table
             'foreignKey' => 'area_pdj',
             'joinType' => 'LEFT',
         ]);
+        $this->belongsTo('AreasPdj', [
+            'className' => 'GrandesAreas',
+            'foreignKey' => 'area_pdj',
+            'joinType' => 'LEFT',
+            'propertyName' => 'area_pdj_grande_area',
+        ]);
         $this->belongsTo('Bolsistas', [
             'className' => 'Usuarios',
             'foreignKey' => 'bolsista',
@@ -443,6 +449,11 @@ class ProjetoBolsistasTable extends Table
             ->allowEmptyString('filhos_menor');
 
         $validator
+            ->scalar('filhos_menor_bolsista')
+            ->maxLength('filhos_menor_bolsista', 1)
+            ->allowEmptyString('filhos_menor_bolsista');
+
+        $validator
             ->scalar('referencia_raic')
             ->allowEmptyString('referencia_raic');
         
@@ -504,7 +515,7 @@ class ProjetoBolsistasTable extends Table
     {
         $rules->add($rules->existsIn('editai_id', 'Editais'), ['errorField' => 'editai_id']);
         $rules->add($rules->existsIn('projeto_id', 'Projetos'), ['errorField' => 'projeto_id']);
-        $rules->add($rules->existsIn('area_pdj', 'Areas'), ['errorField' => 'area_pdj']);
+        $rules->add($rules->existsIn('area_pdj', 'AreasPdj'), ['errorField' => 'area_pdj']);
         $rules->add($rules->existsIn('matriz', 'Matrizes'), ['errorField' => 'matriz']);
         $rules->add($rules->existsIn('pdj_inscricoe_id', 'PdjInscricoes'), ['errorField' => 'pdj_inscricoe_id']);
         $rules->add($rules->existsIn('homologado_por', 'Homologadores'), ['errorField' => 'homologado_por']);

@@ -1,10 +1,55 @@
+<style>
+    .homologacao-separador {
+        border: 0;
+        border-top: 4px solid #6c757d;
+        opacity: 1;
+        margin: 2.75rem 0;
+    }
+
+    .homologacao-bloco-titulo {
+        padding-top: .25rem;
+        margin-bottom: 1.25rem;
+    }
+
+    .homologacao-status-card {
+        background: #fff;
+        border: 1px solid #d7dde4;
+        border-radius: 8px;
+        padding: 1rem;
+        box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+    }
+
+    .homologacao-status-card.status-homologado {
+        background: #f0fdf4;
+        border-color: #86efac;
+    }
+
+    .homologacao-status-card.status-nao-homologado {
+        background: #fef2f2;
+        border-color: #fca5a5;
+    }
+
+    .homologacao-status-card.status-nao-verificado {
+        background: #f8fafc;
+        border-color: #cbd5e1;
+    }
+</style>
+
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h4 class="fw-bold">Homologação #<?= h($inscricao->id ?? '') ?></h4>
-        <a href="<?= $this->Url->build(['controller' => 'Gestao', 'action' => 'listahomologacao']) ?>"
-           class="btn btn-outline-secondary btn-sm rounded-pill px-3">
-            <i class="fa fa-arrow-left me-1"></i> Voltar
-        </a>
+        <div class="d-flex flex-wrap gap-2">
+            <a href="<?= $this->Url->build(['controller' => 'Padrao', 'action' => 'visualizar', (int)($inscricao->id ?? 0)]) ?>"
+               class="btn btn-outline-primary btn-sm rounded-pill px-3"
+               target="_blank"
+               rel="noopener">
+                <i class="fa fa-eye me-1"></i> Visualizar inscrição
+            </a>
+            <a href="<?= $this->Url->build(['controller' => 'Gestao', 'action' => 'listahomologacao']) ?>"
+               class="btn btn-outline-secondary btn-sm rounded-pill px-3">
+                <i class="fa fa-arrow-left me-1"></i> Voltar
+            </a>
+        </div>
     </div>
 
     <?php
@@ -14,16 +59,14 @@
                 return '';
             }
             if ($data instanceof \DateTimeInterface) {
-                return \DateTimeImmutable::createFromInterface($data)
-                    ->modify('-3 hours')
-                    ->format('d/m/Y H:i');
+                return \DateTimeImmutable::createFromInterface($data)->format('d/m/Y H:i');
             }
             $dataTexto = trim((string)$data);
             if ($dataTexto === '') {
                 return '';
             }
             $timestamp = strtotime($dataTexto);
-            return $timestamp ? date('d/m/Y H:i', strtotime('-3 hours', $timestamp)) : $dataTexto;
+            return $timestamp ? date('d/m/Y H:i', $timestamp) : $dataTexto;
         };
         $tipoAnexoOcultoId = 13;
         $ocultarTipoAnexo = static function ($anexos) use ($tipoAnexoOcultoId): array {
@@ -39,11 +82,59 @@
             }
             return $anexosFiltrados;
         };
+        $formatarFilhosMenores = static function ($valor): string {
+            if ($valor === null || $valor === '') {
+                return '';
+            }
+            $valorInt = (int)$valor;
+            if ($valorInt === 0) {
+                return 'Não';
+            }
+            if ($valorInt === 1) {
+                return 'Sim (1 filho)';
+            }
+            return 'Sim (' . $valorInt . ' filhos)';
+        };
+        $formatarSimNao = static function ($valor): string {
+            if ($valor === null || $valor === '') {
+                return '';
+            }
+            return ((int)$valor === 1) ? 'Sim' : 'Não';
+        };
+        $homologadoValor = strtoupper(trim((string)($inscricao->homologado ?? '')));
+        $homologadoTexto = match ($homologadoValor) {
+            'S' => 'Sim',
+            'N' => 'Não',
+            default => 'Não verificado',
+        };
+        $homologadoBadge = match ($homologadoValor) {
+            'S' => 'bg-success',
+            'N' => 'bg-danger',
+            default => 'bg-secondary',
+        };
+        $homologadoStatusCardClasse = match ($homologadoValor) {
+            'S' => 'status-homologado',
+            'N' => 'status-nao-homologado',
+            default => 'status-nao-verificado',
+        };
+        $homologadoDataTexto = $formatDataAnexo($inscricao->homologado_data ?? null);
+        $homologadoUsuarioTexto = trim((string)($inscricao->homologador->nome ?? ''));
+        $homologadoJustificativaTexto = trim((string)($inscricao->homologado_justificativa ?? ''));
         $anexosB = $ocultarTipoAnexo($anexosB ?? []);
         $anexosC = $ocultarTipoAnexo($anexosC ?? []);
         $anexosP = $ocultarTipoAnexo($anexosP ?? []);
         $anexosS = $ocultarTipoAnexo($anexosS ?? []);
         $anexosI = $ocultarTipoAnexo($anexosI ?? []);
+        $anexosOrientador = [];
+        $anexosInscricao = [];
+        foreach ($anexosI as $anexoI) {
+            if (in_array((int)($anexoI['tipo_id'] ?? 0), [27, 29], true)) {
+                $anexosOrientador[] = $anexoI;
+                continue;
+            }
+            $anexosInscricao[] = $anexoI;
+        }
+        $anexosI = $anexosInscricao;
     ?>
 
     <div class="card shadow-sm mb-3">
@@ -122,20 +213,51 @@
                 </div>
             </div>
         </div>
+        <div class="card-footer bg-light border-top">
+            <div class="homologacao-status-card <?= h($homologadoStatusCardClasse) ?>">
+                <div class="row g-3 align-items-start">
+                    <div class="col-md-4">
+                        <div class="text-muted small">Homologado</div>
+                        <div class="fw-semibold">
+                            <span class="badge <?= h($homologadoBadge) ?>"><?= h($homologadoTexto) ?></span>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="text-muted small">Data da última alteração</div>
+                        <div class="fw-semibold"><?= $homologadoDataTexto !== '' ? h($homologadoDataTexto) : $naoInformado ?></div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="text-muted small">Alterado por</div>
+                        <div class="fw-semibold"><?= $homologadoUsuarioTexto !== '' ? h($homologadoUsuarioTexto) : $naoInformado ?></div>
+                    </div>
+                    <div class="col-12">
+                        <div class="text-muted small">Justificativa</div>
+                        <div class="fw-semibold"><?= $homologadoJustificativaTexto !== '' ? nl2br(h($homologadoJustificativaTexto)) : '<span class="text-muted">-</span>' ?></div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <div class="card shadow-sm">
-        <div class="card-body">
-            <h5 class="fw-semibold mb-3">Bolsista</h5>
+        <div class="card-body p-4">
+            <h5 class="fw-semibold homologacao-bloco-titulo">Bolsista</h5>
             <div class="row g-3 mb-4">
-                <div class="col-md-6">
+                <div class="col-md-4">
                     <div class="text-muted small">Primeiro período</div>
                     <div class="fw-semibold"><?= h($primeiroPeriodoTexto) ?></div>
                 </div>
-                <div class="col-md-6">
+                <div class="col-md-4">
                     <div class="text-muted small">Cota</div>
                     <div class="fw-semibold">
                         <?= isset($cotas[(string)($inscricao->cota ?? '')]) ? h($cotas[(string)$inscricao->cota]) : $naoInformado ?>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="text-muted small">Filhos menores de 8 anos da bolsista</div>
+                    <div class="fw-semibold">
+                        <?php $filhosMenorBolsistaTexto = $formatarFilhosMenores($inscricao->filhos_menor_bolsista ?? null); ?>
+                        <?= $filhosMenorBolsistaTexto !== '' ? h($filhosMenorBolsistaTexto) : $naoInformado ?>
                     </div>
                 </div>
             </div>
@@ -227,9 +349,9 @@
                 </table>
             </div>
 
-            <hr class="my-4 border-0 border-top border-2 border-secondary-subtle opacity-100">
+            <hr class="homologacao-separador">
 
-            <h5 class="fw-semibold mb-3">Coorientador</h5>
+            <h5 class="fw-semibold homologacao-bloco-titulo">Orientador / Coorientador</h5>
             <div class="row g-3 mb-3">
                 <div class="col-md-6">
                     <div class="text-muted small">Orientador</div>
@@ -265,6 +387,20 @@
                         <?php endif; ?>
                     </div>
                 </div>
+                <div class="col-md-6">
+                    <div class="text-muted small">Filhos menores de 8 anos da orientadora</div>
+                    <div class="fw-semibold">
+                        <?php $filhosMenorOrientadorTexto = $formatarFilhosMenores($inscricao->filhos_menor ?? null); ?>
+                        <?= $filhosMenorOrientadorTexto !== '' ? h($filhosMenorOrientadorTexto) : $naoInformado ?>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="text-muted small">Recém-servidor</div>
+                    <div class="fw-semibold">
+                        <?php $recemServidorTextoBloco = $formatarSimNao($inscricao->recem_servidor ?? null); ?>
+                        <?= $recemServidorTextoBloco !== '' ? h($recemServidorTextoBloco) : $naoInformado ?>
+                    </div>
+                </div>
             </div>
 
             <?php if (!empty($errosCoorientador)): ?>
@@ -285,6 +421,80 @@
                     <?php endforeach; ?>
                 </div>
             <?php endif; ?>
+
+            <h6 class="fw-semibold mb-2">Anexos do bloco Orientador</h6>
+            <div class="table-responsive mb-4">
+                <table class="table table-sm align-middle">
+                    <thead>
+                        <tr>
+                            <th>Tipo</th>
+                            <th>Regra</th>
+                            <th class="text-center">Status</th>
+                            <th>Anexo</th>
+                            <th class="text-end"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php if (empty($anexosOrientador)): ?>
+                            <tr>
+                                <td colspan="5" class="text-center text-muted">Nenhum anexo obrigatório para o orientador.</td>
+                            </tr>
+                        <?php endif; ?>
+                        <?php foreach ($anexosOrientador as $anexo): ?>
+                            <tr>
+                                <td><?= h($anexo['tipo_nome']) ?></td>
+                                <td><?= !empty($anexo['regras']) ? h(implode(' ', $anexo['regras'])) : 'Obrigatório' ?></td>
+                                <td class="text-center">
+                                    <span class="badge bg-light text-danger border border-danger fw-normal"><?= h($anexo['status_regra']) ?></span>
+                                </td>
+                                <td>
+                                    <?php if ($anexo['arquivo'] !== ''): ?>
+                                        <?= h($anexo['arquivo']) ?>
+                                        <?php
+                                            $usuarioAnexo = trim((string)($anexo['usuario_nome'] ?? ''));
+                                            $dataAnexoFmt = $formatDataAnexo($anexo['data_inclusao'] ?? null);
+                                        ?>
+                                        <div class="small text-muted">
+                                            <?= $usuarioAnexo !== '' ? 'Incluído por ' . h($usuarioAnexo) : 'Usuário não informado' ?>
+                                            <?= $dataAnexoFmt !== '' ? ' em ' . h($dataAnexoFmt) : '' ?>
+                                        </div>
+                                    <?php else: ?>
+                                        <?= $naoInformado ?>
+                                    <?php endif; ?>
+                                </td>
+                                <td class="text-end">
+                                    <?php if ($anexo['arquivo'] !== ''): ?>
+                                        <?= $this->Form->create(null, [
+                                            'type' => 'file',
+                                            'url' => ['controller' => 'Gestao', 'action' => 'telahomologacao', (int)($inscricao->id ?? 0)],
+                                            'class' => 'd-inline-flex align-items-center gap-1',
+                                            'data-no-loading' => '1',
+                                        ]) ?>
+                                            <?= $this->Form->hidden('anexo_acao', ['value' => 'alterar']) ?>
+                                            <?= $this->Form->hidden('anexo_tipo', ['value' => (int)($anexo['tipo_id'] ?? 0)]) ?>
+                                            <?= $this->Form->hidden('alterar_anexo_tipo', ['value' => (int)($anexo['tipo_id'] ?? 0)]) ?>
+                                            <a href="/uploads/anexos/<?= h($anexo['arquivo']) ?>" target="_blank" class="btn btn-light border btn-sm py-0 px-2" title="Download">
+                                                <i class="fa fa-download"></i>
+                                            </a>
+                                            <?php $inputIdAnexoOrientador = 'editar-anexo-O-' . (int)($anexo['tipo_id'] ?? 0); ?>
+                                            <label for="<?= h($inputIdAnexoOrientador) ?>" class="btn btn-light border btn-sm py-0 px-2 mb-0" title="Alterar anexo">
+                                                <i class="fa fa-edit"></i>
+                                            </label>
+                                            <input
+                                                id="<?= h($inputIdAnexoOrientador) ?>"
+                                                name="anexos[<?= (int)($anexo['tipo_id'] ?? 0) ?>]"
+                                                type="file"
+                                                class="d-none homologacao-anexo-file"
+                                                data-tipo="<?= (int)($anexo['tipo_id'] ?? 0) ?>"
+                                            >
+                                        <?= $this->Form->end() ?>
+                                    <?php endif; ?>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
 
             <h6 class="fw-semibold mb-2">Anexos do bloco Coorientador</h6>
             <div class="table-responsive">
@@ -364,9 +574,9 @@
 
             <?php /* Blocos Projeto e Subprojeto comentados temporariamente */ ?>
             <?php if (false): ?>
-                <hr class="my-4 border-0 border-top border-2 border-secondary-subtle opacity-100">
+                <hr class="homologacao-separador">
 
-                <h5 class="fw-semibold mb-3">Projeto</h5>
+                <h5 class="fw-semibold homologacao-bloco-titulo">Projeto</h5>
                 <div class="row g-3 mb-3">
                     <div class="col-md-2">
                         <div class="text-muted small">ID</div>
@@ -429,9 +639,9 @@
                     </table>
                 </div>
 
-                <hr class="my-4 border-0 border-top border-2 border-secondary-subtle opacity-100">
+                <hr class="homologacao-separador">
 
-                <h5 class="fw-semibold mb-3">Subprojeto</h5>
+                <h5 class="fw-semibold homologacao-bloco-titulo">Subprojeto</h5>
                 <div class="row g-3 mb-3">
                     <div class="col-md-12">
                         <div class="text-muted small">Título</div>
@@ -490,10 +700,12 @@
                     </table>
                 </div>
 
-                <hr class="my-4 border-0 border-top border-2 border-secondary-subtle opacity-100">
+                <hr class="homologacao-separador">
             <?php endif; ?>
 
-            <h5 class="fw-semibold mb-3">Anexos específicos da Inscrição</h5>
+            <hr class="homologacao-separador">
+
+            <h5 class="fw-semibold homologacao-bloco-titulo">Anexos específicos da Inscrição</h5>
             <div class="table-responsive">
                 <table class="table table-sm align-middle">
                     <thead>
@@ -567,7 +779,7 @@
                 </table>
             </div>
 
-            <hr class="my-4 border-0 border-top border-2 border-secondary-subtle opacity-100">
+            <hr class="homologacao-separador">
 
             <?php if (!$homologacaoPermitida): ?>
                 <div class="alert alert-danger mb-0 fw-semibold border-2">

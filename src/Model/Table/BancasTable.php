@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace App\Model\Table;
 
-use Cake\ORM\Query\SelectQuery;
+use Cake\ORM\Query;
 use Cake\ORM\RulesChecker;
 use Cake\ORM\Table;
 use Cake\Validation\Validator;
@@ -13,29 +13,28 @@ use Cake\Validation\Validator;
  *
  * @property \App\Model\Table\GrandesAreasTable&\Cake\ORM\Association\BelongsTo $GrandesAreas
  * @property \App\Model\Table\EditaisTable&\Cake\ORM\Association\BelongsTo $Editais
- * @property \App\Model\Table\AvaliadorBolsistasTable&\Cake\ORM\Association\HasMany $AvaliadorBolsistas
  * @property \App\Model\Table\BancaUsuariosTable&\Cake\ORM\Association\HasMany $BancaUsuarios
  *
  * @method \App\Model\Entity\Banca newEmptyEntity()
  * @method \App\Model\Entity\Banca newEntity(array $data, array $options = [])
- * @method array<\App\Model\Entity\Banca> newEntities(array $data, array $options = [])
- * @method \App\Model\Entity\Banca get(mixed $primaryKey, array|string $finder = 'all', \Psr\SimpleCache\CacheInterface|string|null $cache = null, \Closure|string|null $cacheKey = null, mixed ...$args)
- * @method \App\Model\Entity\Banca findOrCreate($search, ?callable $callback = null, array $options = [])
+ * @method \App\Model\Entity\Banca[] newEntities(array $data, array $options = [])
+ * @method \App\Model\Entity\Banca get($primaryKey, $options = [])
+ * @method \App\Model\Entity\Banca findOrCreate($search, ?callable $callback = null, $options = [])
  * @method \App\Model\Entity\Banca patchEntity(\Cake\Datasource\EntityInterface $entity, array $data, array $options = [])
- * @method array<\App\Model\Entity\Banca> patchEntities(iterable $entities, array $data, array $options = [])
- * @method \App\Model\Entity\Banca|false save(\Cake\Datasource\EntityInterface $entity, array $options = [])
- * @method \App\Model\Entity\Banca saveOrFail(\Cake\Datasource\EntityInterface $entity, array $options = [])
- * @method iterable<\App\Model\Entity\Banca>|\Cake\Datasource\ResultSetInterface<\App\Model\Entity\Banca>|false saveMany(iterable $entities, array $options = [])
- * @method iterable<\App\Model\Entity\Banca>|\Cake\Datasource\ResultSetInterface<\App\Model\Entity\Banca> saveManyOrFail(iterable $entities, array $options = [])
- * @method iterable<\App\Model\Entity\Banca>|\Cake\Datasource\ResultSetInterface<\App\Model\Entity\Banca>|false deleteMany(iterable $entities, array $options = [])
- * @method iterable<\App\Model\Entity\Banca>|\Cake\Datasource\ResultSetInterface<\App\Model\Entity\Banca> deleteManyOrFail(iterable $entities, array $options = [])
+ * @method \App\Model\Entity\Banca[] patchEntities(iterable $entities, array $data, array $options = [])
+ * @method \App\Model\Entity\Banca|false save(\Cake\Datasource\EntityInterface $entity, $options = [])
+ * @method \App\Model\Entity\Banca saveOrFail(\Cake\Datasource\EntityInterface $entity, $options = [])
+ * @method \App\Model\Entity\Banca[]|\Cake\Datasource\ResultSetInterface|false saveMany(iterable $entities, $options = [])
+ * @method \App\Model\Entity\Banca[]|\Cake\Datasource\ResultSetInterface saveManyOrFail(iterable $entities, $options = [])
+ * @method \App\Model\Entity\Banca[]|\Cake\Datasource\ResultSetInterface|false deleteMany(iterable $entities, $options = [])
+ * @method \App\Model\Entity\Banca[]|\Cake\Datasource\ResultSetInterface deleteManyOrFail(iterable $entities, $options = [])
  */
 class BancasTable extends Table
 {
     /**
      * Initialize method
      *
-     * @param array<string, mixed> $config The configuration for the Table.
+     * @param array $config The configuration for the Table.
      * @return void
      */
     public function initialize(array $config): void
@@ -43,7 +42,7 @@ class BancasTable extends Table
         parent::initialize($config);
 
         $this->setTable('bancas');
-        $this->setDisplayField('id');
+        $this->setDisplayField('nome');
         $this->setPrimaryKey('id');
 
         $this->belongsTo('GrandesAreas', [
@@ -51,9 +50,6 @@ class BancasTable extends Table
         ]);
         $this->belongsTo('Editais', [
             'foreignKey' => 'editai_id',
-        ]);
-        $this->hasMany('AvaliadorBolsistas', [
-            'foreignKey' => 'banca_id',
         ]);
         $this->hasMany('BancaUsuarios', [
             'foreignKey' => 'banca_id',
@@ -109,8 +105,8 @@ class BancasTable extends Table
      */
     public function buildRules(RulesChecker $rules): RulesChecker
     {
-        $rules->add($rules->existsIn(['grandes_areas_id'], 'GrandesAreas'), ['errorField' => 'grandes_areas_id']);
-        $rules->add($rules->existsIn(['editai_id'], 'Editais'), ['errorField' => 'editai_id']);
+        $rules->add($rules->existsIn('grandes_areas_id', 'GrandesAreas'), ['errorField' => 'grandes_areas_id']);
+        $rules->add($rules->existsIn('editai_id', 'Editais'), ['errorField' => 'editai_id']);
 
         return $rules;
     }

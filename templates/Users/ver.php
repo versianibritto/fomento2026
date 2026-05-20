@@ -72,6 +72,10 @@ $programaSocialMap = [
 body.sidebar-collapse .user-id-bar {
     left: 16px;
 }
+
+.user-table-full {
+    overflow: visible;
+}
 </style>
 
 <!-- ================= IDENTIFICAÇÃO FIXA NO TOPO ================= -->
@@ -531,7 +535,7 @@ function renderTabela($lista, $titulo, $badge, $ehAdmin, $view, $usuarioId, $col
         <div class="card-body p-0">
 
             <?php if (count($lista) > 0): ?>
-                <div class="table-responsive">
+                <div class="user-table-full">
                     <table class="table table-hover align-middle mb-0 sortable-table">
                         <thead class="table-light" style="position: sticky; top: 0; z-index: 3;">
                             <tr>
@@ -665,7 +669,7 @@ function renderTabelaRaic($lista, $titulo, $badge, $ehAdmin, $view, $usuarioId, 
     <div class="collapse" id="<?= $collapseId ?>">
         <div class="card-body p-0">
             <?php if (count($lista) > 0): ?>
-                <div class="table-responsive">
+                <div class="user-table-full">
                     <table class="table table-hover align-middle mb-0 sortable-table">
                         <thead class="table-light" style="position: sticky; top: 0; z-index: 3;">
                             <tr>
@@ -761,6 +765,120 @@ function renderTabelaRaic($lista, $titulo, $badge, $ehAdmin, $view, $usuarioId, 
 </div>
 <?php
 }
+
+function renderTabelaWorkshops($lista, $titulo, $badge, $ehAdmin, $view, $usuarioId, $collapseId) {
+    $tiposBolsa = [
+        'R' => 'Renovação',
+        'V' => '**Workshops de Outras Agências',
+        'Z' => 'Workshops de Outras Agências',
+    ];
+?>
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+        <div class="fw-semibold">
+            <?= $badge ?> <?= h($titulo) ?>
+        </div>
+        <button class="btn btn-sm btn-outline-secondary"
+                data-bs-toggle="collapse"
+                data-bs-target="#<?= $collapseId ?>">
+            Expandir
+        </button>
+    </div>
+
+    <div class="collapse" id="<?= $collapseId ?>">
+        <div class="card-body p-0">
+            <?php if (count($lista) > 0): ?>
+                <div class="user-table-full">
+                    <table class="table table-hover align-middle mb-0 sortable-table">
+                        <thead class="table-light" style="position: sticky; top: 0; z-index: 3;">
+                            <tr>
+                                <th class="sortable">ID</th>
+                                <th class="sortable">Bolsista</th>
+                                <th class="sortable">Orientador</th>
+                                <th class="sortable">Projeto</th>
+                                <th class="sortable">Tipo Bolsa</th>
+                                <th class="sortable">Data Apresentação</th>
+                                <th class="sortable">Edital</th>
+                                <th class="sortable">Unidade</th>
+                                <th class="sortable">Status</th>
+                                <th class="text-end"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        <?php foreach ($lista as $i): ?>
+                            <?php
+                                $dataApresentacao = !empty($i->data_apresentacao)
+                                    ? new \Cake\I18n\FrozenDate($i->data_apresentacao)
+                                    : null;
+                                $tipoBolsa = strtoupper((string)($i->tipo_bolsa ?? ''));
+                                $deletado = (int)($i->deleted ?? 0) === 1;
+                                $presenca = strtoupper((string)($i->presenca ?? ''));
+                                $status = $deletado
+                                    ? '<span class="badge bg-danger">Deletado</span>'
+                                    : ($presenca === 'S'
+                                        ? '<span class="badge bg-success">Certificado liberado</span>'
+                                        : (!empty($i->data_apresentacao)
+                                            ? '<span class="badge bg-primary">Agendado</span>'
+                                            : '<span class="badge bg-secondary">Não agendado</span>'));
+                            ?>
+                            <tr>
+                                <td>
+                                    <?= $view->Html->link(
+                                        '#' . h((string)$i->id),
+                                        ['controller' => 'Workshops', 'action' => 'ver', (int)$i->id],
+                                        ['class' => 'fw-bold text-decoration-none']
+                                    ) ?>
+                                </td>
+                                <td class="text-center">
+                                    <?= $usuarioId == (int)($i->bolsista ?? 0)
+                                        ? bolinhaEu()
+                                        : h($i->bolsista_usuario->nome ?? $i->usuario->nome ?? '—') ?>
+                                </td>
+                                <td class="text-center">
+                                    <?= $usuarioId == (int)($i->orientador ?? 0)
+                                        ? bolinhaEu()
+                                        : h($i->orientadore->nome ?? '—') ?>
+                                </td>
+                                <td>
+                                    <?= !empty($i->projeto_orientador)
+                                        ? h((string)$i->projeto_orientador)
+                                        : 'N/A' ?>
+                                </td>
+                                <td>
+                                    <?= h($tiposBolsa[$tipoBolsa] ?? ($i->tipo_bolsa ?? '—')) ?>
+                                </td>
+                                <td>
+                                    <?= $dataApresentacao
+                                        ? $dataApresentacao->i18nFormat('dd/MM/yyyy')
+                                        : 'Não marcada' ?>
+                                </td>
+                                <td>
+                                    <?= h($i->editai->nome ?? '—') ?><br>
+                                    <small class="text-muted"><?= h($i->editai->programa->nome ?? $i->editai->programa->sigla ?? '—') ?></small>
+                                </td>
+                                <td><?= h($i->unidade->sigla ?? '—') ?></td>
+                                <td><?= $status ?></td>
+                                <td class="text-end">
+                                    <?php if ($ehAdmin && $deletado): ?>
+                                        <i class="fa fa-ban text-danger"
+                                        title="Registro inativo / deletado"></i>
+                                    <?php endif; ?>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            <?php else: ?>
+                <div class="p-3 text-center text-muted">
+                    Nenhum registro encontrado.
+                </div>
+            <?php endif; ?>
+        </div>
+    </div>
+</div>
+<?php
+}
 ?>
 
 <?php
@@ -768,6 +886,7 @@ renderTabela($comoBolsista, 'Atua como Bolsista', '<span class="badge bg-primary
 renderTabela($comoOrientador, 'Atua como Orientador', '<span class="badge bg-info me-1">O</span>', $ehAdmin, $this, $usuario->id, 'orientador');
 renderTabela($comoCoorientador, 'Atua como Coorientador', '<span class="badge bg-secondary me-1">C</span>', $ehAdmin, $this, $usuario->id, 'coorientador');
 renderTabelaRaic($raicsPerfil ?? [], 'RAIC', '<span class="badge bg-warning text-dark me-1">R</span>', $ehAdmin, $this, $usuario->id, 'raic');
+renderTabelaWorkshops($workshopsPerfil ?? [], 'Workshops', '<span class="badge bg-dark me-1">W</span>', $ehAdmin, $this, $usuario->id, 'workshops');
 ?>
 
 <script>

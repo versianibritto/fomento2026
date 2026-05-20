@@ -157,6 +157,7 @@ class AvaliadoresController extends AppController
         $avaliacoes = $this->paginate($query, ['limit' => 20]);
         $tipoMap = [
             'N' => 'Inscrições',
+            'R' => 'RAIC/Workshop',
             'V' => 'RAIC (aluno de renovação)',
             'Z' => 'RAIC de outras agências',
             'J' => 'PDJ Nova',
@@ -232,6 +233,12 @@ class AvaliadoresController extends AppController
             $this->Flash->error('Avaliação não encontrada.');
             return $this->redirect(['action' => 'avaliacoes']);
         }
+
+        if (!in_array((string)($avaliacao->tipo ?? ''), ['N', 'J', 'R', 'V', 'Z', 'W'], true)) {
+            $this->Flash->error('Esta avaliação não pode ser acessada por esta tela.');
+            return $this->redirect(['action' => 'avaliacoes']);
+        }
+
         $this->carregarReferenciaAvaliacao($avaliacao);
 
         $ti = in_array($usuarioId, [1, 8088], true);
@@ -265,15 +272,15 @@ class AvaliadoresController extends AppController
                     || !$this->loadPeriodo(
                         $avaliacao->editai,
                         $identityPeriodo,
-                        8,
-                        [$usuarioId],
-                        [(int)($avaliacao->bolsista ?? 0)]
+                        3,
+                        (int)$usuarioId,
+                        (int)($avaliacao->bolsista ?? 0)
                     )
                 ) {
                     $this->Flash->error('Fora do período de avaliação.');
                     return $this->redirect(['controller' => 'Index', 'action' => 'index']);
                 }
-                if (in_array((string)$avaliacao->tipo, ['V', 'Z'], true)) {
+                if (in_array((string)$avaliacao->tipo, ['R', 'V', 'Z'], true) && !empty($avaliacao->raic)) {
                     $dataAgendada = $avaliacao->raic->data_apresentacao ?? null;
                     $dataAgendadaDia = null;
                     if ($dataAgendada instanceof \DateTimeInterface) {
@@ -325,20 +332,22 @@ class AvaliadoresController extends AppController
             return $this->redirect(['action' => 'avaliacoes']);
         }
 
-        $avaliarSumulas = $this->deveAvaliarSumulas($avaliacao);
-        $sumulasAvaliacao = $avaliarSumulas ? $this->carregarSumulasAvaliacao($avaliacao) : [];
+        $sumulasAvaliacaoBlocos = $this->carregarBlocosSumulasAvaliacao($avaliacao);
+        $avaliarSumulas = $sumulasAvaliacaoBlocos !== [];
+        $sumulasAvaliacao = $sumulasAvaliacaoBlocos[0]['linhas'] ?? [];
         if ($this->request->is('post') && (string)$this->request->getData('_voltar_lancamento', '') !== '1') {
             $erros = $this->validarLancamentoAvaliacao($questoesLista, (array)$this->request->getData('q', []));
-            if ($avaliarSumulas) {
-                $erros = array_merge(
-                    $erros,
-                    $this->validarLancamentoSumulas($sumulasAvaliacao, (array)$this->request->getData('sumula', []))
-                );
+            foreach ($sumulasAvaliacaoBlocos as $blocoSumula) {
+                $erros = array_merge($erros, $this->validarLancamentoSumulas(
+                    $blocoSumula['linhas'],
+                    (array)$this->request->getData((string)$blocoSumula['campo'], []),
+                    (string)$blocoSumula['titulo']
+                ));
             }
             if (trim((string)$this->request->getData('observacao_avaliador', '')) === '') {
                 $erros[] = 'Informe as observações dos quesitos.';
             }
-            if ($avaliarSumulas && $sumulasAvaliacao !== [] && trim((string)$this->request->getData('observacao_sumulas', '')) === '') {
+            if ($avaliarSumulas && trim((string)$this->request->getData('observacao_sumulas', '')) === '') {
                 $erros[] = 'Informe as observações da súmula.';
             }
             if ((string)$this->request->getData('parecer', '') === '') {
@@ -359,17 +368,18 @@ class AvaliadoresController extends AppController
                 $dadosLancamento = $this->request->getData();
                 $tipoMap = [
                     'N' => 'Inscrições',
+                    'R' => 'RAIC/Workshop',
                     'V' => 'RAIC (aluno de renovação)',
                     'Z' => 'RAIC de outras agências',
                     'J' => 'PDJ Nova',
                     'W' => 'Workshop',
                 ];
 
-                $this->set(compact('avaliacao', 'questoesLista', 'tipoMap', 'avaliarSumulas', 'sumulasAvaliacao', 'dadosLancamento'));
+                $this->set(compact('avaliacao', 'questoesLista', 'tipoMap', 'avaliarSumulas', 'sumulasAvaliacao', 'sumulasAvaliacaoBlocos', 'dadosLancamento'));
                 return $this->render('confirmar_avaliacao');
             } else {
                 try {
-                    $this->salvarLancamentoAvaliacao($avaliacao, $questoesLista, $sumulasAvaliacao);
+                    $this->salvarLancamentoAvaliacao($avaliacao, $questoesLista, $sumulasAvaliacaoBlocos);
                     $this->Flash->success('Avaliação finalizada com sucesso.');
                     return $this->redirect(['action' => 'avaliacoes']);
                 } catch (\Throwable $e) {
@@ -384,6 +394,7 @@ class AvaliadoresController extends AppController
 
         $tipoMap = [
             'N' => 'Inscrições',
+            'R' => 'RAIC/Workshop',
             'V' => 'RAIC (aluno de renovação)',
             'Z' => 'RAIC de outras agências',
             'J' => 'PDJ Nova',
@@ -391,7 +402,7 @@ class AvaliadoresController extends AppController
         ];
         $questoes = $questoesLista;
 
-        $this->set(compact('avaliacao', 'questoes', 'tipoMap', 'avaliarSumulas', 'sumulasAvaliacao'));
+        $this->set(compact('avaliacao', 'questoes', 'tipoMap', 'avaliarSumulas', 'sumulasAvaliacao', 'sumulasAvaliacaoBlocos'));
     }
 
     public function verNotas(int $id)
@@ -473,15 +484,67 @@ class AvaliadoresController extends AppController
             ])
             ->all();
 
+        $notasSumulasLista = $notasSumulas->toList();
+        $this->classificarNotasSumulasPdj($avaliacao, $notasSumulasLista);
+
         $tipoMap = [
             'N' => 'Inscrições',
+            'R' => 'RAIC/Workshop',
             'V' => 'RAIC (aluno de renovação)',
             'Z' => 'RAIC de outras agências',
             'J' => 'PDJ Nova',
             'W' => 'Workshop',
         ];
 
-        $this->set(compact('avaliacao', 'notas', 'notasSumulas', 'tipoMap'));
+        $this->set(compact('avaliacao', 'notas', 'notasSumulas', 'notasSumulasLista', 'tipoMap'));
+    }
+
+    protected function classificarNotasSumulasPdj(AvaliadorBolsista $avaliacao, array $notasSumulasLista): void
+    {
+        if ((string)($avaliacao->tipo ?? '') !== 'J') {
+            return;
+        }
+
+        $notaOrientadorAlvo = $avaliacao->nota_sumula;
+        $notaBolsistaAlvo = $avaliacao->nota_sumula_bolsista;
+        $acumuladoOrientador = 0.0;
+        $usandoFallbackTotal = $notaOrientadorAlvo !== null && $notaBolsistaAlvo !== null;
+
+        foreach ($notasSumulasLista as $notaSumula) {
+            $grupo = null;
+            if ((int)($notaSumula->bolsista ?? 0) === 1) {
+                $grupo = 'bolsista';
+            } elseif ($notaSumula->bolsista !== null && (int)$notaSumula->bolsista === 0) {
+                $grupo = 'orientador';
+            } elseif ((int)($notaSumula->inscricao_sumula->bolsista ?? 0) === 1) {
+                $grupo = 'bolsista';
+            } elseif (!empty($notaSumula->inscricao_sumula)) {
+                $grupo = 'orientador';
+            }
+
+            if ($grupo === null) {
+                $sumula = $notaSumula->editais_sumula ?? null;
+                $bloco = $sumula->editais_sumulas_bloco ?? $notaSumula->editais_sumulas_bloco ?? null;
+                $nomeBloco = strtoupper((string)($bloco->nome ?? ''));
+                if (strpos($nomeBloco, 'BOLSISTA') !== false) {
+                    $grupo = 'bolsista';
+                } elseif (strpos($nomeBloco, 'ORIENTADOR') !== false) {
+                    $grupo = 'orientador';
+                }
+            }
+
+            if ($grupo === null && $usandoFallbackTotal) {
+                $proximoTotal = round($acumuladoOrientador + (float)($notaSumula->nota ?? 0), 2);
+                if ($proximoTotal <= round((float)$notaOrientadorAlvo, 2)) {
+                    $grupo = 'orientador';
+                    $acumuladoOrientador = $proximoTotal;
+                } else {
+                    $grupo = 'bolsista';
+                }
+            }
+
+            $notaSumula->set('grupo_sumula', $grupo ?: 'orientador');
+        }
     }
 
     public function deletarNotas(int $id)
@@ -551,6 +614,7 @@ class AvaliadoresController extends AppController
                 $avaliacao->situacao = 'E';
                 $avaliacao->nota = null;
                 $avaliacao->nota_sumula = null;
+                $avaliacao->nota_sumula_bolsista = null;
                 $avaliadorBolsistasTable->saveOrFail($avaliacao);
 
                 $this->registrarHistoricoExclusaoNotas($avaliacao, $chamado);
@@ -572,17 +636,24 @@ class AvaliadoresController extends AppController
     {
         $tipo = (string)($avaliacao->tipo ?? '');
 
-        if ($tipo === 'N') {
+        if (in_array($tipo, ['N', 'J'], true)) {
             $inscricaoId = (int)($avaliacao->projeto_bolsista_id ?? $avaliacao->bolsista ?? 0);
             if ($inscricaoId > 0) {
                 return ['controller' => 'Padrao', 'action' => 'visualizar', $inscricaoId];
             }
         }
 
-        if (in_array($tipo, ['V', 'Z'], true)) {
+        if (in_array($tipo, ['R', 'V', 'Z'], true) && empty($avaliacao->workshop_id)) {
             $raicId = (int)($avaliacao->raic_id ?? $avaliacao->bolsista ?? 0);
             if ($raicId > 0) {
                 return ['controller' => 'RaicNew', 'action' => 'ver', $raicId];
+            }
+        }
+
+        if (in_array($tipo, ['R', 'W'], true)) {
+            $workshopId = (int)($avaliacao->workshop_id ?? 0);
+            if ($workshopId > 0) {
+                return ['controller' => 'Workshops', 'action' => 'bancas'];
             }
         }
 
@@ -619,7 +690,7 @@ class AvaliadoresController extends AppController
             return;
         }
 
-        if (in_array($tipo, ['V', 'Z'], true)) {
+        if (in_array($tipo, ['R', 'V', 'Z'], true) && empty($avaliacao->workshop_id)) {
             $raicId = (int)($avaliacao->raic_id ?? $avaliacao->bolsista ?? 0);
             if ($raicId <= 0) {
                 return;
@@ -637,8 +708,8 @@ class AvaliadoresController extends AppController
             return;
         }
 
-        if ($tipo === 'W') {
-            $workshopId = (int)($avaliacao->workshop_id ?? $avaliacao->bolsista ?? 0);
+        if (in_array($tipo, ['R', 'W'], true)) {
+            $workshopId = (int)($avaliacao->workshop_id ?? 0);
             if ($workshopId <= 0) {
                 return;
             }
@@ -689,19 +760,21 @@ class AvaliadoresController extends AppController
                 (int)($inscricao->bolsista ?? 0),
             ], true) || $ehJediPermitido || $ehPadauanPermitido;
         }
-        if (in_array($tipo, ['V', 'Z'], true) && !empty($avaliacao->raic)) {
+        if (in_array($tipo, ['R', 'V', 'Z'], true) && !empty($avaliacao->raic)) {
             return in_array($usuarioId, [
                 (int)($avaliacao->raic->orientador ?? 0),
                 (int)($avaliacao->raic->usuario_id ?? 0),
             ], true);
         }
-        if ($tipo === 'J' && !empty($avaliacao->pdj_inscrico)) {
+        if ($tipo === 'J' && (!empty($avaliacao->projeto_bolsista) || !empty($avaliacao->pdj_inscrico))) {
+            $inscricao = $avaliacao->projeto_bolsista ?? $avaliacao->pdj_inscrico;
             return in_array($usuarioId, [
-                (int)($avaliacao->pdj_inscrico->usuario_id ?? 0),
-                (int)($avaliacao->pdj_inscrico->bolsista ?? 0),
+                (int)($inscricao->orientador ?? 0),
+                (int)($inscricao->coorientador ?? 0),
+                (int)($inscricao->bolsista ?? 0),
             ], true);
         }
-        if ($tipo === 'W' && !empty($avaliacao->workshop)) {
+        if (in_array($tipo, ['R', 'W'], true) && !empty($avaliacao->workshop)) {
             return in_array($usuarioId, [
                 (int)($avaliacao->workshop->orientador ?? 0),
                 (int)($avaliacao->workshop->usuario_id ?? 0),
@@ -744,7 +817,7 @@ class AvaliadoresController extends AppController
         return $erros;
     }
 
-    protected function validarLancamentoSumulas(array $sumulasAvaliacao, array $dadosSumulas): array
+    protected function validarLancamentoSumulas(array $sumulasAvaliacao, array $dadosSumulas, string $titulo = 'súmula'): array
     {
         $erros = [];
         foreach ($sumulasAvaliacao as $linha) {
@@ -754,20 +827,20 @@ class AvaliadoresController extends AppController
                 continue;
             }
             if (!array_key_exists((string)$sumulaId, $dadosSumulas) && !array_key_exists($sumulaId, $dadosSumulas)) {
-                $erros[] = 'Informe todas as quantidades avaliadas da súmula. Use 0 quando não houver produção.';
+                $erros[] = sprintf('Informe todas as quantidades avaliadas da %s. Use 0 quando não houver produção.', $titulo);
                 break;
             }
 
             $valor = $dadosSumulas[$sumulaId] ?? $dadosSumulas[(string)$sumulaId] ?? null;
             $valor = trim((string)$valor);
             if ($valor === '' || !ctype_digit($valor)) {
-                $erros[] = 'As quantidades avaliadas da súmula devem ser números inteiros. Use 0 quando não houver produção.';
+                $erros[] = sprintf('As quantidades avaliadas da %s devem ser números inteiros. Use 0 quando não houver produção.', $titulo);
                 break;
             }
 
             $quantidade = (int)$valor;
             if ($quantidade < 0 || $quantidade > 50) {
-                $erros[] = 'As quantidades avaliadas da súmula devem estar entre 0 e 50.';
+                $erros[] = sprintf('As quantidades avaliadas da %s devem estar entre 0 e 50.', $titulo);
                 break;
             }
         }
@@ -787,13 +860,69 @@ class AvaliadoresController extends AppController
         return $padrao;
     }
 
-    protected function salvarLancamentoAvaliacao(AvaliadorBolsista $avaliacao, array $questoes, array $sumulasAvaliacao = []): void
+    protected function salvarItensSumulaAvaliacao(
+        $avaliationsSumulasTable,
+        AvaliadorBolsista $avaliacao,
+        array $sumulasAvaliacao,
+        array $dadosSumulas,
+        string $observacaoSumulas,
+        bool $ehSumulaBolsista = false
+    ): float {
+        $totaisPorBloco = [];
+        $maxPorBloco = [];
+
+        foreach ($sumulasAvaliacao as $linha) {
+            $sumula = $linha['sumula'];
+            $inscricaoSumula = $linha['inscricao_sumula'] ?? null;
+            $sumulaId = (int)$sumula->id;
+            $blocoId = (int)($sumula->editais_sumula_bloco_id ?? 0);
+            $quantidadeOriginal = (int)($linha['quantidade_original'] ?? $linha['quantidade'] ?? 0);
+            $quantidadeAvaliada = $this->valorSumulaLancamento($dadosSumulas, $sumulaId);
+            $fator = (float)($sumula->fator ?? 0);
+            $notaItem = round($quantidadeAvaliada * $fator, 2);
+            $maxSumula = $sumula->max ?? null;
+            if ($maxSumula !== null && $maxSumula !== '') {
+                $notaItem = min($notaItem, (float)$maxSumula);
+            }
+
+            $totaisPorBloco[$blocoId] = ($totaisPorBloco[$blocoId] ?? 0) + $notaItem;
+            $maxBloco = $sumula->editais_sumulas_bloco->max ?? null;
+            if ($maxBloco !== null && $maxBloco !== '') {
+                $maxPorBloco[$blocoId] = (float)$maxBloco;
+            }
+
+            $avaliationsSumulasTable->saveOrFail($avaliationsSumulasTable->newEntity([
+                'avaliador_bolsista_id' => (int)$avaliacao->id,
+                'editais_sumula_id' => $sumulaId,
+                'editais_sumula_bloco_id' => $blocoId > 0 ? $blocoId : null,
+                'inscricao_sumula_id' => !empty($inscricaoSumula) ? (int)$inscricaoSumula->id : null,
+                'nota' => $notaItem,
+                'observacao_avaliador' => $observacaoSumulas,
+                'deleted' => 0,
+                'quantidade_original' => $quantidadeOriginal,
+                'quantidade_avaliada' => $quantidadeAvaliada,
+                'bolsista' => $ehSumulaBolsista ? 1 : null,
+            ]));
+        }
+
+        $notaFinal = 0.0;
+        foreach ($totaisPorBloco as $blocoId => $totalBloco) {
+            $maxBloco = $maxPorBloco[$blocoId] ?? null;
+            if ($maxBloco !== null) {
+                $totalBloco = min((float)$totalBloco, (float)$maxBloco);
+            }
+            $notaFinal += (float)$totalBloco;
+        }
+
+        return round($notaFinal, 2);
+    }
+
+    protected function salvarLancamentoAvaliacao(AvaliadorBolsista $avaliacao, array $questoes, array $sumulasAvaliacaoBlocos = []): void
     {
         $avaliadorBolsistasTable = $this->fetchTable('AvaliadorBolsistas');
         $avaliationsTable = $this->fetchTable('Avaliations');
         $avaliationsSumulasTable = $this->fetchTable('AvaliationsSumulas');
         $notas = (array)$this->request->getData('q', []);
-        $dadosSumulas = (array)$this->request->getData('sumula', []);
         $observacaoQuesitos = trim((string)$this->request->getData('observacao_avaliador', ''));
         $observacaoSumulas = trim((string)$this->request->getData('observacao_sumulas', ''));
         $parecer = (string)$this->request->getData('parecer', '');
@@ -812,8 +941,7 @@ class AvaliadoresController extends AppController
             $avaliadorBolsistasTable,
             $avaliationsTable,
             $avaliationsSumulasTable,
-            $sumulasAvaliacao,
-            $dadosSumulas
+            $sumulasAvaliacaoBlocos
         ): void {
             $avaliationsTable->updateAll(
                 ['deleted' => 1],
@@ -843,7 +971,8 @@ class AvaliadoresController extends AppController
             }
 
             $notaSumula = null;
-            if ($sumulasAvaliacao !== []) {
+            $notaSumulaBolsista = null;
+            if ($sumulasAvaliacaoBlocos !== []) {
                 $avaliationsSumulasTable->updateAll(
                     ['deleted' => 1],
                     [
@@ -855,56 +984,29 @@ class AvaliadoresController extends AppController
                     ]
                 );
 
-                $totaisPorBloco = [];
-                $maxPorBloco = [];
-                foreach ($sumulasAvaliacao as $linha) {
-                    $sumula = $linha['sumula'];
-                    $inscricaoSumula = $linha['inscricao_sumula'] ?? null;
-                    $sumulaId = (int)$sumula->id;
-                    $blocoId = (int)($sumula->editais_sumula_bloco_id ?? 0);
-                    $quantidadeOriginal = (int)($linha['quantidade_original'] ?? 0);
-                    $quantidadeAvaliada = $this->valorSumulaLancamento($dadosSumulas, $sumulaId);
-                    $fator = (float)($sumula->fator ?? 0);
-                    $notaItem = round($quantidadeAvaliada * $fator, 2);
-                    $maxSumula = $sumula->max ?? null;
-                    if ($maxSumula !== null && $maxSumula !== '') {
-                        $notaItem = min($notaItem, (float)$maxSumula);
-                    }
+                foreach ($sumulasAvaliacaoBlocos as $blocoSumula) {
+                    $notaBlocoFinal = $this->salvarItensSumulaAvaliacao(
+                        $avaliationsSumulasTable,
+                        $avaliacao,
+                        (array)$blocoSumula['linhas'],
+                        (array)$this->request->getData((string)$blocoSumula['campo'], []),
+                        $observacaoSumulas,
+                        (string)$blocoSumula['destino'] === 'bolsista'
+                    );
 
-                    $totaisPorBloco[$blocoId] = ($totaisPorBloco[$blocoId] ?? 0) + $notaItem;
-                    $maxBloco = $sumula->editais_sumulas_bloco->max ?? null;
-                    if ($maxBloco !== null && $maxBloco !== '') {
-                        $maxPorBloco[$blocoId] = (float)$maxBloco;
+                    if ((string)$blocoSumula['destino'] === 'bolsista') {
+                        $notaSumulaBolsista = $notaBlocoFinal;
+                    } else {
+                        $notaSumula = $notaBlocoFinal;
                     }
-
-                    $avaliationsSumulasTable->saveOrFail($avaliationsSumulasTable->newEntity([
-                        'avaliador_bolsista_id' => (int)$avaliacao->id,
-                        'editais_sumula_id' => $sumulaId,
-                        'editais_sumula_bloco_id' => $blocoId > 0 ? $blocoId : null,
-                        'inscricao_sumula_id' => !empty($inscricaoSumula) ? (int)$inscricaoSumula->id : null,
-                        'nota' => $notaItem,
-                        'observacao_avaliador' => $observacaoSumulas,
-                        'deleted' => 0,
-                        'quantidade_original' => $quantidadeOriginal,
-                        'quantidade_avaliada' => $quantidadeAvaliada,
-                    ]));
                 }
-
-                $notaSumula = 0.0;
-                foreach ($totaisPorBloco as $blocoId => $totalBloco) {
-                    $maxBloco = $maxPorBloco[$blocoId] ?? null;
-                    if ($maxBloco !== null) {
-                        $totalBloco = min((float)$totalBloco, (float)$maxBloco);
-                    }
-                    $notaSumula += (float)$totalBloco;
-                }
-                $notaSumula = round($notaSumula, 2);
             }
 
             $avaliacao->observacao = $observacaoQuesitos;
             $avaliacao->situacao = 'F';
             $avaliacao->nota = $total;
             $avaliacao->nota_sumula = $notaSumula;
+            $avaliacao->nota_sumula_bolsista = $notaSumulaBolsista;
             $avaliacao->parecer = $parecer;
             if ($destaque !== null && $destaque !== '') {
                 $avaliacao->destaque = (int)$destaque;
@@ -914,7 +1016,7 @@ class AvaliadoresController extends AppController
             }
             $avaliadorBolsistasTable->saveOrFail($avaliacao);
 
-            if (in_array((string)$avaliacao->tipo, ['V', 'Z'], true) && (!empty($avaliacao->raic_id) || !empty($avaliacao->bolsista))) {
+            if (in_array((string)$avaliacao->tipo, ['R', 'V', 'Z'], true) && !empty($avaliacao->raic) && (!empty($avaliacao->raic_id) || !empty($avaliacao->bolsista))) {
                 $raicsTable = $this->fetchTable('Raics');
                 $raic = $raicsTable->get((int)($avaliacao->raic_id ?: $avaliacao->bolsista));
                 $raic->observacao_avaliador = $observacaoQuesitos;
@@ -926,7 +1028,7 @@ class AvaliadoresController extends AppController
                     $raic->indicado_premio_capes = (int)$indicadoPremioCapes;
                 }
                 $raicsTable->saveOrFail($raic);
-            } elseif ((string)$avaliacao->tipo === 'W' && (!empty($avaliacao->workshop_id) || !empty($avaliacao->bolsista))) {
+            } elseif (in_array((string)$avaliacao->tipo, ['R', 'W'], true) && !empty($avaliacao->workshop) && (!empty($avaliacao->workshop_id) || !empty($avaliacao->bolsista))) {
                 $workshopsTable = $this->fetchTable('Workshops');
                 $workshop = $workshopsTable->get((int)($avaliacao->workshop_id ?: $avaliacao->bolsista));
                 $workshop->observacao_avaliador = $observacaoQuesitos;
@@ -944,39 +1046,79 @@ class AvaliadoresController extends AppController
 
     protected function deveAvaliarSumulas(AvaliadorBolsista $avaliacao): bool
     {
-        return (string)($avaliacao->tipo ?? '') === 'N'
-            && (string)($avaliacao->editai->origem ?? '') === 'N'
-            && !empty($avaliacao->projeto_bolsista);
+        $tipo = (string)($avaliacao->tipo ?? '');
+
+        if ($tipo === 'N') {
+            return (string)($avaliacao->editai->origem ?? '') === 'N'
+                && !empty($avaliacao->projeto_bolsista);
+        }
+
+        return $tipo === 'J' && (!empty($avaliacao->projeto_bolsista) || !empty($avaliacao->pdj_inscrico));
     }
 
-    protected function carregarSumulasAvaliacao(AvaliadorBolsista $avaliacao): array
+    protected function carregarBlocosSumulasAvaliacao(AvaliadorBolsista $avaliacao): array
     {
-        $inscricaoId = (int)($avaliacao->projeto_bolsista->id ?? $avaliacao->projeto_bolsista_id ?? $avaliacao->bolsista ?? 0);
+        if (!$this->deveAvaliarSumulas($avaliacao)) {
+            return [];
+        }
+
+        if ((string)($avaliacao->tipo ?? '') === 'J') {
+            return array_values(array_filter([
+                [
+                    'titulo' => 'súmula do orientador',
+                    'campo' => 'sumula_orientador',
+                    'destino' => 'orientador',
+                    'linhas' => $this->carregarSumulasAvaliacao($avaliacao, 'O'),
+                ],
+                [
+                    'titulo' => 'súmula do bolsista',
+                    'campo' => 'sumula_bolsista',
+                    'destino' => 'bolsista',
+                    'linhas' => $this->carregarSumulasAvaliacao($avaliacao, 'B'),
+                ],
+            ], static function (array $bloco): bool {
+                return $bloco['linhas'] !== [];
+            }));
+        }
+
+        $linhas = $this->carregarSumulasAvaliacao($avaliacao);
+        if ($linhas === []) {
+            return [];
+        }
+
+        return [[
+            'titulo' => 'súmula do orientador',
+            'campo' => 'sumula',
+            'destino' => 'orientador',
+            'linhas' => $linhas,
+        ]];
+    }
+
+    protected function carregarSumulasAvaliacao(AvaliadorBolsista $avaliacao, ?string $tipoPdj = null): array
+    {
+        $tipo = (string)($avaliacao->tipo ?? '');
+        $inscricaoId = $tipo === 'J'
+            ? (int)($avaliacao->projeto_bolsista->id ?? $avaliacao->pdj_inscrico->id ?? $avaliacao->projeto_bolsista_id ?? $avaliacao->bolsista ?? 0)
+            : (int)($avaliacao->projeto_bolsista->id ?? $avaliacao->projeto_bolsista_id ?? $avaliacao->bolsista ?? 0);
         $editalId = (int)($avaliacao->editai_id ?? $avaliacao->editai->id ?? 0);
         if ($inscricaoId <= 0 || $editalId <= 0) {
             return [];
         }
 
-        $sumulas = $this->fetchTable('EditaisSumulas')->find()
-            ->contain(['EditaisSumulasBlocos'])
-            ->where([
-                'EditaisSumulas.editai_id' => $editalId,
-                'EditaisSumulas.deleted IS' => null,
-            ])
-            ->orderBy([
-                'EditaisSumulas.editais_sumula_bloco_id' => 'ASC',
-                'EditaisSumulas.id' => 'ASC',
-            ])
-            ->all()
-            ->toList();
+        $sumulas = $tipo === 'J'
+            ? $this->buscarSumulasPdjAvaliacao($editalId, (string)$tipoPdj)
+            : $this->buscarSumulasEditalAvaliacao($editalId);
 
         if ($sumulas === []) {
             return [];
         }
 
+        $condicaoBolsistaSumula = $tipo === 'J' && $tipoPdj === 'B'
+            ? ['InscricaoSumulas.bolsista' => 1]
+            : ['InscricaoSumulas.bolsista IS' => null];
         $sumulasIds = array_map(fn($sumula): int => (int)$sumula->id, $sumulas);
         $inscricaoSumulas = $this->fetchTable('InscricaoSumulas')->find()
-            ->where([
+            ->where($condicaoBolsistaSumula + [
                 'InscricaoSumulas.projeto_bolsista_id' => $inscricaoId,
                 //'InscricaoSumulas.pdj_inscricoe_id IS' => null,
                 'InscricaoSumulas.editais_sumula_id IN' => $sumulasIds,
@@ -1001,12 +1143,45 @@ class AvaliadoresController extends AppController
         return $linhas;
     }
 
+    protected function buscarSumulasEditalAvaliacao(int $editalId): array
+    {
+        return $this->fetchTable('EditaisSumulas')->find()
+            ->contain(['EditaisSumulasBlocos'])
+            ->where([
+                'EditaisSumulas.editai_id' => $editalId,
+                'EditaisSumulas.deleted IS' => null,
+            ])
+            ->orderBy([
+                'EditaisSumulas.editais_sumula_bloco_id' => 'ASC',
+                'EditaisSumulas.id' => 'ASC',
+            ])
+            ->all()
+            ->toList();
+    }
+
+    protected function buscarSumulasPdjAvaliacao(int $editalId, string $tipo): array
+    {
+        $rows = $this->buscarSumulasEditalAvaliacao($editalId);
+        $filtradas = array_filter($rows, function ($sumula) use ($tipo) {
+            $nomeBloco = strtoupper((string)($sumula->editais_sumulas_bloco->nome ?? ''));
+            if ($tipo === 'B') {
+                return strpos($nomeBloco, 'BOLSISTA') !== false;
+            }
+
+            return strpos($nomeBloco, 'ORIENTADOR') !== false;
+        });
+
+        return $filtradas ?: $rows;
+    }
+
     protected function carregarReferenciaAvaliacao($avaliacao): void
     {
         $tipo = (string)($avaliacao->tipo ?? '');
-        $referenciaId = (int)($avaliacao->bolsista ?? 0);
+        $referenciaId = in_array($tipo, ['N', 'J'], true)
+            ? (int)($avaliacao->projeto_bolsista_id ?? $avaliacao->bolsista ?? 0)
+            : (int)($avaliacao->bolsista ?? 0);
 
-        if ($tipo === 'N' && empty($avaliacao->projeto_bolsista) && $referenciaId > 0) {
+        if (in_array($tipo, ['N', 'J'], true) && empty($avaliacao->projeto_bolsista) && $referenciaId > 0) {
             $referencia = $this->fetchTable('ProjetoBolsistas')->find()
                 ->contain([
                     'Editais',
@@ -1017,7 +1192,15 @@ class AvaliadoresController extends AppController
                 ->where(['ProjetoBolsistas.id' => $referenciaId])
                 ->first();
             $avaliacao->set('projeto_bolsista', $referencia);
-        } elseif (in_array($tipo, ['V', 'Z'], true) && empty($avaliacao->raic) && $referenciaId > 0) {
+        } elseif (
+            (
+                in_array($tipo, ['V', 'Z'], true)
+                || ($tipo === 'R' && empty($avaliacao->workshop_id))
+            )
+            && empty($avaliacao->raic)
+            && empty($avaliacao->workshop)
+            && $referenciaId > 0
+        ) {
             $referencia = $this->fetchTable('Raics')->find()
                 ->contain([
                     'Editais',
@@ -1029,7 +1212,7 @@ class AvaliadoresController extends AppController
                 ->where(['Raics.id' => $referenciaId])
                 ->first();
             $avaliacao->set('raic', $referencia);
-        } elseif ($tipo === 'W' && empty($avaliacao->workshop) && $referenciaId > 0) {
+        } elseif (in_array($tipo, ['R', 'W'], true) && empty($avaliacao->workshop) && $referenciaId > 0) {
             $referencia = $this->fetchTable('Workshops')->find()
                 ->contain([
                     'Editais',
@@ -1058,6 +1241,7 @@ class AvaliadoresController extends AppController
         ])
             ->where([
                 'Editais.origem' => 'V',
+                'Editais.programa_id' => 7,
                 'Editais.deleted' => 0,
                 'Editais.inicio_avaliar < NOW()',
                 'Editais.fim_avaliar > NOW()',
@@ -1129,6 +1313,91 @@ class AvaliadoresController extends AppController
         }
 
         $this->set(compact('editais', 'unidades', 'dados', 'resultado'));
+    }
+
+    public function cadastroWorkshop()
+    {
+        $this->request->allowMethod(['get', 'post']);
+
+        if (!$this->ehYoda()) {
+            $this->Flash->error('Área restrita à Gestão de Fomento.');
+            return $this->redirect(['controller' => 'Index', 'action' => 'dashboard']);
+        }
+
+        $editais = $this->fetchTable('Editais')->find('list', [
+            'keyField' => 'id',
+            'valueField' => 'nome',
+        ])
+            ->where([
+                'Editais.programa_id' => 8,
+                'Editais.deleted' => 0,
+                'Editais.inicio_avaliar < NOW()',
+                'Editais.fim_avaliar > NOW()',
+            ])
+            ->orderBy(['Editais.nome' => 'ASC'])
+            ->toArray();
+
+        $dados = [
+            'editai_id' => (int)$this->request->getData('editai_id', 0),
+            'cpfs' => (string)$this->request->getData('cpfs', ''),
+        ];
+
+        $resultado = [
+            'processado' => false,
+            'confirmado' => false,
+            'elegiveis' => [],
+            'inelegiveis' => [],
+            'totalInformados' => 0,
+            'totalElegiveis' => 0,
+            'totalInelegiveis' => 0,
+        ];
+
+        if ($this->request->is('post')) {
+            $acao = (string)$this->request->getData('acao', 'analisar');
+            $errosFormulario = $this->validarFormularioCadastroWorkshop($dados, $editais);
+
+            if ($errosFormulario !== []) {
+                $this->Flash->error(implode('<br>', $errosFormulario), ['escape' => false]);
+            } else {
+                try {
+                    $resultado = $this->analisarCadastroWorkshop($dados);
+
+                    if ($acao === 'confirmar') {
+                        if ($resultado['totalElegiveis'] === 0) {
+                            $this->Flash->error('Não há avaliadores elegíveis para confirmar o cadastro.');
+                        } else {
+                            $totalGravados = $this->confirmarCadastroWorkshop($dados, $resultado['elegiveis']);
+                            $resultado['confirmado'] = true;
+                            $this->Flash->success($totalGravados . ' avaliador(es) Workshop cadastrado(s) com sucesso.');
+                        }
+                    } else {
+                        if ($resultado['totalElegiveis'] > 0) {
+                            $this->Flash->info('Revise a prévia abaixo antes de confirmar o cadastro massivo.');
+                        }
+                    }
+
+                    if ($resultado['totalInelegiveis'] > 0) {
+                        $this->Flash->error(
+                            'Foram encontradas inelegibilidades em ' . $resultado['totalInelegiveis'] . ' CPF(s). Revise a listagem abaixo.',
+                            ['escape' => false]
+                        );
+                    }
+
+                    if ($resultado['totalElegiveis'] === 0 && $resultado['totalInelegiveis'] === 0) {
+                        $this->Flash->info('Nenhum CPF válido foi informado para processamento.');
+                    }
+                } catch (\Throwable $e) {
+                    $resultado['processado'] = true;
+                    $this->flashFriendlyException(
+                        $e,
+                        'Erro no Sistema - cadastro massivo de avaliadores Workshop',
+                        'Não foi possível concluir o cadastro massivo de avaliadores Workshop.'
+                    );
+                }
+            }
+        }
+
+        $this->set(compact('editais', 'dados', 'resultado'));
     }
 
     public function cadastroNova()
@@ -1659,6 +1928,18 @@ class AvaliadoresController extends AppController
             return $this->redirect($retornoLista);
         }
 
+        $programaInscricao = (int)($inscricao->programa_id ?? $inscricao->editai->programa_id ?? 0);
+        $origemInscricao = strtoupper(trim((string)($inscricao->origem ?? $inscricao->editai->origem ?? '')));
+
+        if ($programaInscricao === 1 && $origemInscricao === 'R') {
+            return $this->vincularAvaliadoresWorkshopPdj($inscricao, $retornoLista);
+        }
+
+        $tipoVinculoAvaliacao = 'N';
+        if ($programaInscricao === 1 && $origemInscricao === 'N') {
+            $tipoVinculoAvaliacao = 'J';
+        }
+
         $vinculosAtivos = $avaliadorBolsistasTable->find()
             ->contain([
                 'Avaliadors' => ['Usuarios', 'GrandesAreas', 'Areas'],
@@ -1666,7 +1947,7 @@ class AvaliadoresController extends AppController
             ])
             ->where([
                 'AvaliadorBolsistas.deleted' => 0,
-                'AvaliadorBolsistas.tipo' => 'N',
+                'AvaliadorBolsistas.tipo' => $tipoVinculoAvaliacao,
             ])
             ->andWhere(function ($exp) use ($id) {
                 return $exp->or([
@@ -1900,7 +2181,8 @@ class AvaliadoresController extends AppController
                     $avaliador2,
                     $avaliadoresSelecionados,
                     $vinculoAtualPorOrdem,
-                    $usuarioHistoricoId
+                    $usuarioHistoricoId,
+                    $tipoVinculoAvaliacao
                 ): void {
                     $dadosVinculo = [
                         ['avaliador_id' => $avaliador1, 'ordem' => 1],
@@ -1932,7 +2214,7 @@ class AvaliadoresController extends AppController
                         $novo = $avaliadorBolsistasTable->newEmptyEntity();
                         $novo->bolsista = (int)$inscricao->id;
                         $novo->projeto_bolsista_id = (int)$inscricao->id;
-                        $novo->tipo = 'N';
+                        $novo->tipo = $tipoVinculoAvaliacao;
                         $novo->situacao = 'E';
                         $novo->editai_id = (int)$inscricao->editai_id;
                         $novo->ano = (string)date('Y');
@@ -2000,6 +2282,12 @@ class AvaliadoresController extends AppController
         }
 
         return Router::url(['controller' => 'Listas', 'action' => 'listaInscricoesAvaliadores']);
+    }
+
+    protected function vincularAvaliadoresWorkshopPdj($inscricao, string $retornoLista)
+    {
+        $this->Flash->error('A vinculação de avaliadores de workshop deve ser realizada no fluxo próprio de workshop.');
+        return $this->redirect($retornoLista);
     }
 
     protected function retornoListaVincularInscricaoValido(string $retorno): bool
@@ -2692,6 +2980,21 @@ class AvaliadoresController extends AppController
         return $erros;
     }
 
+    protected function validarFormularioCadastroWorkshop(array $dados, array $editais): array
+    {
+        $erros = [];
+
+        if (empty($dados['editai_id']) || !isset($editais[$dados['editai_id']])) {
+            $erros[] = 'Selecione um edital Workshop com avaliações abertas.';
+        }
+
+        if (trim((string)$dados['cpfs']) === '') {
+            $erros[] = 'Informe ao menos um CPF.';
+        }
+
+        return $erros;
+    }
+
     protected function validarFormularioCadastroNova(array $dados, array $editais, array $grandesAreas, array $areas): array
     {
         $erros = [];
@@ -2836,6 +3139,87 @@ class AvaliadoresController extends AppController
         return $resultado;
     }
 
+    protected function analisarCadastroWorkshop(array $dados): array
+    {
+        $usuariosTable = $this->fetchTable('Usuarios');
+
+        $cpfs = $this->normalizarCpfs((string)$dados['cpfs']);
+        $resultado = [
+            'processado' => true,
+            'confirmado' => false,
+            'elegiveis' => [],
+            'inelegiveis' => [],
+            'totalInformados' => count($cpfs),
+            'totalElegiveis' => 0,
+            'totalInelegiveis' => 0,
+        ];
+
+        if ($cpfs === []) {
+            return $resultado;
+        }
+
+        $cpfJaProcessado = [];
+        foreach ($cpfs as $cpfInformado) {
+            $cpfOriginal = $cpfInformado['original'];
+            $cpfNumerico = $cpfInformado['numerico'];
+
+            if (isset($cpfJaProcessado[$cpfNumerico])) {
+                $resultado['inelegiveis'][] = [
+                    'cpf' => $cpfOriginal,
+                    'motivo' => 'CPF repetido na própria listagem enviada.',
+                ];
+                continue;
+            }
+            $cpfJaProcessado[$cpfNumerico] = true;
+
+            if (!$this->validaCPF($cpfNumerico)) {
+                $resultado['inelegiveis'][] = [
+                    'cpf' => $cpfOriginal,
+                    'motivo' => 'CPF inválido.',
+                ];
+                continue;
+            }
+
+            $usuario = $usuariosTable->find()
+                ->select(['id', 'nome', 'cpf'])
+                ->where(['Usuarios.cpf' => $cpfNumerico])
+                ->first();
+
+            if (!$usuario) {
+                $resultado['inelegiveis'][] = [
+                    'cpf' => $cpfOriginal,
+                    'motivo' => 'CPF não localizado na base de usuários.',
+                ];
+                continue;
+            }
+
+            $jaCadastrado = $this->existeCadastroWorkshop(
+                (int)$usuario->id,
+                (int)$dados['editai_id']
+            );
+
+            if ($jaCadastrado) {
+                $resultado['inelegiveis'][] = [
+                    'cpf' => $cpfOriginal,
+                    'nome' => (string)$usuario->nome,
+                    'motivo' => 'Avaliador já cadastrado para o edital Workshop selecionado.',
+                ];
+                continue;
+            }
+
+            $resultado['elegiveis'][] = [
+                'usuario_id' => (int)$usuario->id,
+                'cpf' => $cpfOriginal,
+                'nome' => (string)$usuario->nome,
+            ];
+        }
+
+        $resultado['totalElegiveis'] = count($resultado['elegiveis']);
+        $resultado['totalInelegiveis'] = count($resultado['inelegiveis']);
+
+        return $resultado;
+    }
+
     protected function confirmarCadastroRaic(array $dados, array $elegiveis): int
     {
         $avaliadorsTable = $this->fetchTable('Avaliadors');
@@ -2862,6 +3246,45 @@ class AvaliadoresController extends AppController
                 'deleted' => 0,
                 'editai_id' => (int)$dados['editai_id'],
                 'unidade_id' => (int)$dados['unidade_id'],
+                'aceite' => 1,
+            ]);
+            $totalSalvar++;
+        }
+
+        $avaliadorsTable->getConnection()->transactional(function () use ($avaliadorsTable, $entidadesSalvar): void {
+            foreach ($entidadesSalvar as $entidade) {
+                $avaliadorsTable->saveOrFail($entidade);
+            }
+        });
+
+        return $totalSalvar;
+    }
+
+    protected function confirmarCadastroWorkshop(array $dados, array $elegiveis): int
+    {
+        $avaliadorsTable = $this->fetchTable('Avaliadors');
+        $anoAtual = date('Y');
+        $entidadesSalvar = [];
+        $totalSalvar = 0;
+
+        foreach ($elegiveis as $item) {
+            if ($this->existeCadastroWorkshop(
+                (int)$item['usuario_id'],
+                (int)$dados['editai_id']
+            )) {
+                continue;
+            }
+
+            $entidadesSalvar[] = $avaliadorsTable->newEntity([
+                'usuario_id' => (int)$item['usuario_id'],
+                'grandes_area_id' => null,
+                'area_id' => null,
+                'ano_convite' => $anoAtual,
+                'ano_aceite' => $anoAtual,
+                'tipo_avaliador' => 'R',
+                'deleted' => 0,
+                'editai_id' => (int)$dados['editai_id'],
+                'unidade_id' => null,
                 'aceite' => 1,
             ]);
             $totalSalvar++;
@@ -3144,6 +3567,18 @@ class AvaliadoresController extends AppController
                 'Avaliadors.usuario_id' => $usuarioId,
                 'Avaliadors.editai_id' => $editaiId,
                 'Avaliadors.unidade_id' => $unidadeId,
+                'Avaliadors.deleted' => 0,
+            ])
+            ->count() > 0;
+    }
+
+    protected function existeCadastroWorkshop(int $usuarioId, int $editaiId): bool
+    {
+        return $this->fetchTable('Avaliadors')->find()
+            ->where([
+                'Avaliadors.usuario_id' => $usuarioId,
+                'Avaliadors.editai_id' => $editaiId,
+                'Avaliadors.tipo_avaliador' => 'R',
                 'Avaliadors.deleted' => 0,
             ])
             ->count() > 0;

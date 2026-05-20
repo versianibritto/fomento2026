@@ -99,6 +99,10 @@ class InscricaoSumulasTable extends Table
             ->integer('quantidade')
             ->allowEmptyString('quantidade');
 
+        $validator
+            ->boolean('bolsista')
+            ->allowEmptyString('bolsista');
+
         return $validator;
     }
 
@@ -120,4 +124,3 @@ class InscricaoSumulasTable extends Table
         return $rules;
     }
 }
-

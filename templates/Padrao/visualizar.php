@@ -79,6 +79,18 @@ if (!$temDataInicio && !$temDataFim) {
         $dataFimTexto = $tsFim ? date('d/m/Y', $tsFim) : 'Não informado';
     }
 }
+$formatarDataHoraAnexo = static function ($valor): string {
+    if (empty($valor)) {
+        return 'Não informado';
+    }
+
+    if (is_object($valor) && method_exists($valor, 'i18nFormat')) {
+        return (string)$valor->i18nFormat('dd/MM/yyyy HH:mm');
+    }
+
+    $ts = strtotime((string)$valor);
+    return $ts ? date('d/m/Y H:i', $ts) : 'Não informado';
+};
 ?>
 <style>
     .nav-pills.tabs-visualizacao {
@@ -215,6 +227,43 @@ if (!$temDataInicio && !$temDataFim) {
         font-weight: 700;
         line-height: 1;
     }
+    .homologacao-expansivo {
+        border: 1px solid #d7dde4;
+        border-radius: 8px;
+        background: #fff;
+        margin-bottom: 1rem;
+        overflow: hidden;
+    }
+    .homologacao-expansivo > summary {
+        cursor: pointer;
+        padding: 0.85rem 1rem;
+        font-weight: 600;
+        color: #344054;
+        background: #f8fafc;
+        border-bottom: 1px solid transparent;
+    }
+    .homologacao-expansivo[open] > summary {
+        border-bottom-color: #e5e7eb;
+    }
+    .homologacao-status-card {
+        border: 1px solid #d7dde4;
+        border-radius: 8px;
+        margin: 1rem;
+        padding: 1rem;
+        box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+    }
+    .homologacao-status-card.status-homologado {
+        background: #f0fdf4;
+        border-color: #86efac;
+    }
+    .homologacao-status-card.status-nao-homologado {
+        background: #fef2f2;
+        border-color: #fca5a5;
+    }
+    .homologacao-status-card.status-nao-verificado {
+        background: #f8fafc;
+        border-color: #cbd5e1;
+    }
 </style>
 <div class="container mt-4">
     <h4 class="mb-2">
@@ -234,6 +283,24 @@ if (!$temDataInicio && !$temDataFim) {
         $podeImplementarBolsaManual = empty($inscricao->deleted)
             && ($ehTIVisualizacao || in_array($faseAtual, [8, 9], true));
         $homologadoAtualTela = strtoupper((string)($inscricao->homologado ?? ''));
+        $homologadoTextoTela = match ($homologadoAtualTela) {
+            'S' => 'Sim',
+            'N' => 'Não',
+            default => 'Não verificado',
+        };
+        $homologadoBadgeTela = match ($homologadoAtualTela) {
+            'S' => 'bg-success',
+            'N' => 'bg-danger',
+            default => 'bg-secondary',
+        };
+        $homologadoStatusCardClasseTela = match ($homologadoAtualTela) {
+            'S' => 'status-homologado',
+            'N' => 'status-nao-homologado',
+            default => 'status-nao-verificado',
+        };
+        $homologadoDataTextoTela = $formatarDataHoraAnexo($inscricao->homologado_data ?? null);
+        $homologadoUsuarioTextoTela = trim((string)($inscricao->homologador->nome ?? ''));
+        $homologadoJustificativaTextoTela = trim((string)($inscricao->homologado_justificativa ?? ''));
         $podeAlterarResultado = empty($inscricao->deleted)
             && in_array($faseAtual, [4, 8, 9, 10], true)
             && in_array($homologadoAtualTela, ['S', 'N'], true);
@@ -276,7 +343,7 @@ if (!$temDataInicio && !$temDataFim) {
         <?php endif; ?>
 
         <?php if (in_array($faseAtual, [5], true)): ?>
-            <?= $this->Html->link('Finalizar', [
+            <?= $this->Html->link('Anexar Termo', [
                 'controller' => $controllerFluxo,
                 'action' => 'direcionarAcao',
                 (int)$edital->id,
@@ -431,6 +498,34 @@ if (!$temDataInicio && !$temDataFim) {
         </div>
     </div>
 
+    <?php if ($ehYoda): ?>
+        <details class="homologacao-expansivo">
+            <summary>Dados da homologação</summary>
+            <div class="homologacao-status-card <?= h($homologadoStatusCardClasseTela) ?>">
+                <div class="row g-3 align-items-start">
+                    <div class="col-md-4">
+                        <div class="text-muted small">Homologado</div>
+                        <div class="fw-semibold">
+                            <span class="badge <?= h($homologadoBadgeTela) ?>"><?= h($homologadoTextoTela) ?></span>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="text-muted small">Data da última alteração</div>
+                        <div class="fw-semibold"><?= $homologadoDataTextoTela !== 'Não informado' ? h($homologadoDataTextoTela) : $naoInformado ?></div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="text-muted small">Alterado por</div>
+                        <div class="fw-semibold"><?= $homologadoUsuarioTextoTela !== '' ? h($homologadoUsuarioTextoTela) : $naoInformado ?></div>
+                    </div>
+                    <div class="col-12">
+                        <div class="text-muted small">Justificativa</div>
+                        <div class="fw-semibold"><?= $homologadoJustificativaTextoTela !== '' ? nl2br(h($homologadoJustificativaTextoTela)) : '<span class="text-muted">-</span>' ?></div>
+                    </div>
+                </div>
+            </div>
+        </details>
+    <?php endif; ?>
+
     <div class="card">
         <div class="card-body">
             <ul class="nav nav-pills tabs-visualizacao mb-3" id="tabs-visualizacao-padrao" role="tablist">
@@ -457,7 +552,65 @@ if (!$temDataInicio && !$temDataFim) {
                         <p><strong>Universidade:</strong> <?= !empty($inscricao->bolsista_usuario->instituicao?->sigla) ? h($inscricao->bolsista_usuario->instituicao->sigla) : (!empty($inscricao->bolsista_usuario->instituicao_curso) && !is_numeric($inscricao->bolsista_usuario->instituicao_curso) ? h($inscricao->bolsista_usuario->instituicao_curso) : $naoInformado) ?></p>
                         <p><strong>Curso:</strong> <?= !empty($inscricao->bolsista_usuario->curso) ? h($inscricao->bolsista_usuario->curso) : $naoInformado ?></p>
                     <?php endif; ?>
-                    <p><strong>Primeiro período:</strong> <?= $inscricao->primeiro_periodo === null ? $naoInformado : ((int)$inscricao->primeiro_periodo === 1 ? 'Sim' : 'Nao') ?></p>
+                    <?php if ((int)($edital->programa_id ?? 0) > 1): ?>
+                        <p><strong>Primeiro período:</strong> <?= $inscricao->primeiro_periodo === null ? $naoInformado : ((int)$inscricao->primeiro_periodo === 1 ? 'Sim' : 'Nao') ?></p>
+                    <?php elseif (strtoupper((string)($inscricao->origem ?? '')) === 'N'): ?>
+                        <p>
+                            <strong>Bolsista, possui filhos menores de 8 anos?</strong>
+                            <?php
+                                $bolsistaSexo = strtoupper((string)($inscricao->bolsista_usuario->sexo ?? ''));
+                                $filhosMenorBolsista = (string)($inscricao->filhos_menor_bolsista ?? '');
+                                if ($bolsistaSexo !== 'F') {
+                                    echo 'Não se aplica, pois bolsista não é do sexo feminino';
+                                } else {
+                                    echo $filhosMenorBolsista !== '' ? h($filhosMenorBolsista) : $naoInformado;
+                                }
+                            ?>
+                        </p>
+                    <?php endif; ?>
+                    <?php if ((int)($edital->programa_id ?? 0) === 1 && strtoupper((string)($inscricao->origem ?? '')) === 'R'): ?>
+                        <hr>
+                        <h6>Workshop</h6>
+                        <?php if (empty($workshopsVinculados) || $workshopsVinculados->count() === 0): ?>
+                            <p><?= $naoInformado ?></p>
+                        <?php else: ?>
+                            <ul class="anexos-lista">
+                                <?php foreach ($workshopsVinculados as $workshop): ?>
+                                    <?php
+                                        $workshopDeletado = (int)($workshop->deleted ?? 0) === 1;
+                                        $workshopPresenca = strtoupper((string)($workshop->presenca ?? ''));
+                                        $workshopStatusTexto = $workshopDeletado
+                                            ? 'Deletado'
+                                            : ($workshopPresenca === 'S' ? 'Certificado liberado' : (!empty($workshop->data_apresentacao) ? 'Agendado' : 'Pendente de agendamento'));
+                                    ?>
+                                    <li>
+                                        <div class="anexo-titulo">
+                                            <span class="anexo-tipo">
+                                                Workshop #<?= h((string)$workshop->id) ?>
+                                            </span>
+                                            <span class="anexo-arquivo">
+                                                <?= !empty($workshop->editai->nome) ? h($workshop->editai->nome) : 'Edital não informado' ?>
+                                            </span>
+                                            <span class="anexo-meta">
+                                                Status: <?= h($workshopStatusTexto) ?>
+                                            </span>
+                                            <span class="anexo-meta">
+                                                <?= !empty($workshop->data_apresentacao)
+                                                    ? 'Apresentação em ' . h($workshop->data_apresentacao->i18nFormat('dd/MM/yyyy'))
+                                                    : 'Apresentação não agendada' ?>
+                                                <?= !empty($workshop->unidade->sigla) ? ' - ' . h($workshop->unidade->sigla) : '' ?>
+                                            </span>
+                                        </div>
+                                        <?= $this->Html->link(
+                                            'Abrir',
+                                            ['controller' => 'Workshops', 'action' => 'ver', (int)$workshop->id],
+                                            ['class' => 'btn btn-light border btn-sm py-0 px-2']
+                                        ) ?>
+                                    </li>
+                                <?php endforeach; ?>
+                            </ul>
+                        <?php endif; ?>
+                    <?php endif; ?>
                     <hr>
                     <h6>Anexos do Bolsista</h6>
                     <?php if (empty($anexosPorBloco['B'])): ?>
@@ -472,16 +625,7 @@ if (!$temDataInicio && !$temDataFim) {
                                         <span class="anexo-meta">
                                             Incluído por <?= !empty($anexo['usuario_nome']) ? h($anexo['usuario_nome']) : 'Não informado' ?>
                                             em
-                                            <?php
-                                                if (!empty($anexo['created']) && $anexo['created'] instanceof \Cake\I18n\FrozenTime) {
-                                                    echo h($anexo['created']->i18nFormat('dd/MM/yyyy HH:mm'));
-                                                } elseif (!empty($anexo['created'])) {
-                                                    $tsAnexo = strtotime((string)$anexo['created']);
-                                                    echo h($tsAnexo ? date('d/m/Y H:i', $tsAnexo) : 'Não informado');
-                                                } else {
-                                                    echo 'Não informado';
-                                                }
-                                            ?>
+                                            <?= h($formatarDataHoraAnexo($anexo['created'] ?? null)) ?>
                                         </span>
                                     </div>
                                     <?php if (!empty($anexo['arquivo'])): ?>
@@ -569,16 +713,7 @@ if (!$temDataInicio && !$temDataFim) {
                                             <span class="anexo-meta">
                                                 Incluído por <?= !empty($anexo['usuario_nome']) ? h($anexo['usuario_nome']) : 'Não informado' ?>
                                                 em
-                                                <?php
-                                                    if (!empty($anexo['created']) && $anexo['created'] instanceof \Cake\I18n\FrozenTime) {
-                                                        echo h($anexo['created']->i18nFormat('dd/MM/yyyy HH:mm'));
-                                                    } elseif (!empty($anexo['created'])) {
-                                                        $tsAnexo = strtotime((string)$anexo['created']);
-                                                        echo h($tsAnexo ? date('d/m/Y H:i', $tsAnexo) : 'Não informado');
-                                                    } else {
-                                                        echo 'Não informado';
-                                                    }
-                                                ?>
+                                                <?= h($formatarDataHoraAnexo($anexo['created'] ?? null)) ?>
                                             </span>
                                         </div>
                                         <?php if (!empty($anexo['arquivo'])): ?>
@@ -662,16 +797,7 @@ if (!$temDataInicio && !$temDataFim) {
                                                 <span class="anexo-meta">
                                                     Incluído por <?= !empty($anexo['usuario_nome']) ? h($anexo['usuario_nome']) : 'Não informado' ?>
                                                     em
-                                                    <?php
-                                                        if (!empty($anexo['created']) && $anexo['created'] instanceof \Cake\I18n\FrozenTime) {
-                                                            echo h($anexo['created']->i18nFormat('dd/MM/yyyy HH:mm'));
-                                                        } elseif (!empty($anexo['created'])) {
-                                                            $tsAnexo = strtotime((string)$anexo['created']);
-                                                            echo h($tsAnexo ? date('d/m/Y H:i', $tsAnexo) : 'Não informado');
-                                                        } else {
-                                                            echo 'Não informado';
-                                                        }
-                                                    ?>
+                                                    <?= h($formatarDataHoraAnexo($anexo['created'] ?? null)) ?>
                                                 </span>
                                                 <?php if ((int)($anexo['tipo_id'] ?? 0) !== 5 && !empty($anexo['inscricao_origem_id'])): ?>
                                                     <span class="anexo-meta">
@@ -705,16 +831,7 @@ if (!$temDataInicio && !$temDataFim) {
                                                         <span class="anexo-meta">
                                                             Incluído por <?= !empty($anexo['usuario_nome']) ? h($anexo['usuario_nome']) : 'Não informado' ?>
                                                             em
-                                                            <?php
-                                                                if (!empty($anexo['created']) && $anexo['created'] instanceof \Cake\I18n\FrozenTime) {
-                                                                    echo h($anexo['created']->i18nFormat('dd/MM/yyyy HH:mm'));
-                                                                } elseif (!empty($anexo['created'])) {
-                                                                    $tsAnexo = strtotime((string)$anexo['created']);
-                                                                    echo h($tsAnexo ? date('d/m/Y H:i', $tsAnexo) : 'Não informado');
-                                                                } else {
-                                                                    echo 'Não informado';
-                                                                }
-                                                            ?>
+                                                            <?= h($formatarDataHoraAnexo($anexo['created'] ?? null)) ?>
                                                         </span>
                                                     </div>
                                                     <?php if (!empty($anexo['arquivo'])): ?>
@@ -806,16 +923,7 @@ if (!$temDataInicio && !$temDataFim) {
                                                 <span class="anexo-meta">
                                                     Incluído por <?= !empty($anexo['usuario_nome']) ? h($anexo['usuario_nome']) : 'Não informado' ?>
                                                     em
-                                                    <?php
-                                                        if (!empty($anexo['created']) && $anexo['created'] instanceof \Cake\I18n\FrozenTime) {
-                                                            echo h($anexo['created']->i18nFormat('dd/MM/yyyy HH:mm'));
-                                                        } elseif (!empty($anexo['created'])) {
-                                                            $tsAnexo = strtotime((string)$anexo['created']);
-                                                            echo h($tsAnexo ? date('d/m/Y H:i', $tsAnexo) : 'Não informado');
-                                                        } else {
-                                                            echo 'Não informado';
-                                                        }
-                                                    ?>
+                                                    <?= h($formatarDataHoraAnexo($anexo['created'] ?? null)) ?>
                                                 </span>
                                             </div>
                                             <?php if (!empty($anexo['arquivo'])): ?>
@@ -905,16 +1013,7 @@ if (!$temDataInicio && !$temDataFim) {
                                         <span class="anexo-meta">
                                             Incluído por <?= !empty($anexo['usuario_nome']) ? h($anexo['usuario_nome']) : 'Não informado' ?>
                                             em
-                                            <?php
-                                                if (!empty($anexo['created']) && $anexo['created'] instanceof \Cake\I18n\FrozenTime) {
-                                                    echo h($anexo['created']->i18nFormat('dd/MM/yyyy HH:mm'));
-                                                } elseif (!empty($anexo['created'])) {
-                                                    $tsAnexo = strtotime((string)$anexo['created']);
-                                                    echo h($tsAnexo ? date('d/m/Y H:i', $tsAnexo) : 'Não informado');
-                                                } else {
-                                                    echo 'Não informado';
-                                                }
-                                            ?>
+                                            <?= h($formatarDataHoraAnexo($anexo['created'] ?? null)) ?>
                                         </span>
                                     </div>
                                     <?php if (!empty($anexo['arquivo'])): ?>

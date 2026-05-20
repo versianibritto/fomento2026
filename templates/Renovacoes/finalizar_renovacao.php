@@ -9,9 +9,9 @@
     <div class="card">
         <div class="card-body">
             <div class="p-3 mb-4 bg-light border rounded text-center">
-                <h3 class="mb-2">Finalizar inscrição</h3>
+                <h3 class="mb-2">Anexar Termo</h3>
                 <div class="fw-semibold">Inscrição - <?= h($edital->nome) ?></div>
-                <div class="text-muted mt-1">Esta etapa finaliza sua inscrição.</div>
+                <div class="text-muted mt-1">Esta etapa anexa o termo assinado da inscrição.</div>
             </div>
 
             <div class="alert alert-warning border border-warning-subtle mb-4 sumula-alerta">
@@ -34,7 +34,7 @@
                     ]) ?>
                 </div>
                 <div class="col-12 d-flex justify-content-end">
-                    <?= $this->Form->button('Finalizar', ['class' => 'btn btn-success']) ?>
+                    <?= $this->Form->button('Anexar Termo', ['class' => 'btn btn-success']) ?>
                 </div>
             <?= $this->Form->end() ?>
         </div>

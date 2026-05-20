@@ -43,7 +43,7 @@ $dadosAvaliacao = static function ($avaliacao) use ($nomeCurto): array {
         $orientador = $inscricao->orientadore->nome ?? null;
         $urlConsulta = ['controller' => 'Padrao', 'action' => 'visualizar', (int)$inscricao->id];
         $urlTrabalho = ['controller' => 'Avaliadores', 'action' => 'avaliar', (int)$avaliacao->id];
-    } elseif (in_array($tipo, ['V', 'Z'], true) && !empty($avaliacao->raic)) {
+    } elseif (in_array($tipo, ['R', 'V', 'Z'], true) && !empty($avaliacao->raic)) {
         $raic = $avaliacao->raic;
         $referencia = '#' . (int)$raic->id;
         $edital = $raic->editai->nome ?? $edital;
@@ -52,15 +52,16 @@ $dadosAvaliacao = static function ($avaliacao) use ($nomeCurto): array {
         $orientador = $raic->orientadore->nome ?? null;
         $urlConsulta = ['controller' => 'RaicNew', 'action' => 'ver', (int)$raic->id];
         $urlTrabalho = ['controller' => 'Avaliadores', 'action' => 'avaliar', (int)$avaliacao->id];
-    } elseif ($tipo === 'J' && !empty($avaliacao->pdj_inscrico)) {
-        $inscricao = $avaliacao->pdj_inscrico;
-        $referencia = '#' . (int)$inscricao->id;
+    } elseif ($tipo === 'J') {
+        $inscricao = $avaliacao->projeto_bolsista ?? $avaliacao->pdj_inscrico ?? null;
+        $referencia = '#' . (int)($inscricao->id ?? $avaliacao->bolsista ?? 0);
         $edital = $inscricao->editai->nome ?? $edital;
         $unidade = $inscricao->orientadore->unidade->sigla ?? null;
         $bolsista = $inscricao->bolsista_usuario->nome ?? null;
         $orientador = $inscricao->orientadore->nome ?? null;
+        $urlConsulta = ['controller' => 'Padrao', 'action' => 'visualizar', (int)($inscricao->id ?? $avaliacao->bolsista ?? 0)];
         $urlTrabalho = ['controller' => 'Avaliadores', 'action' => 'avaliar', (int)$avaliacao->id];
-    } elseif ($tipo === 'W' && !empty($avaliacao->workshop)) {
+    } elseif (in_array($tipo, ['R', 'W'], true) && !empty($avaliacao->workshop)) {
         $workshop = $avaliacao->workshop;
         $referencia = '#' . (int)$workshop->id;
         $edital = $workshop->editai->nome ?? $edital;

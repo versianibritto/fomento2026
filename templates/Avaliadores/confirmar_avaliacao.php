@@ -6,6 +6,7 @@
  * @var array<string, string> $tipoMap
  * @var bool $avaliarSumulas
  * @var array<int, array<string, mixed>> $sumulasAvaliacao
+ * @var array<int, array<string, mixed>> $sumulasAvaliacaoBlocos
  * @var array<string, mixed> $dadosLancamento
  */
 
@@ -19,6 +20,15 @@ $parecerMap = [
 $simNaoMap = [0 => 'Não', 1 => 'Sim'];
 $dadosQuesitos = (array)($dadosLancamento['q'] ?? []);
 $dadosSumulas = (array)($dadosLancamento['sumula'] ?? []);
+$sumulasAvaliacaoBlocos = $sumulasAvaliacaoBlocos ?? [];
+if ($sumulasAvaliacaoBlocos === [] && !empty($sumulasAvaliacao)) {
+    $sumulasAvaliacaoBlocos = [[
+        'titulo' => 'súmula do orientador',
+        'campo' => 'sumula',
+        'destino' => 'orientador',
+        'linhas' => $sumulasAvaliacao,
+    ]];
+}
 $valorSumulaLancamento = static function (array $dados, int $sumulaId): int {
     if (array_key_exists($sumulaId, $dados)) {
         return (int)$dados[$sumulaId];
@@ -31,18 +41,30 @@ $valorSumulaLancamento = static function (array $dados, int $sumulaId): int {
 };
 $referencia = match ($tipo) {
     'N' => 'Inscrição #' . (int)($avaliacao->projeto_bolsista->id ?? $avaliacao->bolsista ?? 0),
+    'J' => 'Inscrição #' . (int)($avaliacao->projeto_bolsista->id ?? $avaliacao->pdj_inscrico->id ?? $avaliacao->bolsista ?? 0),
+    'R' => !empty($avaliacao->workshop)
+        ? 'Workshop #' . (int)($avaliacao->workshop->id ?? $avaliacao->bolsista ?? 0)
+        : 'RAIC #' . (int)($avaliacao->raic->id ?? $avaliacao->bolsista ?? 0),
     'V', 'Z' => 'RAIC #' . (int)($avaliacao->raic->id ?? $avaliacao->bolsista ?? 0),
     'W' => 'Workshop #' . (int)($avaliacao->workshop->id ?? $avaliacao->bolsista ?? 0),
     default => 'Avaliação #' . (int)$avaliacao->id,
 };
 $bolsista = match ($tipo) {
     'N' => $avaliacao->projeto_bolsista->bolsista_usuario->nome ?? 'Não informado',
+    'J' => $avaliacao->projeto_bolsista->bolsista_usuario->nome ?? $avaliacao->pdj_inscrico->bolsista_usuario->nome ?? 'Não informado',
+    'R' => !empty($avaliacao->workshop)
+        ? ($avaliacao->workshop->usuario->nome ?? 'Não informado')
+        : ($avaliacao->raic->usuario->nome ?? 'Não informado'),
     'V', 'Z' => $avaliacao->raic->usuario->nome ?? 'Não informado',
     'W' => $avaliacao->workshop->usuario->nome ?? 'Não informado',
     default => 'Não informado',
 };
 $orientador = match ($tipo) {
     'N' => $avaliacao->projeto_bolsista->orientadore->nome ?? 'Não informado',
+    'J' => $avaliacao->projeto_bolsista->orientadore->nome ?? $avaliacao->pdj_inscrico->orientadore->nome ?? 'Não informado',
+    'R' => !empty($avaliacao->workshop)
+        ? ($avaliacao->workshop->orientadore->nome ?? 'Não informado')
+        : ($avaliacao->raic->orientadore->nome ?? 'Não informado'),
     'V', 'Z' => $avaliacao->raic->orientadore->nome ?? 'Não informado',
     'W' => $avaliacao->workshop->orientadore->nome ?? 'Não informado',
     default => 'Não informado',
@@ -63,6 +85,16 @@ $hiddenLancamento = static function (array $dados): string {
             h((string)$id),
             h((string)$valor)
         );
+    }
+    foreach (['sumula_orientador', 'sumula_bolsista'] as $campoSumula) {
+        foreach ((array)($dados[$campoSumula] ?? []) as $id => $valor) {
+            $html .= sprintf(
+                '<input type="hidden" name="%s[%s]" value="%s">',
+                h($campoSumula),
+                h((string)$id),
+                h((string)$valor)
+            );
+        }
     }
     foreach (['observacao_avaliador', 'observacao_sumulas', 'parecer', 'destaque', 'indicado_premio_capes'] as $campo) {
         if (array_key_exists($campo, $dados)) {
@@ -161,102 +193,116 @@ $totaisSumulasPorBloco = [];
                 <?php endif; ?>
             </div>
 
-            <?php if (!empty($avaliarSumulas) && !empty($sumulasAvaliacao)): ?>
+            <?php if (!empty($avaliarSumulas) && !empty($sumulasAvaliacaoBlocos)): ?>
                 <hr>
-                <h5 class="mb-3">Súmula da inscrição</h5>
-                <div class="table-responsive">
-                    <table class="table table-bordered table-striped align-middle">
-                        <thead class="table-secondary">
-                            <tr>
-                                <th>Bloco</th>
-                                <th>Súmula</th>
-                                <th style="width: 120px">Informado</th>
-                                <th style="width: 120px">Avaliado</th>
-                                <th style="width: 100px">Fator</th>
-                                <th style="width: 110px">Nota</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($sumulasAvaliacao as $linha): ?>
-                                <?php
-                                $sumula = $linha['sumula'];
-                                $bloco = $sumula->editais_sumulas_bloco ?? null;
-                                $sumulaId = (int)$sumula->id;
-                                $blocoId = (int)($sumula->editais_sumula_bloco_id ?? 0);
-                                $quantidadeOriginal = (int)($linha['quantidade'] ?? 0);
-                                $quantidadeAvaliada = $valorSumulaLancamento($dadosSumulas, $sumulaId);
-                                $fator = (float)($sumula->fator ?? 0);
-                                $notaItem = round($quantidadeAvaliada * $fator, 2);
-                                if (($sumula->max ?? null) !== null) {
-                                    $notaItem = min($notaItem, (float)$sumula->max);
-                                }
-                                $totaisSumulasPorBloco[$blocoId]['nome'] = (string)($bloco->nome ?? 'Sem bloco');
-                                $totaisSumulasPorBloco[$blocoId]['max'] = $bloco->max ?? null;
-                                $totaisSumulasPorBloco[$blocoId]['total'] = ($totaisSumulasPorBloco[$blocoId]['total'] ?? 0) + $notaItem;
-                                ?>
+                <?php foreach ($sumulasAvaliacaoBlocos as $blocoSumula): ?>
+                    <?php
+                    $campoSumula = (string)$blocoSumula['campo'];
+                    $dadosSumulasBloco = (array)($dadosLancamento[$campoSumula] ?? []);
+                    $totaisSumulasPorBloco = [];
+                    $destinoSumula = (string)($blocoSumula['destino'] ?? '');
+                    $classeBloco = $destinoSumula === 'bolsista' ? 'border-info' : 'border-primary';
+                    $classeCabecalho = $destinoSumula === 'bolsista' ? 'bg-info text-white' : 'bg-primary text-white';
+                    ?>
+                    <div class="border <?= h($classeBloco) ?> rounded mb-4">
+                        <div class="<?= h($classeCabecalho) ?> px-3 py-2 fw-semibold">
+                            <?= h(ucfirst((string)$blocoSumula['titulo'])) ?>
+                        </div>
+                        <div class="p-3 table-responsive">
+                        <table class="table table-bordered table-striped align-middle mb-0">
+                            <thead class="table-secondary">
                                 <tr>
-                                    <td>
-                                        <?= h((string)($bloco->nome ?? 'Sem bloco')) ?>
-                                        <?php if (($bloco->max ?? null) !== null): ?>
-                                            <div class="text-muted small">Máx. <?= h((string)$bloco->max) ?></div>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td>
-                                        <?= h((string)$sumula->sumula) ?>
-                                        <?php if (trim((string)($sumula->parametro ?? '')) !== ''): ?>
-                                            <div class="text-muted small"><?= nl2br(h((string)$sumula->parametro)) ?></div>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td><?= h((string)$quantidadeOriginal) ?></td>
-                                    <td><?= h((string)$quantidadeAvaliada) ?></td>
-                                    <td>
-                                        <?= h((string)($sumula->fator ?? '0.00')) ?>
-                                        <?php if (($sumula->max ?? null) !== null): ?>
-                                            <div class="text-muted small">Máx. súmula <?= h((string)$sumula->max) ?></div>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td><?= h(number_format($notaItem, 2, ',', '.')) ?></td>
+                                    <th>Bloco</th>
+                                    <th>Súmula</th>
+                                    <th style="width: 120px">Informado</th>
+                                    <th style="width: 120px">Avaliado</th>
+                                    <th style="width: 100px">Fator</th>
+                                    <th style="width: 110px">Nota</th>
                                 </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                </div>
+                            </thead>
+                            <tbody>
+                                <?php foreach ((array)$blocoSumula['linhas'] as $linha): ?>
+                                    <?php
+                                    $sumula = $linha['sumula'];
+                                    $bloco = $sumula->editais_sumulas_bloco ?? null;
+                                    $sumulaId = (int)$sumula->id;
+                                    $blocoId = (int)($sumula->editais_sumula_bloco_id ?? 0);
+                                    $quantidadeOriginal = (int)($linha['quantidade'] ?? 0);
+                                    $quantidadeAvaliada = $valorSumulaLancamento($dadosSumulasBloco, $sumulaId);
+                                    $fator = (float)($sumula->fator ?? 0);
+                                    $notaItem = round($quantidadeAvaliada * $fator, 2);
+                                    if (($sumula->max ?? null) !== null) {
+                                        $notaItem = min($notaItem, (float)$sumula->max);
+                                    }
+                                    $totaisSumulasPorBloco[$blocoId]['nome'] = (string)($bloco->nome ?? 'Sem bloco');
+                                    $totaisSumulasPorBloco[$blocoId]['max'] = $bloco->max ?? null;
+                                    $totaisSumulasPorBloco[$blocoId]['total'] = ($totaisSumulasPorBloco[$blocoId]['total'] ?? 0) + $notaItem;
+                                    ?>
+                                    <tr>
+                                        <td>
+                                            <?= h((string)($bloco->nome ?? 'Sem bloco')) ?>
+                                            <?php if (($bloco->max ?? null) !== null): ?>
+                                                <div class="text-muted small">Máx. <?= h((string)$bloco->max) ?></div>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td>
+                                            <?= h((string)$sumula->sumula) ?>
+                                            <?php if (trim((string)($sumula->parametro ?? '')) !== ''): ?>
+                                                <div class="text-muted small"><?= nl2br(h((string)$sumula->parametro)) ?></div>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td><?= h((string)$quantidadeOriginal) ?></td>
+                                        <td><?= h((string)$quantidadeAvaliada) ?></td>
+                                        <td>
+                                            <?= h((string)($sumula->fator ?? '0.00')) ?>
+                                            <?php if (($sumula->max ?? null) !== null): ?>
+                                                <div class="text-muted small">Máx. súmula <?= h((string)$sumula->max) ?></div>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td><?= h(number_format($notaItem, 2, ',', '.')) ?></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                        </div>
+                    </div>
 
-                <div class="table-responsive mt-3">
-                    <table class="table table-sm table-bordered align-middle">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Bloco</th>
-                                <th style="width: 130px">Soma</th>
-                                <th style="width: 130px">Máximo</th>
-                                <th style="width: 160px">Pontuação considerada</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php $notaSumulaFinal = 0.0; ?>
-                            <?php foreach ($totaisSumulasPorBloco as $totalBloco): ?>
-                                <?php
-                                $totalOriginalBloco = round((float)$totalBloco['total'], 2);
-                                $maxBloco = $totalBloco['max'];
-                                $totalConsideradoBloco = $maxBloco !== null
-                                    ? min($totalOriginalBloco, (float)$maxBloco)
-                                    : $totalOriginalBloco;
-                                $notaSumulaFinal += $totalConsideradoBloco;
-                                ?>
+                    <div class="table-responsive mt-3 mb-4">
+                        <table class="table table-sm table-bordered align-middle">
+                            <thead class="table-light">
                                 <tr>
-                                    <td><?= h((string)$totalBloco['nome']) ?></td>
-                                    <td><?= h(number_format($totalOriginalBloco, 2, ',', '.')) ?></td>
-                                    <td><?= $maxBloco !== null ? h(number_format((float)$maxBloco, 2, ',', '.')) : 'Sem teto' ?></td>
-                                    <td><?= h(number_format($totalConsideradoBloco, 2, ',', '.')) ?></td>
+                                    <th>Bloco</th>
+                                    <th style="width: 130px">Soma</th>
+                                    <th style="width: 130px">Máximo</th>
+                                    <th style="width: 160px">Pontuação considerada</th>
                                 </tr>
-                            <?php endforeach; ?>
-                            <tr>
-                                <th colspan="3">Nota final da súmula</th>
-                                <th><?= h(number_format($notaSumulaFinal, 2, ',', '.')) ?></th>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
+                            </thead>
+                            <tbody>
+                                <?php $notaSumulaFinal = 0.0; ?>
+                                <?php foreach ($totaisSumulasPorBloco as $totalBloco): ?>
+                                    <?php
+                                    $totalOriginalBloco = round((float)$totalBloco['total'], 2);
+                                    $maxBloco = $totalBloco['max'];
+                                    $totalConsideradoBloco = $maxBloco !== null
+                                        ? min($totalOriginalBloco, (float)$maxBloco)
+                                        : $totalOriginalBloco;
+                                    $notaSumulaFinal += $totalConsideradoBloco;
+                                    ?>
+                                    <tr>
+                                        <td><?= h((string)$totalBloco['nome']) ?></td>
+                                        <td><?= h(number_format($totalOriginalBloco, 2, ',', '.')) ?></td>
+                                        <td><?= $maxBloco !== null ? h(number_format((float)$maxBloco, 2, ',', '.')) : 'Sem teto' ?></td>
+                                        <td><?= h(number_format($totalConsideradoBloco, 2, ',', '.')) ?></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                                <tr>
+                                    <th colspan="3">Nota final da <?= h((string)$blocoSumula['titulo']) ?></th>
+                                    <th><?= h(number_format($notaSumulaFinal, 2, ',', '.')) ?></th>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                <?php endforeach; ?>
 
                 <div class="mt-3">
                     <strong>Observações da súmula</strong>

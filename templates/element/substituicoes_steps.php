@@ -3,7 +3,7 @@ $steps = [
     'dadosBolsista' => 'Dados do bolsista',
     'coorientador' => 'Coorientador',
     'gerarTermo' => 'Gerar termo',
-    'finalizar' => 'Finalizar',
+    'finalizar' => 'Anexar o termo',
 ];
 $inscricaoId = $inscricao->id ?? null;
 ?>

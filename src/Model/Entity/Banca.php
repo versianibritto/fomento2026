@@ -10,16 +10,15 @@ use Cake\ORM\Entity;
  *
  * @property int $id
  * @property string|null $nome
- * @property \Cake\I18n\Date|null $data
+ * @property \Cake\I18n\FrozenDate|null $data
  * @property string|null $periodo
- * @property \Cake\I18n\DateTime|null $deleted
+ * @property \Cake\I18n\FrozenTime|null $deleted
  * @property int|null $grandes_areas_id
  * @property int|null $editai_id
  * @property int|null $evento
  *
  * @property \App\Model\Entity\GrandesArea $grandes_area
  * @property \App\Model\Entity\Editai $editai
- * @property \App\Model\Entity\AvaliadorBolsista[] $avaliador_bolsistas
  * @property \App\Model\Entity\BancaUsuario[] $banca_usuarios
  */
 class Banca extends Entity
@@ -43,7 +42,6 @@ class Banca extends Entity
         'evento' => true,
         'grandes_area' => true,
         'editai' => true,
-        'avaliador_bolsistas' => true,
         'banca_usuarios' => true,
     ];
 }

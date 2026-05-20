@@ -41,6 +41,7 @@ use Cake\ORM\Entity;
  * @property string|null $modelo_cons_coor
  * @property string|null $modelo_relat_bols
  * @property string|null $controller
+ * @property string|null $cpf_invalidos
  *
  * @property \App\Model\Entity\Usuario $usuario
  * @property \App\Model\Entity\Programa $programa
@@ -100,6 +101,7 @@ class Editai extends Entity
         'modelo_cons_coor' => true,
         'modelo_relat_bols' => true,
         'controller' => true,
+        'cpf_invalidos' => true,
         'usuario' => true,
         'programa' => true,
         'avaliador_bolsistas' => true,

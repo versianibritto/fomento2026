@@ -5,7 +5,7 @@ $steps = [
     'subprojetoRenovacao' => 'Subprojeto',
     'coorientadorRenovacao' => 'Coorientador',
     'gerarTermoRenovacao' => 'Gerar termo',
-    'finalizarRenovacao' => 'Finalizar',
+    'finalizarRenovacao' => 'Anexar o termo',
 ];
 $inscricaoId = $inscricao->id ?? null;
 ?>

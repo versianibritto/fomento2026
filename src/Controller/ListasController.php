@@ -250,7 +250,13 @@ class ListasController extends AppController
                 },
             ])
             ->where(['Raics.created >=' => $dataLimite])
-            ->orderBy(['Raics.id' => 'DESC']);
+            ->leftJoinWith('Usuarios')
+            ->leftJoinWith('Orientadores')
+            ->leftJoinWith('Unidades');
+        $query->select([
+            'bolsista_nome_ordenacao' => $query->func()->trim(['Usuarios.nome' => 'identifier']),
+            'orientador_nome_ordenacao' => $query->func()->trim(['Orientadores.nome' => 'identifier']),
+        ]);
 
         $unidadesTable = $this->fetchTable('Unidades');
         if ($isTi) {
@@ -333,6 +339,13 @@ class ListasController extends AppController
                     'Raics.relatorio' => '',
                 ]);
             });
+        }
+
+        if ((string)$this->request->getQuery('sort', '') === '') {
+            $query->orderBy([
+                'orientador_nome_ordenacao' => 'ASC',
+                'Raics.id' => 'ASC',
+            ]);
         }
 
         if ($this->request->getQuery('acao') === 'excel') {
@@ -436,6 +449,21 @@ class ListasController extends AppController
         $this->paginate = [
             'limit' => 20,
             'maxLimit' => 20,
+            'sortableFields' => [
+                'Raics.id',
+                'bolsista_nome_ordenacao',
+                'orientador_nome_ordenacao',
+                'Unidades.sigla',
+                'Raics.tipo_bolsa',
+                'Raics.relatorio',
+                'Raics.data_apresentacao',
+                'Raics.presenca',
+                'Raics.deleted',
+            ],
+            'order' => [
+                'orientador_nome_ordenacao' => 'ASC',
+                'Raics.id' => 'ASC',
+            ],
         ];
         $listas = $this->paginate($query);
 
@@ -447,6 +475,356 @@ class ListasController extends AppController
         $tipoBolsa = [
             'R' => 'Renovação',
             'O' => 'Raics de Outras Agencias',
+        ];
+
+        $this->set(compact('listas', 'filtros', 'unidades', 'anos', 'tipoBolsa', 'isTi', 'isYoda', 'isJedi'));
+    }
+
+    public function buscaWorkshop()
+    {
+        $acessoNegado = $this->validarAcessoListas();
+        if ($acessoNegado !== null) {
+            return $acessoNegado;
+        }
+
+        $identity = $this->request->getAttribute('identity');
+        $usuarioId = (int)($identity['id'] ?? 0);
+        $jediCsv = (string)($identity['jedi'] ?? '');
+        $isTi = in_array($usuarioId, [1, 8088], true);
+        $isYoda = !empty($identity['yoda']);
+        $isJedi = !$isTi && !$isYoda && $jediCsv !== '';
+        $unidadesPermitidas = array_values(array_filter(array_map('trim', explode(',', $jediCsv))));
+
+        if (!$isTi && !$isYoda && !$isJedi) {
+            $this->Flash->error('Restrito à gestão e coordenação de unidade.');
+            return $this->redirect(['controller' => 'Index', 'action' => 'index']);
+        }
+
+        $unidadesQuery = $this->fetchTable('Unidades')->find('list', [
+            'keyField' => 'id',
+            'valueField' => 'sigla',
+        ])->where(['Unidades.deleted' => 0])
+            ->orderBy(['Unidades.sigla' => 'ASC']);
+        if ($isJedi && !empty($unidadesPermitidas)) {
+            $unidadesQuery->where(['Unidades.id IN' => $unidadesPermitidas]);
+        }
+        $unidades = $unidadesQuery->toArray();
+
+        $anos = [];
+        $anoAtual = (int)FrozenTime::now()->format('Y');
+        for ($ano = $anoAtual; $ano >= ($anoAtual - 5); $ano--) {
+            $anos[(string)$ano] = (string)$ano;
+        }
+
+        $tipoBolsa = [
+            'R' => 'Renovação',
+            'O' => 'Workshops de Outras Agências',
+        ];
+
+        $this->set(compact('unidades', 'anos', 'tipoBolsa', 'isTi', 'isYoda', 'isJedi'));
+    }
+
+    public function resultadoWorkshop()
+    {
+        $acessoNegado = $this->validarAcessoListas();
+        if ($acessoNegado !== null) {
+            return $acessoNegado;
+        }
+
+        $identity = $this->request->getAttribute('identity');
+        $usuarioId = (int)($identity['id'] ?? 0);
+        $jediCsv = (string)($identity['jedi'] ?? '');
+        $isTi = in_array($usuarioId, [1, 8088], true);
+        $isYoda = !empty($identity['yoda']);
+        $isJedi = !$isTi && !$isYoda && $jediCsv !== '';
+        $unidadesPermitidas = array_values(array_filter(array_map('trim', explode(',', $jediCsv))));
+
+        if (!$isTi && !$isYoda && !$isJedi) {
+            $this->Flash->error('Restrito à gestão e coordenação de unidade.');
+            return $this->redirect(['controller' => 'Index', 'action' => 'index']);
+        }
+
+        $filtros = [
+            'ano' => (string)$this->request->getQuery('ano', ''),
+            'agendada' => (string)$this->request->getQuery('agendada', ''),
+            'unidade_id' => (string)$this->request->getQuery('unidade_id', ''),
+            'certificado' => (string)$this->request->getQuery('certificado', ''),
+            'tipo_bolsa' => (string)$this->request->getQuery('tipo_bolsa', ''),
+        ];
+
+        if ($filtros['ano'] === '' || !ctype_digit($filtros['ano'])) {
+            $this->Flash->error('O filtro de ano é obrigatório.');
+            return $this->redirect(['controller' => 'Listas', 'action' => 'buscaWorkshop']);
+        }
+
+        $dataLimite = FrozenTime::now()->subYears(5);
+        $query = $this->fetchTable('Workshops')->find()
+            ->select([
+                'Workshops.id',
+                'Workshops.bolsista',
+                'Workshops.orientador',
+                'Workshops.unidade_id',
+                'Workshops.tipo_bolsa',
+                'Workshops.tipo_apresentacao',
+                'Workshops.data_apresentacao',
+                'Workshops.presenca',
+                'Workshops.deleted',
+                'Workshops.editai_id',
+                'Workshops.created',
+                'Workshops.usuario_libera',
+                'Workshops.data_liberacao',
+                'Workshops.projeto_bolsista_id',
+                'Workshops.nota_final',
+            ])
+            ->contain([
+                'Usuarios' => function ($q) {
+                    return $q->select([
+                        'Usuarios.id',
+                        'Usuarios.nome',
+                        'Usuarios.telefone',
+                        'Usuarios.telefone_contato',
+                        'Usuarios.celular',
+                        'Usuarios.whatsapp',
+                        'Usuarios.email',
+                        'Usuarios.email_alternativo',
+                        'Usuarios.email_contato',
+                    ]);
+                },
+                'Orientadores' => function ($q) {
+                    return $q->select([
+                        'Orientadores.id',
+                        'Orientadores.nome',
+                        'Orientadores.telefone',
+                        'Orientadores.telefone_contato',
+                        'Orientadores.celular',
+                        'Orientadores.whatsapp',
+                        'Orientadores.email',
+                        'Orientadores.email_alternativo',
+                        'Orientadores.email_contato',
+                    ]);
+                },
+                'Unidades' => function ($q) {
+                    return $q->select(['Unidades.id', 'Unidades.sigla']);
+                },
+                'Editais' => function ($q) {
+                    return $q->select(['Editais.id', 'Editais.fim_vigencia', 'Editais.programa_id'])
+                        ->contain([
+                            'Programas' => function ($qp) {
+                                return $qp->select(['Programas.id', 'Programas.sigla', 'Programas.nome']);
+                            },
+                        ]);
+                },
+                'ProjetoBolsistas' => function ($q) {
+                    return $q->select(['ProjetoBolsistas.id', 'ProjetoBolsistas.editai_id', 'ProjetoBolsistas.programa_id'])
+                        ->contain([
+                            'Programas' => function ($qp) {
+                                return $qp->select(['Programas.id', 'Programas.sigla', 'Programas.nome']);
+                            },
+                            'Editais' => function ($qe) {
+                                return $qe->select(['Editais.id', 'Editais.programa_id'])
+                                    ->contain([
+                                        'Programas' => function ($qp) {
+                                            return $qp->select(['Programas.id', 'Programas.sigla', 'Programas.nome']);
+                                        },
+                                    ]);
+                            },
+                        ]);
+                },
+            ])
+            ->where(['Workshops.created >=' => $dataLimite])
+            ->leftJoinWith('Usuarios')
+            ->leftJoinWith('Orientadores')
+            ->leftJoinWith('Unidades');
+        $query->select([
+            'bolsista_nome_ordenacao' => $query->func()->trim(['Usuarios.nome' => 'identifier']),
+            'orientador_nome_ordenacao' => $query->func()->trim(['Orientadores.nome' => 'identifier']),
+        ]);
+
+        $unidadesQuery = $this->fetchTable('Unidades')->find('list', [
+            'keyField' => 'id',
+            'valueField' => 'sigla',
+        ])->where(['Unidades.deleted' => 0])
+            ->orderBy(['Unidades.sigla' => 'ASC']);
+        if ($isJedi && !empty($unidadesPermitidas)) {
+            $unidadesQuery->where(['Unidades.id IN' => $unidadesPermitidas]);
+        }
+        $unidades = $unidadesQuery->toArray();
+
+        if (!$isTi) {
+            $query->where(['Workshops.deleted' => 0]);
+        }
+        if ($isJedi && !empty($unidadesPermitidas)) {
+            $query->where(['Workshops.unidade_id IN' => $unidadesPermitidas]);
+        }
+        if ($filtros['unidade_id'] !== '') {
+            if ($isJedi && !in_array($filtros['unidade_id'], $unidadesPermitidas, true)) {
+                $filtros['unidade_id'] = '';
+            } else {
+                $query->where(['Workshops.unidade_id' => $filtros['unidade_id']]);
+            }
+        }
+        if ($filtros['ano'] !== '' && ctype_digit($filtros['ano'])) {
+            $query->where(function ($exp) use ($filtros) {
+                return $exp->eq('YEAR(Workshops.created)', (int)$filtros['ano'], 'integer');
+            });
+        }
+        if ($filtros['agendada'] === 'S') {
+            $query->where(['Workshops.data_apresentacao IS NOT' => null]);
+        } elseif ($filtros['agendada'] === 'N') {
+            $query->where(['Workshops.data_apresentacao IS' => null]);
+        }
+        if ($filtros['certificado'] === 'S') {
+            $query->where(['Workshops.presenca' => 'S']);
+        } elseif ($filtros['certificado'] === 'N') {
+            $query->where(function ($exp) {
+                return $exp->or([
+                    'Workshops.presenca <>' => 'S',
+                    'Workshops.presenca IS' => null,
+                ]);
+            });
+        }
+        if ($filtros['tipo_bolsa'] !== '') {
+            if ($filtros['tipo_bolsa'] === 'O') {
+                $query->where(['Workshops.tipo_bolsa IN' => ['V', 'Z']]);
+            } else {
+                $query->where(['Workshops.tipo_bolsa' => $filtros['tipo_bolsa']]);
+            }
+        }
+
+        if ((string)$this->request->getQuery('sort', '') === '') {
+            $query->orderBy([
+                'orientador_nome_ordenacao' => 'ASC',
+                'Workshops.id' => 'ASC',
+            ]);
+        }
+
+        if ($this->request->getQuery('acao') === 'excel') {
+            $rows = $query->all();
+            $header = [
+                'id',
+                'programa',
+                'orientador',
+                'orientador_telefone',
+                'orientador_telefone_contato',
+                'orientador_celular',
+                'orientador_whatsapp',
+                'orientador_email',
+                'orientador_email_alternativo',
+                'orientador_email_contato',
+                'bolsista',
+                'bolsista_telefone',
+                'bolsista_telefone_contato',
+                'bolsista_celular',
+                'bolsista_whatsapp',
+                'bolsista_email',
+                'bolsista_email_alternativo',
+                'bolsista_email_contato',
+                'unidade_workshop',
+                'data_apresentacao',
+                'certificado_liberado',
+                'tipo_apresentacao',
+                'nota_final',
+                'usuario_libera',
+                'data_liberacao',
+                'created',
+                'tipo_bolsa',
+                'projeto_bolsista_id',
+            ];
+            $programaWorkshopTexto = function ($workshop): string {
+                if (empty($workshop->projeto_bolsista_id)) {
+                    return 'Outras agências de fomento';
+                }
+
+                $programaTexto = trim((string)(
+                    $workshop->projeto_bolsista->programa_associado->sigla
+                    ?? $workshop->projeto_bolsista->programa_associado->nome
+                    ?? $workshop->projeto_bolsista->editai->programa->sigla
+                    ?? $workshop->projeto_bolsista->editai->programa->nome
+                    ?? $workshop->editai->programa->sigla
+                    ?? $workshop->editai->programa->nome
+                    ?? ''
+                ));
+
+                return $programaTexto !== '' ? $programaTexto : 'Não informado';
+            };
+            $exportRows = [];
+            foreach ($rows as $workshop) {
+                $exportRows[] = [
+                    $workshop->id,
+                    $programaWorkshopTexto($workshop),
+                    $workshop->orientadore->nome ?? '',
+                    $workshop->orientadore->telefone ?? '',
+                    $workshop->orientadore->telefone_contato ?? '',
+                    $workshop->orientadore->celular ?? '',
+                    $workshop->orientadore->whatsapp ?? '',
+                    $workshop->orientadore->email ?? '',
+                    $workshop->orientadore->email_alternativo ?? '',
+                    $workshop->orientadore->email_contato ?? '',
+                    $workshop->usuario->nome ?? '',
+                    $workshop->usuario->telefone ?? '',
+                    $workshop->usuario->telefone_contato ?? '',
+                    $workshop->usuario->celular ?? '',
+                    $workshop->usuario->whatsapp ?? '',
+                    $workshop->usuario->email ?? '',
+                    $workshop->usuario->email_alternativo ?? '',
+                    $workshop->usuario->email_contato ?? '',
+                    $workshop->unidade->sigla ?? '',
+                    $workshop->data_apresentacao ? $workshop->data_apresentacao->i18nFormat('dd/MM/yyyy') : '',
+                    strtoupper((string)($workshop->presenca ?? '')) === 'S' ? 'Sim' : 'Não',
+                    match (strtoupper((string)($workshop->tipo_apresentacao ?? ''))) {
+                        'O' => 'Oral',
+                        'P' => 'Painel',
+                        default => '',
+                    },
+                    $workshop->nota_final ?? '',
+                    $workshop->usuario_libera ?? '',
+                    $workshop->data_liberacao ? $workshop->data_liberacao->i18nFormat('dd/MM/yyyy HH:mm') : '',
+                    $workshop->created ? $workshop->created->i18nFormat('dd/MM/yyyy HH:mm') : '',
+                    match (strtoupper((string)($workshop->tipo_bolsa ?? ''))) {
+                        'R' => 'Renovação',
+                        'V', 'Z' => 'Workshops de Outras Agências',
+                        default => (string)($workshop->tipo_bolsa ?? ''),
+                    },
+                    $workshop->projeto_bolsista_id ?? '',
+                ];
+            }
+
+            return $this->downloadCsvResponse(
+                'lista_workshop_' . date('Ymd_His') . '.csv',
+                $header,
+                $exportRows
+            );
+        }
+
+        $this->paginate = [
+            'limit' => 20,
+            'maxLimit' => 20,
+            'sortableFields' => [
+                'Workshops.id',
+                'bolsista_nome_ordenacao',
+                'orientador_nome_ordenacao',
+                'Unidades.sigla',
+                'Workshops.tipo_bolsa',
+                'Workshops.data_apresentacao',
+                'Workshops.presenca',
+                'Workshops.deleted',
+                'Workshops.nota_final',
+            ],
+            'order' => [
+                'orientador_nome_ordenacao' => 'ASC',
+                'Workshops.id' => 'ASC',
+            ],
+        ];
+        $listas = $this->paginate($query);
+
+        $anos = [];
+        $anoAtual = (int)FrozenTime::now()->format('Y');
+        for ($ano = $anoAtual; $ano >= ($anoAtual - 5); $ano--) {
+            $anos[(string)$ano] = (string)$ano;
+        }
+        $tipoBolsa = [
+            'R' => 'Renovação',
+            'O' => 'Workshops de Outras Agências',
         ];
 
         $this->set(compact('listas', 'filtros', 'unidades', 'anos', 'tipoBolsa', 'isTi', 'isYoda', 'isJedi'));
@@ -630,7 +1008,8 @@ class ListasController extends AppController
         }
 
         $tipoOptions = [
-            'N' => 'Inscrições dos editais',
+            'N' => 'Inscrições IC',
+            'J' => 'PDJ Nova',
             'R' => 'RAIC',
             'W' => 'Workshop',
         ];
@@ -668,7 +1047,7 @@ class ListasController extends AppController
                 [
                     'ProjetoBolsistasLegado.id = AvaliadorBolsistas.bolsista',
                     'AvaliadorBolsistas.projeto_bolsista_id IS' => null,
-                    'AvaliadorBolsistas.tipo' => 'N',
+                    'AvaliadorBolsistas.tipo IN' => ['N', 'J'],
                 ]
             )
             ->leftJoin(
@@ -700,7 +1079,7 @@ class ListasController extends AppController
             $query->where(['1 = 0']);
         } else {
             $query->where([
-                'AvaliadorBolsistas.tipo IN' => ['N', 'V', 'Z', 'W'],
+                'AvaliadorBolsistas.tipo IN' => ['N', 'J', 'V', 'Z', 'W'],
                 'AvaliadorBolsistas.editai_id IN' => $editaisAbertosIds,
             ]);
         }
@@ -1390,7 +1769,6 @@ class ListasController extends AppController
         ])
             ->where([
                 'Editais.deleted' => 0,
-                'Editais.origem IN' => ['N', 'R'],
                 'Editais.inicio_avaliar < NOW()',
                 'Editais.fim_avaliar > NOW()',
             ])
@@ -1572,7 +1950,6 @@ class ListasController extends AppController
                 'ProjetoBolsistas.deleted IS' => null,
                 'ProjetoBolsistas.fase_id' => 4,
                 'Editais.deleted' => 0,
-                'Editais.origem IN' => ['N', 'R'],
                 'Editais.inicio_avaliar < NOW()',
                 'Editais.fim_avaliar > NOW()',
             ])

@@ -20,6 +20,7 @@ use Cake\ORM\Entity;
  * @property int|null $deleted
  * @property int|null $quantidade_original
  * @property int|null $quantidade_avaliada
+ * @property int|null $bolsista
  *
  * @property \App\Model\Entity\AvaliadorBolsista $avaliador_bolsista
  * @property \App\Model\Entity\EditaisSumula $editais_sumula
@@ -45,6 +46,7 @@ class AvaliationsSumula extends Entity
         'deleted' => true,
         'quantidade_original' => true,
         'quantidade_avaliada' => true,
+        'bolsista' => true,
         'avaliador_bolsista' => true,
         'editais_sumula' => true,
         'editais_sumulas_bloco' => true,

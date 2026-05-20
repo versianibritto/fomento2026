@@ -331,6 +331,7 @@ class PadraoController extends AppController
                 'Coorientadores' => ['Escolaridades', 'Vinculos'],
                 'Projetos' => ['Areas' => ['GrandesAreas'], 'Linhas' => ['AreasFiocruz']],
                 'Fases',
+                'Homologadores',
                 'Anexos' => ['conditions' => 'Anexos.deleted IS NULL', 'AnexosTipos', 'Usuarios'],
             ])
             ->where(['ProjetoBolsistas.id' => (int)$inscricaoId])
@@ -678,7 +679,20 @@ class PadraoController extends AppController
         ];
 
         $origemAtual = strtoupper((string)($inscricao->origem ?? ''));
-        $controllerFluxo = $origemAtual === 'R' ? 'Renovacoes' : 'Inscricoes';
+        $workshopsVinculados = [];
+        if ((int)($edital->programa_id ?? 0) === 1 && $origemAtual === 'R') {
+            $workshopsVinculados = $this->fetchTable('Workshops')->find()
+                ->contain(['Editais', 'Unidades'])
+                ->where([
+                    'Workshops.projeto_bolsista_id' => (int)$inscricao->id,
+                ])
+                ->orderBy(['Workshops.deleted' => 'ASC', 'Workshops.id' => 'DESC'])
+                ->all();
+        }
+        $controllerFluxo = trim((string)($edital->controller ?? ''));
+        if ($controllerFluxo === '') {
+            $controllerFluxo = $origemAtual === 'R' ? 'Renovacoes' : 'Inscricoes';
+        }
 
         $this->set(compact(
             'inscricao',
@@ -699,7 +713,8 @@ class PadraoController extends AppController
             'resultadoMap',
             'statusAvaliacaoMap',
             'controllerFluxo',
-            'origemAtual'
+            'origemAtual',
+            'workshopsVinculados'
         ));
     }
 
@@ -988,6 +1003,37 @@ class PadraoController extends AppController
                         'Registro excluido: ' . $justificativa,
                         true
                     );
+
+                    if (
+                        (int)($inscricao->programa_id ?? $inscricao->editai->programa_id ?? 0) === 1
+                        && strtoupper(trim((string)($inscricao->origem ?? ''))) === 'R'
+                    ) {
+                        $tblWorkshops = $this->fetchTable('Workshops');
+                        $workshop = $tblWorkshops->find()
+                            ->where([
+                                'Workshops.projeto_bolsista_id' => (int)$inscricao->id,
+                                'Workshops.deleted' => 0,
+                            ])
+                            ->first();
+
+                        if ($workshop) {
+                            $workshopPatch = $tblWorkshops->patchEntity($workshop, [
+                                'deleted' => 1,
+                            ]);
+                            $tblWorkshops->saveOrFail($workshopPatch);
+
+                            $tblWorkshopHistoricos = $this->fetchTable('WorkshopHistoricos');
+                            $historicoWorkshop = $tblWorkshopHistoricos->newEntity([
+                                'workshop_id' => (int)$workshop->id,
+                                'usuario_id' => !empty($identity->id) ? (int)$identity->id : null,
+                                'alteracao' => 'Workshop deletado por exclusão da renovação PDJ',
+                                'justificativa' => 'Exclusão da inscrição #' . (int)$inscricao->id . ': ' . $justificativa,
+                            ]);
+                            $tblWorkshopHistoricos->saveOrFail($historicoWorkshop);
+
+                           
+                        }
+                    }
 
                     // Se for renovacao excluida, reativa a referencia para fase ativa.
                     if (strtoupper((string)($inscricao->origem ?? '')) === 'R' && !empty($inscricao->referencia_inscricao_anterior)) {

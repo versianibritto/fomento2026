@@ -6,6 +6,7 @@
  * @var array<string, string> $tipoMap
  * @var bool $avaliarSumulas
  * @var array<int, array<string, mixed>> $sumulasAvaliacao
+ * @var array<int, array<string, mixed>> $sumulasAvaliacaoBlocos
  */
 
 $nomeCurto = static function (?string $nome): string {
@@ -32,7 +33,7 @@ if ($tipo === 'N' && !empty($avaliacao->projeto_bolsista)) {
     $orientador = $nomeCurto($item->orientadore->nome ?? null);
     $titulo = $item->projeto->titulo ?? $item->projeto->nome ?? $item->sp_titulo ?? $titulo;
     $urlReferencia = ['controller' => 'Padrao', 'action' => 'visualizar', (int)$item->id];
-} elseif (in_array($tipo, ['V', 'Z'], true) && !empty($avaliacao->raic)) {
+} elseif (in_array($tipo, ['R', 'V', 'Z'], true) && !empty($avaliacao->raic)) {
     $item = $avaliacao->raic;
     $referencia = 'RAIC #' . (int)$item->id;
     $edital = $item->editai->nome ?? $edital;
@@ -41,15 +42,16 @@ if ($tipo === 'N' && !empty($avaliacao->projeto_bolsista)) {
     $orientador = $nomeCurto($item->orientadore->nome ?? null);
     $titulo = $item->titulo ?? $item->projeto_bolsista->projeto->titulo ?? $titulo;
     $urlReferencia = ['controller' => 'RaicNew', 'action' => 'ver', (int)$item->id];
-} elseif ($tipo === 'J' && !empty($avaliacao->pdj_inscrico)) {
-    $item = $avaliacao->pdj_inscrico;
-    $referencia = 'PDJ #' . (int)$item->id;
+} elseif ($tipo === 'J' && (!empty($avaliacao->projeto_bolsista) || !empty($avaliacao->pdj_inscrico))) {
+    $item = $avaliacao->projeto_bolsista ?? $avaliacao->pdj_inscrico;
+    $referencia = 'Inscrição #' . (int)$item->id;
     $edital = $item->editai->nome ?? $edital;
     $unidade = $item->orientadore->unidade->sigla ?? $unidade;
     $bolsista = $nomeCurto($item->bolsista_usuario->nome ?? null);
     $orientador = $nomeCurto($item->orientadore->nome ?? null);
-    $titulo = $item->projeto->titulo ?? $item->projeto->nome ?? $titulo;
-} elseif ($tipo === 'W' && !empty($avaliacao->workshop)) {
+    $titulo = $item->projeto->titulo ?? $item->projeto->nome ?? $item->sp_titulo ?? $titulo;
+    $urlReferencia = ['controller' => 'Padrao', 'action' => 'visualizar', (int)$item->id];
+} elseif (in_array($tipo, ['R', 'W'], true) && !empty($avaliacao->workshop)) {
     $item = $avaliacao->workshop;
     $referencia = 'Workshop #' . (int)$item->id;
     $edital = $item->editai->nome ?? $edital;
@@ -62,6 +64,15 @@ if ($tipo === 'N' && !empty($avaliacao->projeto_bolsista)) {
 $referencia = $referencia ?? ('Avaliação #' . (int)$avaliacao->id);
 $dadosQuesitos = (array)$this->request->getData('q', []);
 $dadosSumulas = (array)$this->request->getData('sumula', []);
+$sumulasAvaliacaoBlocos = $sumulasAvaliacaoBlocos ?? [];
+if ($sumulasAvaliacaoBlocos === [] && !empty($sumulasAvaliacao)) {
+    $sumulasAvaliacaoBlocos = [[
+        'titulo' => 'súmula do orientador',
+        'campo' => 'sumula',
+        'destino' => 'orientador',
+        'linhas' => $sumulasAvaliacao,
+    ]];
+}
 $valorSumulaLancamento = static function (array $dados, int $sumulaId): string {
     if (array_key_exists($sumulaId, $dados)) {
         return (string)$dados[$sumulaId];
@@ -81,7 +92,7 @@ $parecerPendente = $campoPendente($this->request->getData('parecer', ''));
 $destaquePendente = $origemExigeDestaque && $campoPendente($this->request->getData('destaque', ''));
 $premioPendente = $origemExigeDestaque && $campoPendente($this->request->getData('indicado_premio_capes', ''));
 $observacaoSumulasPendente = !empty($avaliarSumulas)
-    && !empty($sumulasAvaliacao)
+    && !empty($sumulasAvaliacaoBlocos)
     && $campoPendente($this->request->getData('observacao_sumulas', ''));
 ?>
 
@@ -253,73 +264,87 @@ $observacaoSumulasPendente = !empty($avaliarSumulas)
                         <?php if (!empty($avaliarSumulas)): ?>
                             <tr>
                                 <td colspan="5">
-                                    <h5 class="mt-2 mb-2">Súmula da inscrição</h5>
-                                    <?php if (empty($sumulasAvaliacao)): ?>
+                                    <?php if (empty($sumulasAvaliacaoBlocos)): ?>
                                         <div class="alert alert-light border mb-0">Não há súmulas cadastradas para este edital.</div>
                                     <?php else: ?>
-                                        <div class="table-responsive">
-                                            <table class="table table-sm table-bordered align-middle mb-0">
-                                                <thead class="table-light">
-                                                    <tr>
-                                                        <th>Bloco</th>
-                                                        <th>Súmula</th>
-                                                        <th style="width: 130px">Informado</th>
-                                                        <th style="width: 110px">Fator</th>
-                                                        <th style="width: 170px">Quantidade avaliada</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    <?php foreach ($sumulasAvaliacao as $linha): ?>
-                                                        <?php
-                                                        $sumula = $linha['sumula'];
-                                                        $quantidadeOriginal = (int)($linha['quantidade'] ?? 0);
-                                                        $sumulaId = (int)$sumula->id;
-                                                        $valorSumula = $valorSumulaLancamento($dadosSumulas, $sumulaId);
-                                                        $sumulaPendente = $campoPendente($valorSumula);
-                                                        ?>
+                                        <?php foreach ($sumulasAvaliacaoBlocos as $blocoSumula): ?>
+                                            <?php
+                                            $campoSumula = (string)$blocoSumula['campo'];
+                                            $dadosSumulasBloco = (array)$this->request->getData($campoSumula, []);
+                                            $linhasSumula = (array)$blocoSumula['linhas'];
+                                            $destinoSumula = (string)($blocoSumula['destino'] ?? '');
+                                            $classeBloco = $destinoSumula === 'bolsista' ? 'border-info' : 'border-primary';
+                                            $classeCabecalho = $destinoSumula === 'bolsista' ? 'bg-info text-white' : 'bg-primary text-white';
+                                            ?>
+                                            <div class="border <?= h($classeBloco) ?> rounded mb-4">
+                                                <div class="<?= h($classeCabecalho) ?> px-3 py-2 fw-semibold">
+                                                    <?= h(ucfirst((string)$blocoSumula['titulo'])) ?>
+                                                </div>
+                                                <div class="p-3 table-responsive">
+                                                <table class="table table-sm table-bordered align-middle mb-0">
+                                                    <thead class="table-light">
                                                         <tr>
-                                                            <td>
-                                                                <?= h((string)($sumula->editais_sumulas_bloco->nome ?? 'Sem bloco')) ?>
-                                                                <?php if ($sumula->editais_sumulas_bloco->max !== null): ?>
-                                                                    <div class="text-muted small">
-                                                                        Máx. <?= h((string)$sumula->editais_sumulas_bloco->max) ?>
-                                                                    </div>
-                                                                <?php endif; ?>
-                                                            </td>
-                                                            <td>
-                                                                <?= h((string)$sumula->sumula) ?>
-                                                                <?php if (trim((string)($sumula->parametro ?? '')) !== ''): ?>
-                                                                    <div class="text-muted small"><?= nl2br(h((string)$sumula->parametro)) ?></div>
-                                                                <?php endif; ?>
-                                                            </td>
-                                                            <td><?= h((string)$quantidadeOriginal) ?></td>
-                                                            <td>
-                                                                <?= h((string)($sumula->fator ?? '0.00')) ?>
-                                                                <?php if (($sumula->max ?? null) !== null): ?>
-                                                                    <div class="text-muted small">
-                                                                        Máx. súmula <?= h((string)$sumula->max) ?>
-                                                                    </div>
-                                                                <?php endif; ?>
-                                                            </td>
-                                                            <td>
-                                                                <input
-                                                                    name="sumula[<?= (int)$sumula->id ?>]"
-                                                                    type="number"
-                                                                    step="1"
-                                                                    min="0"
-                                                                    max="50"
-                                                                    class="form-control<?= $sumulaPendente ? ' is-invalid' : '' ?>"
-                                                                    value="<?= h((string)$valorSumula) ?>"
-                                                                >
-                                                                <?php if ($sumulaPendente): ?>
-                                                                    <div class="invalid-feedback">Informe a quantidade.</div>
-                                                                <?php endif; ?>
-                                                            </td>
+                                                            <th>Bloco</th>
+                                                            <th>Súmula</th>
+                                                            <th style="width: 130px">Informado</th>
+                                                            <th style="width: 110px">Fator</th>
+                                                            <th style="width: 170px">Quantidade avaliada</th>
                                                         </tr>
-                                                    <?php endforeach; ?>
-                                                </tbody>
-                                            </table>
-                                        </div>
+                                                    </thead>
+                                                    <tbody>
+                                                        <?php foreach ($linhasSumula as $linha): ?>
+                                                            <?php
+                                                            $sumula = $linha['sumula'];
+                                                            $quantidadeOriginal = (int)($linha['quantidade'] ?? 0);
+                                                            $sumulaId = (int)$sumula->id;
+                                                            $valorSumula = $valorSumulaLancamento($dadosSumulasBloco, $sumulaId);
+                                                            $sumulaPendente = $campoPendente($valorSumula);
+                                                            ?>
+                                                            <tr>
+                                                                <td>
+                                                                    <?= h((string)($sumula->editais_sumulas_bloco->nome ?? 'Sem bloco')) ?>
+                                                                    <?php if ($sumula->editais_sumulas_bloco->max !== null): ?>
+                                                                        <div class="text-muted small">
+                                                                            Máx. <?= h((string)$sumula->editais_sumulas_bloco->max) ?>
+                                                                        </div>
+                                                                    <?php endif; ?>
+                                                                </td>
+                                                                <td>
+                                                                    <?= h((string)$sumula->sumula) ?>
+                                                                    <?php if (trim((string)($sumula->parametro ?? '')) !== ''): ?>
+                                                                        <div class="text-muted small"><?= nl2br(h((string)$sumula->parametro)) ?></div>
+                                                                    <?php endif; ?>
+                                                                </td>
+                                                                <td><?= h((string)$quantidadeOriginal) ?></td>
+                                                                <td>
+                                                                    <?= h((string)($sumula->fator ?? '0.00')) ?>
+                                                                    <?php if (($sumula->max ?? null) !== null): ?>
+                                                                        <div class="text-muted small">
+                                                                            Máx. súmula <?= h((string)$sumula->max) ?>
+                                                                        </div>
+                                                                    <?php endif; ?>
+                                                                </td>
+                                                                <td>
+                                                                    <input
+                                                                        name="<?= h($campoSumula) ?>[<?= (int)$sumula->id ?>]"
+                                                                        type="number"
+                                                                        step="1"
+                                                                        min="0"
+                                                                        max="50"
+                                                                        class="form-control<?= $sumulaPendente ? ' is-invalid' : '' ?>"
+                                                                        value="<?= h((string)$valorSumula) ?>"
+                                                                    >
+                                                                    <?php if ($sumulaPendente): ?>
+                                                                        <div class="invalid-feedback">Informe a quantidade.</div>
+                                                                    <?php endif; ?>
+                                                                </td>
+                                                            </tr>
+                                                        <?php endforeach; ?>
+                                                    </tbody>
+                                                </table>
+                                                </div>
+                                            </div>
+                                        <?php endforeach; ?>
                                         <div class="mt-3">
                                             <?= $this->Form->control('observacao_sumulas', [
                                                 'label' => 'Observações da súmula',

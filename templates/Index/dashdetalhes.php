@@ -3,8 +3,92 @@
     $tipo = strtoupper((string)($tipo ?? ''));
 ?>
 
+<style>
+    .dash-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: .25rem;
+        max-width: 180px;
+    }
 
+    .dash-action-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: .25rem;
+        border-radius: 999px;
+        font-weight: 600;
+        font-size: .78rem;
+        line-height: 1;
+        padding: .34rem .55rem;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, .08);
+        white-space: nowrap;
+        border-style: dashed;
+    }
 
+    .dash-switcher {
+        display: inline-flex;
+        align-items: center;
+        gap: .45rem;
+        border-radius: 999px;
+        font-weight: 600;
+        padding: .55rem .95rem;
+        box-shadow: 0 2px 6px rgba(15, 23, 42, .08);
+    }
+
+    .dash-action-desistir {
+        background: #fff5f5;
+        color: #b02a37;
+    }
+
+    .dash-action-desistir:hover,
+    .dash-action-desistir:focus {
+        background: #dc3545;
+        border-color: #dc3545;
+        color: #fff;
+    }
+
+    .dash-action-editar {
+        background: #fff8e1;
+        color: #8a5a00;
+    }
+
+    .dash-action-editar:hover,
+    .dash-action-editar:focus {
+        background: #ffc107;
+        border-color: #ffc107;
+        color: #212529;
+    }
+
+    .dash-action-termo,
+    .dash-action-substituir {
+        background: #eef9f1;
+        color: #146c43;
+    }
+
+    .dash-action-termo:hover,
+    .dash-action-termo:focus,
+    .dash-action-substituir:hover,
+    .dash-action-substituir:focus {
+        background: #198754;
+        border-color: #198754;
+        color: #fff;
+    }
+
+    .dash-action-anexar,
+    .dash-action-cancelar {
+        background: #fff5f5;
+        color: #b02a37;
+    }
+
+    .dash-action-anexar:hover,
+    .dash-action-anexar:focus,
+    .dash-action-cancelar:hover,
+    .dash-action-cancelar:focus {
+        background: #dc3545;
+        border-color: #dc3545;
+        color: #fff;
+    }
+</style>
 
 <div class="container mt-4">
 
@@ -141,6 +225,7 @@
                                 </td>
                                 <td>
                                     <?php if ($usuarioId == $i['orientador']): ?>
+                                        <div class="dash-actions">
                                         <?php
                                             $faseRegistro = (int)($i['fase_id'] ?? 0);
                                             $origemRegistro = strtoupper(trim((string)($i['origem'] ?? '')));
@@ -158,8 +243,9 @@
                                                     $i['id'],
                                                     'E',
                                                 ]) ?>"
-                                                class="btn btn-sm btn-outline-warning mb-1">
-                                                    Editar
+                                                class="btn btn-sm btn-outline-warning dash-action-btn dash-action-editar">
+                                                    <i class="fa fa-pen"></i>
+                                                    <span>Editar Inscrição</span>
                                                 </a>
                                             <?php endif; ?>
 
@@ -172,8 +258,9 @@
                                                     $i['id'],
                                                     'T',
                                                 ]) ?>"
-                                                class="btn btn-sm btn-outline-success mb-1">
-                                                    Termo
+                                                class="btn btn-sm btn-outline-success dash-action-btn dash-action-termo">
+                                                    <i class="fa fa-file-signature"></i>
+                                                    <span>Gerar Termo</span>
                                                 </a>
                                             <?php endif; ?>
 
@@ -186,9 +273,10 @@
                                                     $i['id'],
                                                     'F',
                                                 ]) ?>"
-                                                class="btn btn-sm btn-outline-danger mb-1"
-                                                onclick="return confirm('Deseja finalizar esta inscrição?');">
-                                                    Finalizar
+                                                class="btn btn-sm btn-outline-danger dash-action-btn dash-action-anexar"
+                                                onclick="return confirm('Deseja Anexar o Termo desta esta inscrição?');">
+                                                    <i class="fa fa-upload"></i>
+                                                    <span>Anexar Termo</span>
                                                 </a>
                                             <?php endif; ?>
                                         
@@ -200,7 +288,7 @@
                                                 (int)$i['editai_id'],
                                                 (int)$i['id'],
                                             ], [
-                                                'class' => 'btn btn-sm btn-outline-danger mb-1',
+                                                'class' => 'btn btn-sm btn-outline-danger dash-action-btn dash-action-desistir',
                                                 'confirm' => 'Confirma a desistência do processo? Esta ação não poderá ser desfeita.',
                                             ]) ?>
                                         <?php endif; ?>
@@ -212,8 +300,9 @@
                                                     'action' => 'cancelar',
                                                     $i['id'],
                                                 ]) ?>"
-                                                class="btn btn-sm btn-outline-danger mb-1">
-                                                    Cancelar
+                                                class="btn btn-sm btn-outline-danger dash-action-btn dash-action-cancelar">
+                                                    <i class="fa fa-ban"></i>
+                                                    <span>Cancelar</span>
                                                 </a>
                                             <?php endif; ?>
 
@@ -224,11 +313,13 @@
                                                     'action' => 'iniciar',
                                                     $i['id'],
                                                 ]) ?>"
-                                                class="btn btn-sm btn-outline-success mb-1">
-                                                    Substituir
+                                                class="btn btn-sm btn-outline-success dash-action-btn dash-action-substituir">
+                                                    <i class="fa fa-user-plus"></i>
+                                                    <span>Substituir</span>
                                                 </a>
                                             <?php endif; ?>                             
                                         <?php endif; ?>
+                                        </div>
                                     <?php endif; ?>
 
                                 </td>
@@ -286,18 +377,18 @@
                 'action' => 'dashdetalhes',
                 $tipo === 'A' ? 'V' : 'A'
             ]) ?>"
-            class="btn btn-outline-secondary btn-sm rounded-pill px-3">
+            class="btn btn-outline-primary dash-switcher mt-3">
             <i class="fa fa-filter me-1"></i>
             Mostrar Inscrições <?= $tipo === 'A' ? 'VIGENTES' : 'EM ANDAMENTO' ?>
         </a>
     <?php else: ?>
-        <div class="d-flex gap-2">
+        <div class="d-flex flex-wrap gap-2 mt-3">
             <a href="<?= $this->Url->build(['action' => 'dashdetalhes', 'V']) ?>"
-               class="btn btn-outline-secondary btn-sm rounded-pill px-3">
+               class="btn btn-outline-primary dash-switcher">
                 <i class="fa fa-filter me-1"></i> Mostrar Vigentes
             </a>
             <a href="<?= $this->Url->build(['action' => 'dashdetalhes', 'A']) ?>"
-               class="btn btn-outline-secondary btn-sm rounded-pill px-3">
+               class="btn btn-outline-primary dash-switcher">
                 <i class="fa fa-filter me-1"></i> Mostrar Em Andamento
             </a>
         </div>

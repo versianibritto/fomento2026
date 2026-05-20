@@ -239,7 +239,7 @@ $formatarNota = static function ($valor): string {
                                                 ?? '-';
                                             $tipoVinculo = (string)($vinculo->tipo ?? '');
                                             $temReferenciaAvaliacao = (
-                                                $tipoVinculo === 'N'
+                                                in_array($tipoVinculo, ['N', 'J'], true)
                                                 && (!empty($vinculo->projeto_bolsista_id) || !empty($vinculo->projeto_bolsista_legado_id) || !empty($vinculo->projeto_bolsista))
                                             ) || (
                                                 in_array($tipoVinculo, ['V', 'Z'], true)
@@ -252,7 +252,7 @@ $formatarNota = static function ($valor): string {
                                                 ? ['controller' => 'Avaliadores', 'action' => 'avaliar', (int)$vinculo->id]
                                                 : null;
                                             $inscricaoVinculoId = (int)($vinculo->projeto_bolsista_id ?: $vinculo->projeto_bolsista_legado_id ?: 0);
-                                            $urlVincularInscricao = ($tipoVinculo === 'N' && $inscricaoVinculoId > 0)
+                                            $urlVincularInscricao = (in_array($tipoVinculo, ['N', 'J'], true) && $inscricaoVinculoId > 0)
                                                 ? [
                                                     'controller' => 'Avaliadores',
                                                     'action' => 'vincularInscricao',

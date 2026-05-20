@@ -185,6 +185,11 @@ class AvaliadorBolsistasTable extends Table
             ->allowEmptyString('nota_sumula');
 
         $validator
+            ->numeric('nota_sumula_bolsista')
+            ->range('nota_sumula_bolsista', [-999.99, 999.99])
+            ->allowEmptyString('nota_sumula_bolsista');
+
+        $validator
             ->scalar('parecer')
             ->maxLength('parecer', 45)
             ->allowEmptyString('parecer');

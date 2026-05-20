@@ -1118,7 +1118,7 @@ LEFT JOIN vinculos vc ON vc.id = coo.vinculo_id
 LEFT JOIN projetos t ON t.id = p.projeto_id
 LEFT JOIN areas a ON a.id = t.area_id
 LEFT JOIN grandes_areas g ON g.id = a.grandes_area_id
-LEFT JOIN areas apdj ON apdj.id = p.area_pdj
+LEFT JOIN grandes_areas apdj ON apdj.id = p.area_pdj
 LEFT JOIN linhas l ON l.id = t.linha_id
 LEFT JOIN areas_fiocruz af ON af.id = l.areas_fiocruz_id
 LEFT JOIN fases fs ON fs.id = p.fase_id
@@ -1490,7 +1490,7 @@ VIEW `geral` AS
         LEFT JOIN `projetos` `t` ON ((`t`.`id` = `p`.`projeto_id`)))
         LEFT JOIN `areas` `a` ON ((`a`.`id` = `t`.`area_id`)))
         LEFT JOIN `grandes_areas` `g` ON ((`g`.`id` = `a`.`grandes_area_id`)))
-        LEFT JOIN `areas` `apdj` ON ((`apdj`.`id` = `p`.`area_pdj`)))
+        LEFT JOIN `grandes_areas` `apdj` ON ((`apdj`.`id` = `p`.`area_pdj`)))
         LEFT JOIN `linhas` `l` ON ((`l`.`id` = `t`.`linha_id`)))
         LEFT JOIN `areas_fiocruz` `af` ON ((`af`.`id` = `l`.`areas_fiocruz_id`)))
         LEFT JOIN `fases` `fs` ON ((`fs`.`id` = `p`.`fase_id`)))
@@ -1816,7 +1816,7 @@ FROM
     LEFT JOIN `projetos` `t` ON (`t`.`id` = `p`.`projeto_id`)
     LEFT JOIN `areas` `a` ON (`a`.`id` = `t`.`area_id`)
     LEFT JOIN `grandes_areas` `g` ON (`g`.`id` = `a`.`grandes_area_id`)
-    LEFT JOIN `areas` `apdj` ON (`apdj`.`id` = `p`.`area_pdj`)
+    LEFT JOIN `grandes_areas` `apdj` ON (`apdj`.`id` = `p`.`area_pdj`)
     LEFT JOIN `linhas` `l` ON (`l`.`id` = `t`.`linha_id`)
     LEFT JOIN `areas_fiocruz` `af` ON (`af`.`id` = `l`.`areas_fiocruz_id`)
     LEFT JOIN `fases` `fs` ON (`fs`.`id` = `p`.`fase_id`)
@@ -1914,3 +1914,48 @@ ALTER TABLE `avaliador_bolsistas` ADD COLUMN `nota_sumula` DOUBLE(5,2) NULL AFTE
 
 
 ALTER TABLE avaliador_bolsistas ADD COLUMN criado_por INT NULL COMMENT 'usuario que criou o vinculo', ADD COLUMN deletado_por INT NULL COMMENT 'usuario que deletou/inativou o vinculo', ADD COLUMN deletado_em DATETIME NULL COMMENT 'data de delecao/inativacao';
+
+-- PDJ
+
+UPDATE `anexos_tipos` SET `condicional` = '1' WHERE (`id` = '11');
+UPDATE `anexos_tipos` SET `programa` = '2,3,4,5,6,7,8,9,10,11' WHERE (`id` = '15');
+UPDATE `anexos_tipos` SET `programa` = '2,3,4,5,6,7,8,9,10,11' WHERE (`id` = '16');
+UPDATE `anexos_tipos` SET `nome` = 'Comprovante de escolaridade (doutorado)' WHERE (`id` = '10');
+UPDATE `anexos_tipos` SET `condicional` = '1' WHERE (`id` = '12');
+UPDATE `anexos_tipos` SET `programa` = '2,3,4,5,6,7,8,9,10,11' WHERE (`id` = '13');
+UPDATE `anexos_tipos` SET `programa` = '2,3,4,5,6,7,8,9,10,11' WHERE (`id` = '14');
+UPDATE `anexos_tipos` SET `cota` = 'N, T' WHERE (`id` = '21');
+UPDATE `anexos_tipos` SET `programa` = NULL WHERE (`id` = '16');
+UPDATE `anexos_tipos` SET `programa` = NULL WHERE (`id` = '15');
+
+
+ALTER TABLE `projeto_bolsistas` 
+ADD COLUMN `filhos_menor_bolsista` CHAR(1) NULL AFTER `homologado_justificativa`;
+
+
+
+UPDATE `vinculos` SET `nome` = 'Servidor Público Fiocruz - Ativo' WHERE (`id` = '1');
+UPDATE `vinculos` SET `nome` = 'Servidor Público Fiocruz - Aposentado' WHERE (`id` = '11');
+UPDATE `vinculos` SET `nome` = 'Aluno de Mestrado' WHERE (`id` = '12');
+UPDATE `vinculos` SET `deleted` = '1' WHERE (`id` = '14');
+UPDATE `vinculos` SET `nome` = 'Candidato Bolsista PDJ' WHERE (`id` = '13');
+
+ALTER TABLE `fomento2026`.`inscricao_sumulas` 
+ADD COLUMN `bolsista` TINYINT(1) NULL AFTER `quantidade`;
+
+
+ALTER TABLE `fomento2026`.`editais` 
+ADD COLUMN `cpf_invalidos` TEXT NULL AFTER `controller`;
+
+
+ALTER TABLE `fomento2026`.`workshops` 
+ADD COLUMN `projeto_bolsista_id` INT NULL AFTER `pdj_inscricoe_id`,
+CHANGE COLUMN `usuario_id` `bolsista` INT NULL DEFAULT NULL ;
+
+
+ALTER TABLE `fomento2026`.`avaliador_bolsistas` 
+ADD COLUMN `nota_sumula_bolsista` DOUBLE(5,2) NULL AFTER `deletado_em`;
+
+ALTER TABLE `fomento2026`.`avaliations_sumulas` 
+ADD COLUMN `bolsista` TINYINT(1) NULL AFTER `quantidade_avaliada`;
+

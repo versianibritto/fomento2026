@@ -17,6 +17,7 @@ use Cake\ORM\Entity;
  * @property int|null $projeto_bolsista_id
  * @property int|null $pdj_inscricoe_id
  * @property int|null $quantidade
+ * @property int|null $bolsista
  *
  * @property \App\Model\Entity\EditaisSumula $editais_sumula
  * @property \App\Model\Entity\Editai $editai
@@ -40,6 +41,7 @@ class InscricaoSumula extends Entity
         'projeto_bolsista_id' => true,
         'pdj_inscricoe_id' => true,
         'quantidade' => true,
+        'bolsista' => true,
         'editais_sumula' => true,
         'editai' => true,
         'editais_sumulas_bloco' => true,
@@ -47,4 +49,3 @@ class InscricaoSumula extends Entity
         'pdj_inscrico' => true,
     ];
 }
-

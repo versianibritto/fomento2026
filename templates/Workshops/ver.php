@@ -1,0 +1,453 @@
+<?php
+/**
+ * @var \App\View\AppView $this
+ * @var \App\Model\Entity\Workshop $workshop
+ * @var \Cake\Datasource\ResultSetInterface|\Cake\Collection\CollectionInterface|array $lista
+ * @var \App\Model\Entity\Anexo|null $anexoRelatorio
+ * @var \Cake\Datasource\ResultSetInterface|\Cake\Collection\CollectionInterface|array $historicos
+ * @var \App\Model\Entity\Editai|null $editalReferencia
+ * @var \App\Model\Entity\Editai|null $editalEvento
+ */
+$naoInformado = '<span class="badge border border-danger text-danger bg-transparent fw-normal">Não informado</span>';
+$tipoBolsaTexto = match (strtoupper((string)($workshop->tipo_bolsa ?? ''))) {
+    'R' => 'Aluno de Renovação',
+    'V', 'Z' => 'Voluntário',
+    default => 'Não informado',
+};
+$coorientadorNome = !empty($workshop->coorientadore?->nome) ? $workshop->coorientadore->nome : null;
+$dataCadastroTexto = !empty($workshop->created) ? $workshop->created->i18nFormat('dd/MM/YYYY') : 'Não informado';
+$dataApresentacaoTexto = !empty($workshop->data_apresentacao) ? $workshop->data_apresentacao->i18nFormat('dd/MM/YYYY') : null;
+$tipoApresentacaoTexto = match ((string)($workshop->tipo_apresentacao ?? '')) {
+    'O' => 'Oral',
+    'P' => 'Painel',
+    default => null,
+};
+$programaTexto = 'Outras agências de fomento';
+if (!empty($workshop->projeto_bolsista_id)) {
+    $programaTexto = trim((string)(
+        $workshop->projeto_bolsista->programa_associado->sigla
+        ?? $workshop->projeto_bolsista->programa_associado->nome
+        ?? $workshop->projeto_bolsista->editai->programa->sigla
+        ?? $workshop->projeto_bolsista->editai->programa->nome
+        ?? ''
+    ));
+    if ($programaTexto === '') {
+        $programaTexto = 'Não informado';
+    }
+}
+$certificadoLiberado = strtoupper((string)($workshop->presenca ?? '')) === 'S';
+$identityWorkshopView = $this->getRequest()->getAttribute('identity');
+$ehYodaWorkshopView = !empty($identityWorkshopView['yoda']);
+$ehTiWorkshopView = in_array((int)($identityWorkshopView['id'] ?? 0), [1, 8088], true);
+$jediPermitidoWorkshopView = false;
+if (!empty($identityWorkshopView['jedi'])) {
+    $unidadesPermitidasWorkshopView = array_filter(array_map('trim', explode(',', (string)$identityWorkshopView['jedi'])));
+    $jediPermitidoWorkshopView = in_array((string)($workshop->unidade_id ?? ''), $unidadesPermitidasWorkshopView, true);
+}
+$podeGerenciarApresentacao = ($ehYodaWorkshopView || $jediPermitidoWorkshopView) && strtoupper((string)($workshop->presenca ?? '')) !== 'S';
+$hojeWorkshopView = new \Cake\I18n\FrozenDate(date('Y-m-d'));
+$dataApresentacaoWorkshopView = !empty($workshop->data_apresentacao)
+    ? new \Cake\I18n\FrozenDate($workshop->data_apresentacao->format('Y-m-d'))
+    : null;
+$hojeWorkshopViewIso = $hojeWorkshopView->format('Y-m-d');
+$dataApresentacaoWorkshopViewIso = $dataApresentacaoWorkshopView?->format('Y-m-d');
+$podeAgendarApresentacao = $podeGerenciarApresentacao && $dataApresentacaoWorkshopView === null;
+$podeReagendarApresentacao = $podeGerenciarApresentacao
+    && $dataApresentacaoWorkshopView !== null
+    && $dataApresentacaoWorkshopViewIso > $hojeWorkshopViewIso;
+$mensagemAgendamentoWorkshopView = "O agendamento da apresentação pode ser feito pela Gestão de Fomento ou pela Coordenação da unidade da Workshop.\n\nQuando a Workshop ainda não tiver data marcada, o agendamento fica disponível.\n\nSe já houver uma data definida, o reagendamento só pode ser feito até a véspera.\n\nNo dia da apresentação, não é mais possível reagendar.";
+$podeEditarWorkshop = false;
+$tipoBolsaCodigo = strtoupper((string)($workshop->tipo_bolsa ?? ''));
+$editalTexto = 'Não informado';
+if ($tipoBolsaCodigo === 'R') {
+    if (!empty($editalEvento)) {
+        $editalTexto = trim((string)$editalEvento->nome) . ' (#' . (int)$editalEvento->id . ')';
+    } elseif (!empty($editalReferencia)) {
+        $editalTexto = trim((string)$editalReferencia->nome) . ' (#' . (int)$editalReferencia->id . ')';
+    }
+} elseif (!empty($editalReferencia)) {
+    $editalTexto = trim((string)$editalReferencia->nome) . ' (#' . (int)$editalReferencia->id . ')';
+}
+?>
+
+<style>
+    .nav-pills.tabs-workshop-visualizacao {
+        gap: 0.5rem;
+        border-bottom: 1px solid #e9ecef;
+        padding-bottom: 0.75rem;
+        margin-bottom: 1rem;
+    }
+    .nav-pills.tabs-workshop-visualizacao .nav-link {
+        border: 1px solid #d7dde4;
+        border-radius: 999px;
+        color: #344054;
+        background: #f3f5f7;
+        font-weight: 600;
+        padding: 0.45rem 0.9rem;
+        transition: all 0.15s ease-in-out;
+    }
+    .nav-pills.tabs-workshop-visualizacao .nav-link:hover {
+        border-color: #9aa4b2;
+        color: #1f2937;
+        background: #e9edf2;
+    }
+    .nav-pills.tabs-workshop-visualizacao .nav-link.active {
+        color: #fff;
+        background: #0b5ed7;
+        border-color: #0b5ed7;
+        box-shadow: 0 1px 4px rgba(11, 94, 215, 0.22);
+    }
+    .workshop-resumo {
+        line-height: 1.45;
+    }
+    .workshop-resumo > div {
+        margin-bottom: 0.35rem;
+    }
+    .workshop-resumo strong {
+        color: #344054;
+        font-weight: 600;
+    }
+    .workshop-card-muted {
+        border: 1px solid #e9ecef;
+        border-radius: 0.75rem;
+        background: #f8f9fa;
+        padding: 1rem;
+    }
+    .workshop-table thead th {
+        white-space: nowrap;
+    }
+    .workshop-collapse-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        font-weight: 600;
+    }
+    .workshop-historico-lista {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+    .workshop-historico-item {
+        border: 1px solid #e9ecef;
+        border-radius: 0.75rem;
+        background: #fff;
+        padding: 0.85rem 1rem;
+    }
+    .workshop-historico-meta {
+        color: #6c757d;
+        font-size: 0.9rem;
+        margin-bottom: 0.35rem;
+    }
+    .workshop-tab-pane {
+        padding-top: 0.25rem;
+    }
+</style>
+
+<div class="container mt-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <h4 class="mb-0">
+            Detalhes da Workshop #<?= (int)$workshop->id ?>
+            <?php if (!empty($workshop->deleted)): ?>
+                <span class="badge bg-danger ms-2">Deletada / Inativa</span>
+            <?php endif; ?>
+        </h4>
+
+        <div class="d-flex gap-2">
+            <?= $this->Html->link('Voltar para Workshop', ['controller' => 'Workshops', 'action' => 'painel'], ['class' => 'btn btn-sm btn-outline-secondary']) ?>
+            <?php if ($ehTiWorkshopView && (int)($workshop->deleted ?? 0) === 0): ?>
+                <?= $this->Html->link(
+                    '<i class="fa fa-trash"></i>',
+                    ['controller' => 'Workshops', 'action' => 'deletar', $workshop->id],
+                    [
+                        'class' => 'btn btn-sm btn-outline-danger',
+                        'escape' => false,
+                        'title' => 'Deletar Workshop',
+                    ]
+                ) ?>
+            <?php endif; ?>
+            <?php if ($certificadoLiberado): ?>
+                <?= $this->Html->link('Certificado', ['controller' => 'Certificados', 'action' => 'ver', $workshop->id, 'R', !empty($workshop->data_apresentacao) ? $workshop->data_apresentacao->format('Y') : date('Y')], ['class' => 'btn btn-sm btn-outline-primary', 'target' => '_blank']) ?>
+            <?php endif; ?>
+        </div>
+    </div>
+
+    <ul class="nav nav-pills flex-wrap tabs-workshop-visualizacao" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-workshop-dados" type="button">Dados da Workshop</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-workshop-avaliacao" type="button">Avaliação</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-workshop-historico" type="button">Histórico</button>
+        </li>
+    </ul>
+
+    <div class="tab-content">
+        <div class="tab-pane fade show active workshop-tab-pane" id="tab-workshop-dados">
+            <div class="card shadow-sm mb-3">
+                <div class="card-body">
+                    <div class="workshop-resumo">
+                        <div><strong>Bolsista:</strong> <?= h($workshop->usuario->nome ?? 'Não informado') ?></div>
+                        <div><strong>Orientador:</strong> <?= h($workshop->orientadore->nome ?? 'Não informado') ?></div>
+                        <div><strong>Coorientador:</strong> <?= $coorientadorNome ? h($coorientadorNome) : $naoInformado ?></div>
+                        <div><strong>Tipo:</strong> <?= h($tipoBolsaTexto) ?></div>
+                        <div><strong>Edital:</strong> <?= h($editalTexto) ?></div>
+                        <div><strong>Unidade:</strong> <?= !empty($workshop->unidade->sigla) ? h($workshop->unidade->sigla) : $naoInformado ?></div>
+                        <div>
+                            <strong>Cadastro:</strong>
+                            <?php if (($workshop->usuario_cadastro == null) && ($workshop->tipo_bolsa == 'R')): ?>
+                                <?= h(($workshop->orientadore->nome ?? 'Não informado') . ' em ' . $dataCadastroTexto) ?>
+                            <?php elseif (($workshop->usuario_cadastro == null) && ($workshop->tipo_bolsa == 'V')): ?>
+                                <?= h('Automático em ' . $dataCadastroTexto) ?>
+                            <?php elseif ($workshop->usuario_cadastro != null): ?>
+                                <?= h(($workshop->cadastro->nome ?? 'Não informado') . ' em ' . $dataCadastroTexto) ?>
+                            <?php else: ?>
+                                <?= $naoInformado ?>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+
+                    <?php if (!empty($workshop->deleted)): ?>
+                        <div class="alert alert-danger mt-3 mb-0">
+                            Workshop deletada. Justificativa:
+                            <?= !empty($workshop->projeto_bolsista->justificativa_cancelamento)
+                                ? h($workshop->projeto_bolsista->justificativa_cancelamento)
+                                : 'Não informada' ?>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+
+            <?php if (!empty($workshop->projeto_bolsista_id)): ?>
+                <div class="card shadow-sm mb-3">
+                    <div class="card-body">
+                        <h5 class="mb-3">Inscrição vinculada</h5>
+                        <?= $this->Html->link(
+                            'Solicitação de renovação: ' . $workshop->projeto_bolsista_id,
+                            ['controller' => 'Padrao', 'action' => 'visualizar', $workshop->projeto_bolsista_id],
+                            ['class' => 'btn btn-sm btn-outline-info']
+                        ) ?>
+                    </div>
+                </div>
+            <?php endif; ?>
+
+            <div class="card shadow-sm mb-3">
+                <div class="card-body">
+                    <h5 class="mb-3">Apresentação</h5>
+
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <div class="workshop-card-muted h-100">
+                                <strong>Data de Apresentação</strong><br>
+                                <?= $dataApresentacaoTexto ? h($dataApresentacaoTexto) : 'Data de apresentação não localizada' ?>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4">
+                            <div class="workshop-card-muted h-100">
+                                <strong>Tipo de Apresentação</strong><br>
+                                <?= $tipoApresentacaoTexto ? h($tipoApresentacaoTexto) : 'Tipo de apresentação não localizado' ?>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4">
+                            <div class="workshop-card-muted h-100">
+                                <strong>Programa</strong><br>
+                                <?= h($programaTexto) ?>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="workshop-card-muted mt-3">
+                        <strong>Local de Apresentação</strong><br>
+                        <?= !empty($workshop->local_apresentacao) ? h($workshop->local_apresentacao) : 'Local não localizado' ?>
+                    </div>
+
+                    <div class="alert alert-light border mt-3 mb-0">
+                        <?= nl2br(h($mensagemAgendamentoWorkshopView)) ?>
+                    </div>
+
+                    <?php if ((int)$workshop->deleted === 0): ?>
+                        <div class="mt-3 d-flex flex-wrap gap-2 align-items-center">
+                            <?php if ($certificadoLiberado): ?>
+                                <span class="badge bg-success">
+                                    Certificado liberado
+                                    <?= !empty($workshop->data_liberacao)
+                                        ? ' em ' . h($workshop->data_liberacao->i18nFormat('dd/MM/YYYY')) . ', por ' . h($workshop->libera->nome ?? 'Processo interno')
+                                        : ' em processo interno' ?>
+                                </span>
+                            <?php else: ?>
+                                <?= $this->Html->link(
+                                    $dataApresentacaoWorkshopView !== null ? 'Reagendar apresentação' : 'Agendar apresentação',
+                                    ['controller' => 'Workshops', 'action' => 'agendar', $workshop->id],
+                                    ['class' => 'btn btn-sm btn-outline-primary']
+                                ) ?>
+                            <?php endif; ?>
+
+                            <?php if (!$certificadoLiberado && $dataApresentacaoWorkshopView !== null && $podeGerenciarApresentacao): ?>
+                                <?= $this->Form->postLink(
+                                    'Libera Certificado',
+                                    ['controller' => 'Workshops', 'action' => 'liberacertificado', $workshop->id],
+                                    ['class' => 'btn btn-sm btn-warning']
+                                ) ?>
+                            <?php endif; ?>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="tab-pane fade workshop-tab-pane" id="tab-workshop-avaliacao">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                        <h5 class="mb-0">Avaliadores</h5>
+                        <?php
+                            $identityAtual = $this->request->getAttribute('identity');
+                            $identityAtualId = is_array($identityAtual)
+                                ? (int)($identityAtual['id'] ?? 0)
+                                : (int)($identityAtual->id ?? 0);
+                            $identityAtualYoda = is_array($identityAtual)
+                                ? !empty($identityAtual['yoda'])
+                                : !empty($identityAtual->yoda);
+                            $identityAtualJedi = is_array($identityAtual)
+                                ? (string)($identityAtual['jedi'] ?? '')
+                                : (string)($identityAtual->jedi ?? '');
+                            $identityAtualTi = in_array($identityAtualId, [1, 8088], true);
+                            $unidadesJedi = array_filter(array_map('trim', explode(',', $identityAtualJedi)));
+                            $podeGerenciarAgendamento = $identityAtualYoda
+                                || $identityAtualTi
+                                || in_array((string)($workshop->unidade_id ?? ''), $unidadesJedi, true);
+                            $podeReagendarPorData = true;
+                            if (!empty($workshop->data_apresentacao) && $workshop->data_apresentacao instanceof \DateTimeInterface) {
+                                $podeReagendarPorData = $workshop->data_apresentacao->format('Y-m-d') > date('Y-m-d') || $identityAtualTi;
+                            }
+                            $podeVerNotas = $identityAtualYoda
+                                || in_array($identityAtualId, [1, 8088], true)
+                                || $identityAtualId === (int)($workshop->orientador ?? 0)
+                                || $identityAtualId === (int)($workshop->bolsista ?? 0);
+                        ?>
+                        <?php if ($podeGerenciarAgendamento && $podeReagendarPorData): ?>
+                            <?= $this->Html->link(
+                                '<i class="fas fa-user-edit"></i> Alterar banca',
+                                ['controller' => 'Workshops', 'action' => 'agendar', (int)$workshop->id],
+                                ['class' => 'btn btn-sm btn-outline-success', 'escape' => false]
+                            ) ?>
+                        <?php endif; ?>
+                    </div>
+                    <?php if (empty($lista) || $lista->count() === 0): ?>
+                        <p class="text-muted mb-0">Nenhum avaliador vinculado.</p>
+                    <?php else: ?>
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle workshop-table mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Nome</th>
+                                        <th>Deletado?</th>
+                                        <th>Situação</th>
+                                        <th>Cadastro</th>
+                                        <th>Exclusão</th>
+                                        <th class="text-end"></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($lista as $b): ?>
+                                        <?php
+                                        $deletado = (int)($b->deleted ?? 0) === 1;
+                                        $avaliado = !$deletado && (string)($b->situacao ?? '') === 'F';
+                                        $dataCadastro = $b->created ?? null;
+                                        $dataCadastroTexto = $dataCadastro && method_exists($dataCadastro, 'format')
+                                            ? $dataCadastro->format('d/m/Y H:i')
+                                            : 'Não informado';
+                                        $usuarioCadastro = trim((string)($b->criador->nome ?? ''));
+                                        if ($usuarioCadastro === '') {
+                                            $usuarioCadastro = 'Não informado';
+                                        }
+                                        $dataExclusao = $b->deletado_em ?? null;
+                                        $dataExclusaoTexto = $dataExclusao && method_exists($dataExclusao, 'format')
+                                            ? $dataExclusao->format('d/m/Y H:i')
+                                            : 'Não informado';
+                                        $usuarioExclusao = trim((string)($b->deletador->nome ?? ''));
+                                        if ($usuarioExclusao === '') {
+                                            $usuarioExclusao = 'Não informado';
+                                        }
+                                        ?>
+                                        <tr class="<?= $deletado ? 'table-danger' : ($avaliado ? 'table-success' : '') ?>">
+                                            <td>
+                                                <?= h($b->avaliador->usuario->nome ?? 'Não informado') ?>
+                                                <span class="text-muted small">(AV <?= h((string)($b->ordem ?? '-')) ?>)</span>
+                                            </td>
+                                            <td><?= $deletado ? 'Sim' : 'Não' ?></td>
+                                            <td><?= h($deletado ? 'Deletado' : ($avaliado ? 'Avaliado' : 'Aguardando')) ?></td>
+                                            <td>
+                                                <div class="small">
+                                                    <?= h($dataCadastroTexto) ?><br>
+                                                    <span class="text-muted"><?= h($usuarioCadastro) ?></span>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <?php if ($deletado): ?>
+                                                    <div class="small">
+                                                        <?= h($dataExclusaoTexto) ?><br>
+                                                        <span class="text-muted"><?= h($usuarioExclusao) ?></span>
+                                                    </div>
+                                                <?php endif; ?>
+                                            </td>
+                                            <td class="text-end">
+                                                <?php if ($avaliado && $podeVerNotas): ?>
+                                                    <?= $this->Html->link(
+                                                        '<i class="fas fa-file-alt"></i> Ver notas',
+                                                        ['controller' => 'Avaliadores', 'action' => 'verNotas', (int)$b->id],
+                                                        ['class' => 'btn btn-xs btn-outline-primary py-0 px-1', 'escape' => false]
+                                                    ) ?>
+                                                <?php endif; ?>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-pane fade workshop-tab-pane" id="tab-workshop-historico">
+            <div class="card shadow-sm mb-3">
+                <div class="card-body">
+                    <h5 class="mb-3">Histórico</h5>
+
+                    <?php if (empty($historicos) || $historicos->count() === 0): ?>
+                        <p class="text-muted mb-0">Nenhum histórico localizado.</p>
+                    <?php else: ?>
+                        <div class="workshop-historico-lista">
+                            <?php foreach ($historicos as $historico): ?>
+                                <div class="workshop-historico-item">
+                                    <div class="workshop-historico-meta">
+                                        <?php $dataHistoricoTela = !empty($historico->created) ? $historico->created->subHours(3) : null; ?>
+                                        <strong>Data:</strong>
+                                        <?= $dataHistoricoTela ? h($dataHistoricoTela->i18nFormat('dd/MM/YYYY HH:mm')) : 'Não informado' ?>
+                                        <span class="ms-2">
+                                            <strong>Por:</strong>
+                                            <?= h((string)($historico->usuario->nome ?? 'Não informado')) ?>
+                                        </span>
+                                    </div>
+                                    <div class="mb-2">
+                                        <strong>Alteração:</strong>
+                                        <?= !empty($historico->alteracao) ? h($historico->alteracao) : 'Não informado' ?>
+                                    </div>
+                                    <div>
+                                        <strong>Justificativa:</strong>
+                                        <?= !empty($historico->justificativa) ? h($historico->justificativa) : 'Não informado' ?>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

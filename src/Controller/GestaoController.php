@@ -720,6 +720,7 @@ class GestaoController extends AppController
         $programaId = (int)($this->request->getQuery('programa_id') ?? 0);
         $homologadoParam = trim((string)($this->request->getQuery('homologado') ?? 'P'));
         $homologado = in_array($homologadoParam, ['', 'P', 'S', 'N'], true) ? $homologadoParam : 'P';
+        $orientadorNome = trim((string)($this->request->getQuery('orientador_nome') ?? ''));
         $agora = FrozenTime::now();
         $conditions = [
             'ProjetoBolsistas.deleted IS' => null,
@@ -749,8 +750,19 @@ class GestaoController extends AppController
                 'Coorientadores',
                 'Fases',
             ])
+            ->leftJoinWith('Editais.Programas')
+            ->leftJoinWith('Bolsistas')
+            ->leftJoinWith('Orientadores.Unidades')
+            ->leftJoinWith('Fases')
             ->where($conditions)
-            ->orderBy(['ProjetoBolsistas.id' => 'DESC']);
+            ->orderBy([
+                'Orientadores.nome' => 'ASC',
+                'ProjetoBolsistas.id' => 'DESC',
+            ]);
+
+        if ($orientadorNome !== '') {
+            $query->where(['Orientadores.nome LIKE' => '%' . $orientadorNome . '%']);
+        }
 
         $programas = $this->fetchTable('Programas')->find('list', ['limit' => 200])->toArray();
 
@@ -776,8 +788,15 @@ class GestaoController extends AppController
                         'Coorientadores',
                         'Fases',
                     ])
+                    ->leftJoinWith('Editais.Programas')
+                    ->leftJoinWith('Bolsistas')
+                    ->leftJoinWith('Orientadores.Unidades')
+                    ->leftJoinWith('Fases')
                     ->where($excelConditions)
-                    ->orderBy(['ProjetoBolsistas.id' => 'DESC']);
+                    ->orderBy([
+                        'Orientadores.nome' => 'ASC',
+                        'ProjetoBolsistas.id' => 'DESC',
+                    ]);
             } else {
                 $excelQuery = $tblProjetoBolsistas->find()
                     ->contain([
@@ -788,8 +807,18 @@ class GestaoController extends AppController
                         'Coorientadores',
                         'Fases',
                     ])
+                    ->leftJoinWith('Editais.Programas')
+                    ->leftJoinWith('Bolsistas')
+                    ->leftJoinWith('Orientadores.Unidades')
+                    ->leftJoinWith('Fases')
                     ->where($excelConditions)
-                    ->orderBy(['ProjetoBolsistas.id' => 'DESC']);
+                    ->orderBy([
+                        'Orientadores.nome' => 'ASC',
+                        'ProjetoBolsistas.id' => 'DESC',
+                    ]);
+                if ($orientadorNome !== '') {
+                    $excelQuery->where(['Orientadores.nome LIKE' => '%' . $orientadorNome . '%']);
+                }
             }
 
             $rows = $excelQuery->all();
@@ -861,7 +890,7 @@ class GestaoController extends AppController
             'S' => 'Homologadas',
             'N' => 'Não homologadas',
         ];
-        $this->set(compact('inscricoes', 'programas', 'programaId', 'homologado', 'statusHomologacaoOptions'));
+        $this->set(compact('inscricoes', 'programas', 'programaId', 'homologado', 'orientadorNome', 'statusHomologacaoOptions'));
     }
 
     public function telahomologacao($id)
@@ -874,6 +903,7 @@ class GestaoController extends AppController
                 'Projetos',
                 'Orientadores' => ['Unidades', 'Vinculos'],
                 'Coorientadores' => ['Vinculos'],
+                'Homologadores',
                 'Fases',
             ])
             ->where(['ProjetoBolsistas.id' => (int)$id])
@@ -1052,6 +1082,7 @@ class GestaoController extends AppController
         $programaEdital = (string)($inscricao->editai->programa_id ?? '');
         $cotaAtual = strtoupper(trim((string)($inscricao->cota ?? '')));
         $primeiroPeriodo = $inscricao->primeiro_periodo !== null ? (string)(int)$inscricao->primeiro_periodo : '';
+        $filhosMenorBolsista = (int)($inscricao->filhos_menor_bolsista ?? 0);
         $bolsistaMenorIdade = false;
         $dataNascimentoBolsista = $inscricao->bolsista_usuario->data_nascimento
             ?? $inscricao->bolsista->data_nascimento
@@ -1110,6 +1141,10 @@ class GestaoController extends AppController
                     }
                 }
             } else {
+                if ($tipoId === 11 && $filhosMenorBolsista > 0) {
+                    $regras[] = 'Condicional: obrigatório para bolsista com filhos menores de 8 anos.';
+                    $mostrarTipo = true;
+                }
                 if ($programaRegra === '' && $cotaRegra === '') {
                     if ($tipoId === 16 && $primeiroPeriodo === '0') {
                         $regras[] = 'Condicional: obrigatório para bolsista fora do primeiro período.';

@@ -16,6 +16,7 @@ use Cake\ORM\Entity;
  * @property int|null $workshop_id
  * @property int|null $projeto_bolsista_id
  * @property float|null $nota_sumula
+ * @property float|null $nota_sumula_bolsista
  * @property string|null $tipo
  * @property string|null $ano
  * @property string|null $situacao
@@ -67,6 +68,7 @@ class AvaliadorBolsista extends Entity
         'workshop_id' => true,
         'projeto_bolsista_id' => true,
         'nota_sumula' => true,
+        'nota_sumula_bolsista' => true,
         'tipo' => true,
         'ano' => true,
         'situacao' => true,

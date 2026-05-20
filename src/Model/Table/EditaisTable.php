@@ -247,6 +247,10 @@ class EditaisTable extends Table
             ->maxLength('controller', 45)
             ->allowEmptyString('controller');
 
+        $validator
+            ->scalar('cpf_invalidos')
+            ->allowEmptyString('cpf_invalidos');
+
         return $validator;
     }
 

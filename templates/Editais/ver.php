@@ -270,6 +270,21 @@ $modifiedLabel = $edital->modified
                         <?php } ?>
                     </div>
                 </div>
+                <div class="col-md-3">
+                    <strong>CPFs inválidos/bloqueados:</strong>
+                    <div class="mt-1">
+                        <?php if (empty($edital->cpf_invalidos)) { ?>
+                            <span class="badge bg-secondary">Não</span>
+                        <?php } else { ?>
+                            <?php
+                            $cpfsInvalidos = preg_split('/[\s,;]+/', (string)$edital->cpf_invalidos, -1, PREG_SPLIT_NO_EMPTY);
+                            foreach ($cpfsInvalidos as $cpfInvalido) {
+                                echo '<span class="badge bg-light text-dark border me-1 mb-1">' . h($cpfInvalido) . '</span>';
+                            }
+                            ?>
+                        <?php } ?>
+                    </div>
+                </div>
             </div>
 
             <hr>

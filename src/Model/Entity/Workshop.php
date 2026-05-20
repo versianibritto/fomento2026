@@ -9,7 +9,7 @@ use Cake\ORM\Entity;
  * Workshop Entity
  *
  * @property int $id
- * @property int|null $usuario_id
+ * @property int|null $bolsista
  * @property int|null $orientador
  * @property int|null $projeto_orientador
  * @property \Cake\I18n\DateTime|null $created
@@ -30,12 +30,15 @@ use Cake\ORM\Entity;
  * @property int|null $usuario_libera
  * @property \Cake\I18n\DateTime|null $data_liberacao
  * @property int|null $pdj_inscricoe_id
+ * @property int|null $projeto_bolsista_id
  *
  * @property \App\Model\Entity\Usuario $usuario
+ * @property \App\Model\Entity\Usuario $bolsista_usuario
  * @property \App\Model\Entity\Usuario $orientadore
  * @property \App\Model\Entity\Unidade $unidade
  * @property \App\Model\Entity\Editai $editai
  * @property \App\Model\Entity\PdjInscrico $pdj_inscrico
+ * @property \App\Model\Entity\ProjetoBolsista $projeto_bolsista
  * @property \App\Model\Entity\WorkshopHistorico[] $workshop_historicos
  */
 class Workshop extends Entity
@@ -50,7 +53,7 @@ class Workshop extends Entity
      * @var array<string, bool>
      */
     protected array $_accessible = [
-        'usuario_id' => true,
+        'bolsista' => true,
         'orientador' => true,
         'projeto_orientador' => true,
         'created' => true,
@@ -71,11 +74,14 @@ class Workshop extends Entity
         'usuario_libera' => true,
         'data_liberacao' => true,
         'pdj_inscricoe_id' => true,
+        'projeto_bolsista_id' => true,
         'usuario' => true,
+        'bolsista_usuario' => true,
         'orientadore' => true,
         'unidade' => true,
         'editai' => true,
         'pdj_inscrico' => true,
+        'projeto_bolsista' => true,
         'workshop_historicos' => true,
     ];
 }

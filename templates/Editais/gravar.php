@@ -191,6 +191,15 @@ $hasEscolaridades = !empty($escolaridadesPermitidas);
                                         'placeholder' => 'Informe os CPFs separados por virgula ou linha',
                                     ]) ?>
                                 </div>
+                                <div class="col-md-12">
+                                    <?=$this->Form->control('cpf_invalidos', [
+                                        'label' => 'CPFs inválidos/bloqueados',
+                                        'type' => 'textarea',
+                                        'class' => 'form-control',
+                                        'rows' => 3,
+                                        'placeholder' => 'Informe os CPFs separados por virgula ou linha',
+                                    ]) ?>
+                                </div>
                                 
 
                                 <div class="col-md-4">
