@@ -42,6 +42,30 @@ class DashdetalhesTable extends Table
         parent::initialize($config);
 
         $this->setTable('dashdetalhes');
+        $this->setSchema([
+            'id' => 'integer',
+            'bolsista' => 'integer',
+            'nome_bolsista' => 'string',
+            'orientador' => 'integer',
+            'nome_orientador' => 'string',
+            'coorientador' => 'integer',
+            'nome_coorientador' => 'string',
+            'projeto_id' => 'integer',
+            'fase_id' => 'integer',
+            'nome_fase' => 'string',
+            'bloco' => 'string',
+            'vigente' => 'integer',
+            'origem' => 'string',
+            'editai_id' => 'integer',
+            'nome_edital' => 'string',
+            'controller' => 'string',
+            'nome_programa' => 'string',
+            'data_inicio' => 'datetime',
+            'data_fim' => 'datetime',
+            'programa_id' => 'integer',
+            'fim_vigencia' => 'datetime',
+            'ativo' => 'integer',
+        ]);
 
         $this->belongsTo('Projetos', [
             'foreignKey' => 'projeto_id',
