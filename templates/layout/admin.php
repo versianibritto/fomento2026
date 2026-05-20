@@ -1,3 +1,21 @@
+<?php
+/**
+ * @var \App\View\AppView $this
+ * @var array|\ArrayAccess $usuario_logado
+ * @var int|null $feedbackCount
+ * @var int|null $suporteNotifTotal
+ * @var int|null $suporteNotifDuvidaCount
+ * @var int|null $suporteNotifFinalizadoCount
+ * @var int|null $suporteNotifNovaCount
+ * @var int|null $suporteStatusNovoId
+ * @var int|null $atv
+ * @var int|null $atv_pdj
+ * @var int|null $subs
+ * @var int|null $subs_pdj
+ * @var int|null $canc
+ * @var int|null $canc_pdj
+ */
+?>
 <!DOCTYPE html>
 <html lang="pt-BR">
 

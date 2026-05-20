@@ -221,7 +221,7 @@ class DashboardUserService
         // Filtro de vigência
         // ===============================
         $query->where(function (QueryExpression $exp) {
-            return $exp->gt('Dashdetalhes.fim_vigencia', FrozenTime::now());
+            return $exp->gt('Dashdetalhes.fim_vigencia', FrozenTime::now()->format('Y-m-d H:i:s'));
         });
 
         // ===============================

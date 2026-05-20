@@ -183,13 +183,14 @@ class IndexController extends AppController
 
         $tipo = strtoupper(trim($tipo));
         $conditions = [];
+        $agoraSql = FrozenTime::now()->format('Y-m-d H:i:s');
 
         // Filtros específicos por tipo
         if ($tipo === 'V') {
-            $conditions['Dashdetalhes.fim_vigencia >=' ] = FrozenTime::now();
+            $conditions['Dashdetalhes.fim_vigencia >=' ] = $agoraSql;
             $conditions['Dashdetalhes.vigente'] = 1;
         } elseif ($tipo === 'A') {
-            $conditions['Dashdetalhes.fim_vigencia >=' ] = FrozenTime::now();
+            $conditions['Dashdetalhes.fim_vigencia >=' ] = $agoraSql;
             $conditions['Dashdetalhes.bloco IN'] = ['I', 'F', 'H', 'R'];
         } elseif ($tipo !== 'T') {
             $this->Flash->error(
