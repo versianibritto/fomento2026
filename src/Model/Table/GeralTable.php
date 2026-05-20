@@ -38,7 +38,7 @@ class GeralTable extends Table
         $this->setTable('geral');
         $this->setDisplayField('id');
         $this->setPrimaryKey('id');
-        $this->getSchema()->setColumnType('origem', 'string');
+        //$this->getSchema()->setColumnType('origem', 'string');
     }
 
     /**
