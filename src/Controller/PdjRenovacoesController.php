@@ -133,7 +133,7 @@ class PdjRenovacoesController extends AppController
             preg_split('/[\s,;]+/', (string)($edital->cpf_invalidos ?? ''), -1, PREG_SPLIT_NO_EMPTY)
         ));
         if ($cpfBolsista !== '' && in_array($cpfBolsista, $cpfsInvalidos, true)) {
-            $this->Flash->error('O aluno não pode ser renovado: o aluno está na listagem de CPFs inelegíveis para uma bolsa este ano.');
+            $this->Flash->error('Aluno não elegível para concorrer ao edital.');
             return $this->redirect(['controller' => 'Index', 'action' => 'dashboard']);
         }
 
@@ -1655,7 +1655,7 @@ class PdjRenovacoesController extends AppController
                 $cpfBolsista = (string)($usuarioBolsista->cpf ?? '');
             }
             if ($this->cpfInvalidoNoEdital($cpfBolsista, $edital)) {
-                $errosBolsista[] = 'O CPF informado não pode ser utilizado neste edital.';
+                $errosBolsista[] = 'Aluno não elegível para concorrer ao edital.';
             }
         }
 

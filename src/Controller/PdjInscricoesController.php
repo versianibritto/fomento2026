@@ -658,7 +658,7 @@ class PdjInscricoesController extends AppController
                     $cpfBolsista = (string)($usuarioBolsista->cpf ?? '');
                 }
                 if ($this->cpfInvalidoNoEdital($cpfBolsista, $edital)) {
-                    $errosBolsista[] = 'O CPF informado não pode ser utilizado neste edital.';
+                    $errosBolsista[] = 'Aluno não elegível para concorrer ao edital.';
                 }
 
                 $tiposBolsista = $this->fetchTable('AnexosTipos')->find()
@@ -1107,7 +1107,7 @@ class PdjInscricoesController extends AppController
 
         $cpf = preg_replace('/\D/', '', $cpfInformado);
         if ($this->cpfInvalidoNoEdital($cpf, $edital)) {
-            $this->Flash->error('O CPF informado não pode ser utilizado neste edital.');
+            $this->Flash->error('Aluno não elegível para concorrer ao edital.');
             return $this->redirect(['action' => 'dadosBolsista', (int)$edital->id, (int)$inscricao->id]);
         }
 
@@ -1190,7 +1190,7 @@ class PdjInscricoesController extends AppController
             ->first();
 
         if ($usuario && $this->cpfInvalidoNoEdital((string)$usuario->cpf, $edital)) {
-            throw new \Exception('O CPF informado não pode ser utilizado neste edital.');
+            throw new \Exception('Aluno não elegível para concorrer ao edital.');
         }
 
         $projetoBolsistas = $this->fetchTable('ProjetoBolsistas');
