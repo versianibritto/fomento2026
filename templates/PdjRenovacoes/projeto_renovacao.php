@@ -45,6 +45,7 @@
                     $valorPalavras = trim((string)($projetoSelecionado->palavras_chaves ?? ''));
                     $valorResumo = trim((string)($projetoSelecionado->resumo ?? ''));
                     $valorResumoTela = trim(html_entity_decode(strip_tags($valorResumo), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+                    $valorJustificativaBolsa = trim((string)($inscricao->justificativa_bolsa ?? ''));
                     $rotuloAnexoTipo5 = 'Anexo do projeto';
                     foreach ($anexosTiposProjeto as $tipoProjetoInfo) {
                         if ((int)$tipoProjetoInfo->id === 5) {
@@ -177,6 +178,16 @@
                                     <div class="mt-2" style="white-space: pre-line;"><?= h($valorResumoTela !== '' ? $valorResumoTela : $naoInformado) ?></div>
                                 </details>
                             <?php endif; ?>
+                        </div>
+                        <div class="col-12">
+                            <?= $this->Form->control('justificativa_bolsa', [
+                                'label' => 'Justificativa da bolsa',
+                                'type' => 'textarea',
+                                'class' => 'form-control' . ($valorJustificativaBolsa === '' ? ' campo-vazio' : ''),
+                                'rows' => 4,
+                                'maxlength' => 4000,
+                                'value' => $inscricao->justificativa_bolsa ?? null,
+                            ]) ?>
                         </div>
                         <div class="col-md-6">
                             <div class="anexos-areas">

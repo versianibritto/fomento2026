@@ -1193,6 +1193,19 @@ class PdjRenovacoesController extends AppController
                 }
                 $dadosProjeto['resumo'] = $resumo;
             }
+            $justificativaBolsa = trim((string)($dados['justificativa_bolsa'] ?? ''));
+            $erroJustificativaBolsa = parent::padraoValidarTextoComLimites(
+                $justificativaBolsa,
+                'Justificativa da bolsa',
+                0,
+                4000,
+                false,
+                true
+            );
+            if ($erroJustificativaBolsa !== null) {
+                $this->Flash->error($erroJustificativaBolsa);
+                return $this->redirect(['action' => 'projetoRenovacao', $context['edital']->id, $inscricao->id]);
+            }
             if (!empty($dadosProjeto) && $projetoSelecionado) {
                 $tblProjetos = $this->fetchTable('Projetos');
                 $projetoAtualizado = $tblProjetos->patchEntity($projetoSelecionado, $dadosProjeto);
@@ -1204,6 +1217,25 @@ class PdjRenovacoesController extends AppController
                         $e,
                         'Erro no Sistema - atualizar dados do projeto na renovação',
                     'Não foi possível salvar os dados do projeto.'
+                    );
+                    return $this->redirect(['action' => 'projetoRenovacao', $context['edital']->id, $inscricao->id]);
+                }
+            }
+
+            if ($justificativaBolsa !== trim((string)($inscricao->justificativa_bolsa ?? ''))) {
+                $tblProjetoBolsistas = $this->fetchTable('ProjetoBolsistas');
+                $inscricaoAtualizada = $tblProjetoBolsistas->patchEntity($inscricao, [
+                    'justificativa_bolsa' => $justificativaBolsa,
+                ]);
+                try {
+                    $tblProjetoBolsistas->saveOrFail($inscricaoAtualizada, ['validate' => false, 'checkRules' => false]);
+                    $inscricao = $inscricaoAtualizada;
+                    $houveAtualizacaoInscricao = true;
+                } catch (\Throwable $e) {
+                    $this->flashFriendlyException(
+                        $e,
+                        'Erro no Sistema - atualizar justificativa da bolsa na renovação PDJ',
+                        'Não foi possível salvar a justificativa da bolsa.'
                     );
                     return $this->redirect(['action' => 'projetoRenovacao', $context['edital']->id, $inscricao->id]);
                 }
