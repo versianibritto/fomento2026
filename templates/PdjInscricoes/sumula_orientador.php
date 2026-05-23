@@ -9,7 +9,7 @@
     <div class="card">
         <div class="card-body">
             <div class="p-3 mb-4 bg-light border rounded text-center">
-                <h3 class="mb-2">Súmula do orientador</h3>
+                <h3 class="mb-2">Súmula do Supervidor</h3>
                 <div class="fw-semibold">Inscrição PDJ - <?= h($edital->nome) ?></div>
                 <div class="text-muted mt-1">Rascunho: nenhum campo é obrigatório nesta etapa.</div>
             </div>
@@ -22,11 +22,11 @@
                 <div class="col-12">
                     <div class="alert alert-warning border border-warning-subtle mb-0 sumula-alerta">
                         <div class="fw-semibold mb-1">Atenção ao preenchimento da súmula</div>
-                        <div>Orientadoras com filhos; Orientadores recém-doutores; ou orientadores que tenham ingressado na Fiocruz por meio dos concursos de 2016 e 2024, considerar a produção científica e tecnológica dos últimos 8 anos.</div>
+                        <div>Supervidoras com filhos; Supervidores recém-doutores; ou supervidores que tenham ingressado na Fiocruz por meio dos concursos de 2016 e 2024, considerar a produção científica e tecnológica dos últimos 8 anos.</div>
                         <div>Para os demais, será considerada a produção científica e tecnológica dos últimos 5 anos.</div>
                         <div>OBS. Detalhes no anexo II do Edital</div>
                         <div class="mt-3">Todos os campos desta tela serão exigidos na finalização da inscrição.</div>
-                        <div>As súmulas que o orientador não possuir devem ser preenchidas obrigatoriamente com valor 0 (zero).</div>
+                        <div>As súmulas que o supervidor não possuir devem ser preenchidas obrigatoriamente com valor 0 (zero).</div>
                         <?php $filhosValor = (int)($inscricao->filhos_menor ?? 0); ?>
                         <?php $recemServidorValor = (int)($inscricao->recem_servidor ?? 0); ?>
                         <?php $sexoLogado = strtoupper(trim((string)($this->request->getAttribute('identity')['sexo'] ?? ''))); ?>
@@ -83,7 +83,7 @@
                                 <?php if ($sexoLogado === 'F') : ?>
                                     <div class="row g-2 align-items-center mt-3 pt-3 border-top border-warning-subtle">
                                         <div class="col-md-6">
-                                            <label for="filhos-menor" class="form-label mb-0">Orientadora, possui filhos menores de 8 anos?</label>
+                                            <label for="filhos-menor" class="form-label mb-0">Supervidora, possui filhos menores de 8 anos?</label>
                                         </div>
                                         <div class="col-md-6">
                                             <?= $this->Form->control('filhos_menor', [

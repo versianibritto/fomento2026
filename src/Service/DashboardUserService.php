@@ -65,6 +65,7 @@ class DashboardUserService
             'subst'        => 0,
             'aceito'       => 0,
             'recusado'     => 0,
+            'avaliacoes'   => 0,
             
         ];
 
@@ -109,8 +110,35 @@ class DashboardUserService
         $dashboard['total'] =
             $dashboard['andamento'] + $dashboard['finalizadas'];
 
+        if ($userId !== null) {
+            $dashboard['avaliacoes'] = $this->contarAvaliacoesPendentesAnoCorrente($userId);
+        }
+
         return $dashboard;
 
+    }
+
+    private function contarAvaliacoesPendentesAnoCorrente(int $userId): int
+    {
+        if ($userId <= 0) {
+            return 0;
+        }
+
+        return (int)TableRegistry::getTableLocator()
+            ->get('AvaliadorBolsistas')
+            ->find()
+            ->matching('Avaliadors', function ($q) use ($userId) {
+                return $q->where([
+                    'Avaliadors.usuario_id' => $userId,
+                    'Avaliadors.deleted' => 0,
+                ]);
+            })
+            ->where([
+                'AvaliadorBolsistas.situacao' => 'E',
+                'AvaliadorBolsistas.deleted' => 0,
+                'AvaliadorBolsistas.ano' => (string)date('Y'),
+            ])
+            ->count();
     }
 
     public function detalhes(?array $conditions = null, ?int $userId = null, ?object $identity = null): \Cake\ORM\Query

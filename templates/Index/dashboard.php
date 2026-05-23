@@ -205,9 +205,15 @@ document.addEventListener('DOMContentLoaded', function () {
         <!-- AVALIAÇÕES -->
         <div class="col-md-3 col-sm-6">
             <div class="card card-counter card-equal shadow-sm text-center p-3" data-toggle="modal" data-target="#modalAvaliacoes">
-                <h6 class="text-muted mb-1">Avaliações</h6>
+                <h6 class="text-muted mb-1">Avaliações Pendentes</h6>
                 <h2 class="fw-bold text-warning"><?= h($dashboard['avaliacoes'] ?? 0) ?></h2>
-                <button class="btn btn-outline-warning btn-sm mt-2">Ver detalhes</button>
+                <a href="<?= $this->Url->build([
+                    'controller' => 'Avaliadores',
+                    'action' => 'avaliacoes',
+                ]) ?>"
+                class="btn btn-outline-warning btn-sm mt-2">
+                    Ver detalhes
+                </a>
             </div>
         </div>
 

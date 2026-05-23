@@ -30,6 +30,12 @@ $filhosMap = [
 $origemAtual = strtoupper((string)($origemAtual ?? ($inscricao->origem ?? '')));
 $ehYoda = !empty($this->request->getAttribute('identity')['yoda']);
 $isRenovacao = $origemAtual === 'R';
+$isProgramaSupervisor = (int)($edital->programa_id ?? 0) === 1;
+$rotuloOrientador = $isProgramaSupervisor ? 'Supervisor' : 'Orientador';
+$rotuloOrientadorMinusculo = $isProgramaSupervisor ? 'supervisor' : 'orientador';
+$rotuloOrientadora = $isProgramaSupervisor ? 'Supervisora' : 'Orientadora';
+$resultadoEditalTimestamp = !empty($edital->resultado) ? strtotime((string)$edital->resultado) : false;
+$podeVisualizarResultadoAvaliacao = $ehYoda || ($resultadoEditalTimestamp !== false && $resultadoEditalTimestamp < time());
 $pdjInscricaoId = !empty($inscricao->pdj_inscricoe_id) ? (int)$inscricao->pdj_inscricoe_id : null;
 $ehTrocaProjeto = (int)($inscricao->troca_projeto ?? 0) === 1;
 $mostrarReferenciaAnterior = in_array($origemAtual, ['R', 'S', 'A'], true) || $ehTrocaProjeto;
@@ -43,7 +49,7 @@ if ($origemAtual === 'R') {
     $referenciaAnteriorDescricao = 'inscricao que foi substituida';
 } elseif ($ehTrocaProjeto) {
     $referenciaAnteriorValor = $inscricao->referencia_inscricao_anterior ?? null;
-    $referenciaAnteriorDescricao = 'inscricao do orientador original';
+    $referenciaAnteriorDescricao = 'inscricao do ' . $rotuloOrientadorMinusculo . ' original';
 }
 $referenciaAnteriorId = (is_numeric((string)$referenciaAnteriorValor) && (int)$referenciaAnteriorValor > 0)
     ? (int)$referenciaAnteriorValor
@@ -456,7 +462,7 @@ $formatarDataHoraAnexo = static function ($valor): string {
                     <?= $trocaProjetoTexto ?>
                 </div>
                 <div class="col-md-6">
-                    <strong>Troca de Orientador (herança):</strong>
+                    <strong>Troca de <?= h($rotuloOrientador) ?> (herança):</strong>
                     <?= $herancaTexto ?>
                 </div>
                 <?php if ($isRenovacao): ?>
@@ -474,7 +480,7 @@ $formatarDataHoraAnexo = static function ($valor): string {
                         ?>
                     </div>
                 <?php endif; ?>
-                <div class="col-md-12"><strong>Orientador:</strong> <?= !empty($inscricao->orientadore->nome) ? h($inscricao->orientadore->nome) : $naoInformado ?></div>
+                <div class="col-md-12"><strong><?= h($rotuloOrientador) ?>:</strong> <?= !empty($inscricao->orientadore->nome) ? h($inscricao->orientadore->nome) : $naoInformado ?></div>
                 <div class="col-md-12"><strong>Bolsista:</strong> <?= !empty($inscricao->bolsista_usuario->nome) ? h($inscricao->bolsista_usuario->nome) : $naoInformado ?></div>
                 <div class="col-md-12"><strong>Coorientador:</strong> <?= !empty($inscricao->coorientadore->nome) ? h($inscricao->coorientadore->nome) : $naoInformado ?></div>
                 <div class="col-md-12"><strong>Projeto:</strong> <?php
@@ -650,7 +656,7 @@ $formatarDataHoraAnexo = static function ($valor): string {
                         <div class="sumula-campos">
                             <?php if ($mostrarFilhosOrientadora): ?>
                                 <p>
-                                    <strong>Orientadora, possui filhos menores de 5 anos?</strong>
+                                    <strong><?= h($rotuloOrientadora) ?>, possui filhos menores de 5 anos?</strong>
                                     <?= isset($filhosMap[$filhosKey]) ? h($filhosMap[$filhosKey]) : $naoInformado ?>
                                 </p>
                             <?php endif; ?>
@@ -1030,34 +1036,39 @@ $formatarDataHoraAnexo = static function ($valor): string {
                 </div>
 
                 <div class="tab-pane fade" id="tab-avaliacao">
-                    <p>
-                        <strong>Resultado final:</strong>
-                        <?= !empty($resultadoMap[(string)($inscricao->resultado ?? '')]) ? h($resultadoMap[(string)$inscricao->resultado]) : $naoInformado ?>
-                    </p>
-                    <?php if ($ehYoda): ?>
-                        <div class="alert alert-light border py-2 px-3 mb-3" style="font-size: 0.92rem; line-height: 1.4;">
-                            <strong>Informativo à Gestão de Fomento</strong><br>
-                            A tabela de avaliação está disponível para todos os perfis com acesso a esta visualização,<br>
-                            incluindo status e valor da nota.<br>
-                            O nome do avaliador é exibido apenas para a Gestão de Fomento.
-                        </div>
-                    <?php endif; ?>
-                    <?php if (!empty($avaliacoes) && $avaliacoes->count() > 0): ?>
-                        <div class="visualizacao-tabela">
-                            <table class="table table-sm table-striped align-middle">
-                                <thead>
-                                    <tr>
-	                                        <th>Avaliador</th>
-	                                        <th>Status</th>
-                                            <th>Cadastro</th>
-                                            <th>Exclusão</th>
-	                                        <th>Nota</th>
-	                                        <th>Nota súmula</th>
-                                        <th>Ações</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php foreach ($avaliacoes as $av): ?>
+                    <?php if (!$podeVisualizarResultadoAvaliacao): ?>
+                        <p class="text-muted mb-0">Resultado e avaliações disponíveis após a data de resultado do edital.</p>
+                    <?php else: ?>
+                        <p>
+                            <strong>Resultado final:</strong>
+                            <?= !empty($resultadoMap[(string)($inscricao->resultado ?? '')]) ? h($resultadoMap[(string)$inscricao->resultado]) : $naoInformado ?>
+                        </p>
+                        <?php if ($ehYoda): ?>
+                            <div class="alert alert-light border py-2 px-3 mb-3" style="font-size: 0.92rem; line-height: 1.4;">
+                                <strong>Informativo à Gestão de Fomento</strong><br>
+                                A tabela de avaliação está disponível para os perfis com acesso a esta visualização:
+                                Gestão de Fomento, coordenação da unidade da inscrição, orientador e bolsista.<br>
+                                São apresentados status, valor da nota e link para os detalhes da nota.<br>
+                                O nome do avaliador é exibido apenas para a Gestão de Fomento.<br>
+                                Para a Gestão de Fomento, os dados são apresentados a partir do cadastro. Para os demais perfis, somente após a data de resultado do edital.
+                            </div>
+                        <?php endif; ?>
+                        <?php if (!empty($avaliacoes) && $avaliacoes->count() > 0): ?>
+                            <div class="visualizacao-tabela">
+                                <table class="table table-sm table-striped align-middle">
+                                    <thead>
+                                        <tr>
+	                                            <th>Avaliador</th>
+	                                            <th>Status</th>
+                                                <th>Cadastro</th>
+                                                <th>Exclusão</th>
+	                                            <th>Nota</th>
+	                                            <th>Nota súmula</th>
+                                            <th>Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($avaliacoes as $av): ?>
                                             <?php
                                                 $avaliacaoDeletada = (int)($av->deleted ?? 0) === 1;
                                                 $dataCadastro = $av->created ?? null;
@@ -1182,12 +1193,13 @@ $formatarDataHoraAnexo = static function ($valor): string {
                                                 <?php endif; ?>
                                             </td>
                                         </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                    <?php else: ?>
-                        <p class="text-muted">Nenhum avaliador vinculado.</p>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        <?php else: ?>
+                            <p class="text-muted">Nenhum avaliador vinculado.</p>
+                        <?php endif; ?>
                     <?php endif; ?>
                 </div>
 

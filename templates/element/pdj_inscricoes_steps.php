@@ -2,7 +2,7 @@
 $steps = [
     'dadosBolsista' => 'Dados do bolsista',
     'sumulaBolsista' => 'Súmula do bolsista',
-    'sumulaOrientador' => 'Súmula do orientador',
+    'sumulaOrientador' => 'Súmula do Supervidor',
     'projeto' => 'Projeto',
     'gerarTermo' => 'Gerar termo',
     'finalizar' => 'Anexar o termo',

@@ -9,7 +9,7 @@
     <div class="card">
         <div class="card-body">
             <div class="p-3 mb-4 bg-light border rounded text-center">
-                <h3 class="mb-2">Dados do projeto do orientador</h3>
+                <h3 class="mb-2">Dados do projeto do Supervidor</h3>
                 <div class="fw-semibold">Inscrição PDJ - <?= h($edital->nome) ?></div>
                 <div class="text-muted mt-1">Projeto novo para esta inscrição.</div>
             </div>

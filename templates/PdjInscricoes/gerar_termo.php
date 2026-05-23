@@ -20,7 +20,7 @@
                 <ol class="mb-0 mt-2 ps-3">
                     <li>Bolsista: dados pessoais, anexos e cota afirmativa.</li>
                     <li>Súmula do bolsista: itens e quantidades, quando aplicável.</li>
-                    <li>Súmula do orientador: itens e quantidades, quando aplicável.</li>
+                    <li>Súmula do Supervidor: itens e quantidades, quando aplicável.</li>
                     <li>Projeto: título, resumo, áreas e anexo.</li>
                 </ol>
             </div>
