@@ -116,8 +116,9 @@
                                     <?php
                                         $statusHomologacao = match ((string)($item->homologado ?? '')) {
                                             'S' => 'Homologada',
+                                            'P' => 'Homologada com pendência',
                                             'N' => 'Não homologada',
-                                            default => 'Pendente',
+                                            default => 'Não verificada',
                                         };
                                     ?>
                                     <?= h($statusHomologacao) ?>

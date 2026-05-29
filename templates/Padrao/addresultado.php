@@ -6,10 +6,13 @@
  * @var string $resultadoAtual
  * @var array<int, string> $erros
  */
-$this->assign('title', 'Alterar resultado');
+$resultadoJaLancado = trim((string)($inscricao->resultado ?? '')) !== '';
+$labelAcaoResultado = $resultadoJaLancado ? 'Alterar resultado' : 'Lançar resultado';
+$this->assign('title', $labelAcaoResultado);
 
 $homologacaoTexto = match ((string)($inscricao->homologado ?? '')) {
     'S' => 'Homologada',
+    'P' => 'Homologada com pendência',
     'N' => 'Não homologada',
     default => 'Não definida',
 };
@@ -23,10 +26,10 @@ $editalNome = !empty($inscricao->editai->nome) ? (string)$inscricao->editai->nom
     <div class="card">
         <div class="card-body">
             <div class="p-3 mb-4 bg-light border rounded">
-                <h4 class="mb-2">Alterar resultado #<?= (int)$inscricao->id ?></h4>
+                <h4 class="mb-2"><?= h($labelAcaoResultado) ?> #<?= (int)$inscricao->id ?></h4>
                 <div class="text-muted">Ação exclusiva da gestão.</div>
                 <div class="text-muted">
-                    Inscrições não homologadas somente podem ser alteradas para Reprovada.
+                    Inscrições não homologadas ou homologadas com pendência somente podem ser alteradas para Reprovada.
                 </div>
             </div>
 
@@ -102,7 +105,7 @@ $editalNome = !empty($inscricao->editai->nome) ? (string)$inscricao->editai->nom
                             ['action' => 'visualizar', (int)$inscricao->id],
                             ['class' => 'btn btn-outline-secondary']
                         ) ?>
-                        <?= $this->Form->button('Salvar resultado', ['class' => 'btn btn-primary']) ?>
+                        <?= $this->Form->button($labelAcaoResultado, ['class' => 'btn btn-primary']) ?>
                     </div>
                 <?= $this->Form->end() ?>
             <?php endif; ?>

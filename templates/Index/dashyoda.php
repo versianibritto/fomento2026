@@ -223,7 +223,7 @@ document.addEventListener('DOMContentLoaded', function () {
                             <a href="<?= $this->Url->build([
                                 'controller' => 'Gestao',
                                 'action' => 'resultadoHomologacao',
-                                '?' => ['homologado' => 'P'],
+                                '?' => ['homologado' => 'A'],
                             ]) ?>"
                             class="btn btn-outline-warning btn-sm">
                                 <i class="bi bi-check2-square me-1"></i>Homologar
@@ -255,13 +255,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
                         <!-- Falta / Total (AÇÃO CONTEXTUAL) -->
                         <div>
-	                            <h3 class="fw-bold text-warning mb-1">
+	                            <h3 class="fw-bold text-primary mb-1">
 	                                <a href="<?= $this->Url->build([
                                         'controller' => 'Gestao',
                                         'action' => 'resultadoHomologacao',
-                                        '?' => ['homologado' => 'P'],
+                                        '?' => ['homologado' => 'A'],
                                     ]) ?>"
-	                                class="text-warning text-decoration-none">
+	                                class="text-primary text-decoration-none">
                                     <?= $dashboard['homologacaoPendente'] ?? 0 ?>
                                     /
                                     <?= $dashboard['homologacaoTotal'] ?? 0 ?>
@@ -272,14 +272,42 @@ document.addEventListener('DOMContentLoaded', function () {
 
                         <div>
                             <h3 class="fw-bold text-success mb-1">
-                                <?= $dashboard['aceito'] ?? 0 ?>
+                                <a href="<?= $this->Url->build([
+                                    'controller' => 'Gestao',
+                                    'action' => 'resultadoHomologacao',
+                                    '?' => ['homologado' => 'S'],
+                                ]) ?>"
+                                class="text-success text-decoration-none">
+                                    <?= $dashboard['aceito'] ?? 0 ?>
+                                </a>
                             </h3>
                             <small class="text-muted">Aceitas</small>
                         </div>
 
                         <div>
+                            <h3 class="fw-bold text-warning mb-1">
+                                <a href="<?= $this->Url->build([
+                                    'controller' => 'Gestao',
+                                    'action' => 'resultadoHomologacao',
+                                    '?' => ['homologado' => 'P'],
+                                ]) ?>"
+                                class="text-warning text-decoration-none">
+                                    <?= $dashboard['homologacaoPendencia'] ?? 0 ?>
+                                </a>
+                            </h3>
+                            <small class="text-muted">Com pendência</small>
+                        </div>
+
+                        <div>
                             <h3 class="fw-bold text-danger mb-1">
-                                <?= $dashboard['recusado'] ?? 0 ?>
+                                <a href="<?= $this->Url->build([
+                                    'controller' => 'Gestao',
+                                    'action' => 'resultadoHomologacao',
+                                    '?' => ['homologado' => 'N'],
+                                ]) ?>"
+                                class="text-danger text-decoration-none">
+                                    <?= $dashboard['recusado'] ?? 0 ?>
+                                </a>
                             </h3>
                             <small class="text-muted">Recusadas</small>
                         </div>

@@ -1385,17 +1385,21 @@ class PadraoController extends AppController
 
         $faseAtual = (int)($inscricao->fase_id ?? 0);
         $homologado = strtoupper((string)($inscricao->homologado ?? ''));
+        $origem = strtoupper((string)($inscricao->origem ?? ''));
         $erros = [];
 
         if ($inscricao->deleted !== null) {
             $erros[] = 'Inscrições deletadas não podem ter o resultado alterado.';
+        }
+        if (!in_array($origem, ['N', 'R'], true)) {
+            $erros[] = 'A alteração de resultado só é permitida para inscrições novas ou renovações.';
         }
         if (!in_array($faseAtual, [4, 8, 9, 10], true)) {
             $erros[] = 'A alteração de resultado só é permitida nas fases Finalizada, Banco Reserva, Aprovado ou Reprovado.';
         }
         if ($homologado === '') {
             $erros[] = 'A homologação ainda não foi definida. Não é possível alterar o resultado.';
-        } elseif (!in_array($homologado, ['S', 'N'], true)) {
+        } elseif (!in_array($homologado, ['S', 'N', 'P'], true)) {
             $erros[] = 'A homologação atual está inconsistente. Não é possível alterar o resultado.';
         }
 
@@ -1406,7 +1410,7 @@ class PadraoController extends AppController
                 'B' => 'Banco Reserva',
                 'R' => 'Reprovado',
             ];
-        } elseif ($homologado === 'N') {
+        } elseif (in_array($homologado, ['N', 'P'], true)) {
             $resultadoOptions = [
                 'R' => 'Reprovado',
             ];

@@ -363,7 +363,7 @@ class ProjetoBolsistasTable extends Table
         $validator
             ->scalar('homologado')
             ->maxLength('homologado', 1)
-            ->inList('homologado', ['S', 'N'])
+            ->inList('homologado', ['S', 'N', 'P'])
             ->allowEmptyString('homologado');
 
         $validator

@@ -2081,12 +2081,12 @@ class PdjRenovacoesController extends AppController
             $this->Flash->error('Acesso negado.');
             return $this->redirect(['controller' => 'Index', 'action' => 'dashboard']);
         }
-        if ((int)$inscricao->fase_id !== 5) {
+        if ((int)$inscricao->fase_id !== 5 && !$ehTI) {
             $this->Flash->error('O termo só pode ser baixado quando a inscrição estiver na fase 5.');
             return $this->redirect(['action' => 'gerarTermoRenovacao', $edital->id, $inscricao->id]);
         }
 
-        $geracaoTopo = 'Termo gerado em ' . date('d/m/Y H:i:s', strtotime('-3 hours')) . ' por ' . (string)($identity->nome ?? 'Usuário');
+        $geracaoTopo = 'Termo gerado em ' . date('d/m/Y H:i:s') . ' por ' . (string)($identity->nome ?? 'Usuário');
         $htmlPdf = $this->montarHtmlTermoInscricao($edital, $inscricao, false, '', $geracaoTopo);
         $htmlExport = $this->montarHtmlTermoInscricao($edital, $inscricao, false, '', $geracaoTopo);
 
@@ -2313,7 +2313,7 @@ class PdjRenovacoesController extends AppController
         $nomeEditalCabecalho = $esc($edital->nome ?? 'PIBIC');
         $textoGeracaoCabecalho = trim((string)$textoRodapeGeracao) !== ''
             ? (string)$textoRodapeGeracao
-            : ('Termo gerado em ' . date('d/m/Y H:i:s', strtotime('-3 hours')) . ' por Usuario');
+            : ('Termo gerado em ' . date('d/m/Y H:i:s') . ' por Usuario');
         $textoGeracaoCabecalhoHtml = $esc($textoGeracaoCabecalho);
         if (preg_match('/^Termo gerado em (.+) por (.+)$/u', $textoGeracaoCabecalho, $partesGeracao) === 1) {
             $textoGeracaoCabecalhoHtml = 'Termo gerado em <strong>' . $esc($partesGeracao[1]) . '</strong> por <strong>' . $esc($partesGeracao[2]) . '</strong>';

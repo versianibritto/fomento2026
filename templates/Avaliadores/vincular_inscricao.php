@@ -29,6 +29,9 @@ $homologadoValor = strtoupper((string)($inscricao->homologado ?? ''));
 if ($homologadoValor === 'S') {
     $homologadoTexto = 'Homologada';
     $homologadoClasse = 'success';
+} elseif ($homologadoValor === 'P') {
+    $homologadoTexto = 'Homologada com pendência';
+    $homologadoClasse = 'warning text-dark';
 } elseif ($homologadoValor === 'N') {
     $homologadoTexto = 'Não homologada';
     $homologadoClasse = 'danger';

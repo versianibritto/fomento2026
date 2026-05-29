@@ -37,6 +37,11 @@ class ListasController extends AppController
     {
         parent::beforeFilter($event);
         $this->Geral = TableRegistry::getTableLocator()->get('Geral');
+
+        $acessoPadauan = $this->validarAcessoPadauan();
+        if ($acessoPadauan !== null) {
+            return $acessoPadauan;
+        }
     }
 
     public function initialize(): void
@@ -70,8 +75,9 @@ class ListasController extends AppController
             ->toArray();
         $homologacao = [
             'T' => 'Todas',
-            'P' => 'Não verificadas',
+            'A' => 'Não verificadas',
             'S' => 'Homologadas',
+            'P' => 'Homologadas com pendência',
             'N' => 'Não homologadas',
         ];
         $herancaOptions = [
@@ -959,8 +965,9 @@ class ListasController extends AppController
         }
 
         $homologadoOptions = [
-            'P' => 'Não verificada',
+            'A' => 'Não verificada',
             'S' => 'Homologada',
+            'P' => 'Homologada com pendência',
             'N' => 'Não homologada',
         ];
         if ($filtros['homologado'] !== '' && !isset($homologadoOptions[$filtros['homologado']])) {
@@ -2112,9 +2119,9 @@ class ListasController extends AppController
             'ProjetoBolsistas.id' => 'DESC',
         ]);
 
-        if (in_array($filtros['homologado'] ?? '', ['S', 'N'], true)) {
+        if (in_array($filtros['homologado'] ?? '', ['S', 'N', 'P'], true)) {
             $query->where(['ProjetoBolsistas.homologado' => $filtros['homologado']]);
-        } elseif (($filtros['homologado'] ?? '') === 'P') {
+        } elseif (($filtros['homologado'] ?? '') === 'A') {
             $query->where(['ProjetoBolsistas.homologado IS' => null]);
         }
 
@@ -2247,6 +2254,7 @@ class ListasController extends AppController
                         $key = strtoupper((string)$val);
                         $val = match ($key) {
                             'S' => 'Homologada',
+                            'P' => 'Homologada com pendência',
                             'N' => 'Não homologada',
                             default => 'Não verificada',
                         };
@@ -2276,8 +2284,9 @@ class ListasController extends AppController
             ->toArray();
         $homologacao = [
             'T' => 'Todas',
-            'P' => 'Não verificadas',
+            'A' => 'Não verificadas',
             'S' => 'Homologadas',
+            'P' => 'Homologadas com pendência',
             'N' => 'Não homologadas',
         ];
         $herancaOptions = [
@@ -2369,6 +2378,39 @@ class ListasController extends AppController
         return [];
     }
 
+    private function validarAcessoPadauan()
+    {
+        $data = $this->identityToArray($this->request->getAttribute('identity'));
+        if ($data === [] || !empty($data['yoda'])) {
+            return null;
+        }
+
+        $padauanRaw = trim((string)($data['padauan'] ?? ''));
+        if ($padauanRaw === '') {
+            return null;
+        }
+
+        $acoesPermitidas = ['busca', 'resultado', 'limpar'];
+        $action = (string)$this->request->getParam('action');
+        if (in_array($action, ['busca', 'resultado'], true)) {
+            $pass = $this->request->getParam('pass') ?? [];
+            $tipo = strtoupper((string)($pass[0] ?? 'T'));
+            if (in_array($tipo, ['V', 'A', 'T'], true)) {
+                return null;
+            }
+
+            $this->Flash->error('Área restrita. Seu perfil permite acesso apenas às listagens administrativas autorizadas.');
+            return $this->redirect(['controller' => 'Index', 'action' => 'dashboard']);
+        }
+
+        if ($action === 'limpar') {
+            return null;
+        }
+
+        $this->Flash->error('Área restrita. Seu perfil permite acesso apenas às listagens administrativas autorizadas.');
+        return $this->redirect(['controller' => 'Index', 'action' => 'dashboard']);
+    }
+
     private function getPadraoInscricaoColumns($rows): array
     {
         $columns = $this->Geral->getSchema()->columns();
@@ -2449,6 +2491,8 @@ class ListasController extends AppController
         } elseif ($homologado === 'N') {
             $conditions[] = ['Geral.homologado' => 'N'];
         } elseif ($homologado === 'P') {
+            $conditions[] = ['Geral.homologado' => 'P'];
+        } elseif ($homologado === 'A') {
             $conditions[] = ['Geral.homologado IS' => null];
         }
 

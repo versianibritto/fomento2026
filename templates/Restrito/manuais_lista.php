@@ -1,5 +1,6 @@
 <?php
 $filtros = (array)($filtros ?? []);
+$acessosManual = (array)($acessosManual ?? []);
 ?>
 <section class="mt-n3">
     <div class="card card-secondary card-outline mb-3">
@@ -30,6 +31,15 @@ $filtros = (array)($filtros ?? []);
                         'value' => $filtros['restrito'] ?? '',
                     ]) ?>
                 </div>
+                <div class="col-md-2">
+                    <?= $this->Form->control('acesso', [
+                        'label' => 'Acesso',
+                        'type' => 'select',
+                        'options' => ['' => 'Todos'] + $acessosManual,
+                        'class' => 'form-select',
+                        'value' => $filtros['acesso'] ?? '',
+                    ]) ?>
+                </div>
                 <div class="col-md-3">
                     <?= $this->Form->control('status', [
                         'label' => 'Status',
@@ -55,6 +65,7 @@ $filtros = (array)($filtros ?? []);
                                 <th style="width: 80px;"><?= $this->Paginator->sort('id', 'ID') ?></th>
                                 <th><?= $this->Paginator->sort('nome', 'Nome') ?></th>
                                 <th style="width: 90px;"><?= $this->Paginator->sort('restrito', 'Restrito') ?></th>
+                                <th style="width: 160px;"><?= $this->Paginator->sort('acesso', 'Acesso') ?></th>
                                 <th>Anexo</th>
                                 <th style="width: 180px;"><?= $this->Paginator->sort('created', 'Criado em') ?></th>
                                 <th style="width: 180px;"><?= $this->Paginator->sort('deleted', 'Status') ?></th>
@@ -67,6 +78,15 @@ $filtros = (array)($filtros ?? []);
                                     <td><?= (int)$item->id ?></td>
                                     <td><?= !empty($item->nome) ? $item->nome : '-' ?></td>
                                     <td><?= (int)($item->restrito ?? 0) === 1 ? 'Sim' : 'Não' ?></td>
+                                    <td>
+                                        <?php
+                                            $acessosItem = array_filter(array_map('trim', explode(',', (string)($item->acesso ?? ''))));
+                                            $acessosLabels = array_map(static function ($codigo) use ($acessosManual) {
+                                                return $acessosManual[$codigo] ?? $codigo;
+                                            }, $acessosItem);
+                                        ?>
+                                        <?= $acessosLabels ? h(implode(', ', $acessosLabels)) : '-' ?>
+                                    </td>
                                     <td>
                                         <?php if (!empty($item->arquivo)): ?>
                                             <a href="/uploads/editais/<?= h($item->arquivo) ?>" target="_blank"><?= h($item->arquivo) ?></a>
@@ -100,7 +120,15 @@ $filtros = (array)($filtros ?? []);
                                                 ) ?>
                                             </div>
                                         <?php else: ?>
-                                            <span class="text-muted small">Sem ações</span>
+                                            <?= $this->Form->postLink(
+                                                'Reativar',
+                                                ['controller' => 'Restrito', 'action' => 'manuaisLista'],
+                                                [
+                                                    'class' => 'btn btn-outline-success btn-sm',
+                                                    'confirm' => 'Confirma a reativação do manual #' . (int)$item->id . '?',
+                                                    'data' => ['acao' => 'reativar', 'id' => (int)$item->id],
+                                                ]
+                                            ) ?>
                                         <?php endif; ?>
                                     </td>
                                 </tr>

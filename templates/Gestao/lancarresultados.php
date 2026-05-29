@@ -14,6 +14,12 @@ $iconeRecusa = static function (string $motivo): string {
     if (str_contains($motivo, 'não homologada')) {
         return '<span class="text-secondary" title="Não homologada"><i class="fa fa-check-square-o"></i></span>';
     }
+    if (str_contains($motivo, 'homologada com pendência')) {
+        return '<span class="text-warning" title="Homologada com pendência"><i class="fa fa-exclamation-triangle"></i></span>';
+    }
+    if (str_contains($motivo, 'não passou pela homologação')) {
+        return '<span class="text-primary" title="Homologação não verificada"><i class="fa fa-clock-o"></i></span>';
+    }
     if (str_contains($motivo, 'origem inválida')) {
         return '<span class="text-info" title="Origem inválida"><i class="fa fa-random"></i></span>';
     }

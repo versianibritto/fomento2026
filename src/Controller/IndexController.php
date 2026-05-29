@@ -129,12 +129,135 @@ class IndexController extends AppController
     public function manuais()
     {
         $manuais = TableRegistry::getTableLocator()->get('Manuais')->find()->where([
-            '(deleted is null)',
-            'restrito'=>0
+            'Manuais.deleted IS' => null,
+            'Manuais.restrito' => 0,
+            'Manuais.arquivo IS NOT' => null,
+            'Manuais.arquivo !=' => '',
         ])->orderBy([
             'Manuais.id' => 'DESC'
         ]);
         $this->set(compact('manuais'));               
+    }
+
+    public function manuaisLista()
+    {
+        $this->request->allowMethod(['get']);
+        $this->viewBuilder()->setLayout('admin');
+        $tblManuais = TableRegistry::getTableLocator()->get('Manuais');
+        $identity = $this->request->getAttribute('identity');
+        $perfilManuais = $this->getPerfilManuaisLista($identity);
+        $filtros = [
+            'nome' => trim((string)$this->request->getQuery('nome', '')),
+            'restrito' => (string)$this->request->getQuery('restrito', ''),
+            'acesso' => strtoupper(trim((string)$this->request->getQuery('acesso', ''))),
+            'status' => (string)$this->request->getQuery('status', $perfilManuais['ti'] ? 'T' : 'A'),
+        ];
+        if (!$perfilManuais['ti']) {
+            $filtros['status'] = 'A';
+        }
+        if (
+            !$perfilManuais['ti']
+            && !$perfilManuais['yoda']
+            && !$perfilManuais['jedi']
+            && !$perfilManuais['padauan']
+        ) {
+            $filtros['restrito'] = '0';
+            $filtros['acesso'] = '';
+        }
+
+        $conditions = [];
+        if ($filtros['nome'] !== '') {
+            $conditions['Manuais.nome LIKE'] = '%' . $filtros['nome'] . '%';
+        }
+        if ($filtros['restrito'] !== '') {
+            $conditions['Manuais.restrito'] = (int)$filtros['restrito'];
+        }
+        if ($filtros['acesso'] !== '') {
+            $conditions['Manuais.acesso LIKE'] = '%' . $filtros['acesso'] . '%';
+        }
+        if ($perfilManuais['ti']) {
+            if ($filtros['status'] === 'A') {
+                $conditions['Manuais.deleted IS'] = null;
+            } elseif ($filtros['status'] === 'I') {
+                $conditions['Manuais.deleted IS NOT'] = null;
+            }
+        } else {
+            $conditions['Manuais.deleted IS'] = null;
+        }
+
+        $escopo = $this->getEscopoManuaisLista($perfilManuais);
+        if ($escopo !== []) {
+            $conditions[] = $escopo;
+        }
+
+        $query = $tblManuais->find()
+            ->where($conditions)
+            ->orderBy(['Manuais.id' => 'DESC']);
+
+        $manuais = $this->paginate($query, ['limit' => 15]);
+        $acessosManual = [
+            'T' => 'TI',
+            'Y' => 'G Fomento',
+            'J' => 'Cord Unid',
+            'P' => 'Cord Programa',
+        ];
+
+        $this->set(compact('manuais', 'filtros', 'acessosManual', 'perfilManuais'));
+    }
+
+    private function getPerfilManuaisLista($identity): array
+    {
+        $valor = static function ($campo) use ($identity) {
+            if (!$identity) {
+                return null;
+            }
+            if (is_array($identity)) {
+                return $identity[$campo] ?? null;
+            }
+            return $identity->{$campo} ?? null;
+        };
+
+        $id = (int)($valor('id') ?? 0);
+        $ti = in_array($id, [1, 8088], true);
+        $yoda = !$ti && !empty($valor('yoda'));
+        $jedi = !$ti && !$yoda && trim((string)($valor('jedi') ?? '')) !== '';
+        $padauan = !$ti && !$yoda && trim((string)($valor('padauan') ?? '')) !== '';
+
+        return compact('ti', 'yoda', 'jedi', 'padauan');
+    }
+
+    private function getEscopoManuaisLista(array $perfil): array
+    {
+        if (!empty($perfil['ti'])) {
+            return [];
+        }
+        if (!empty($perfil['yoda'])) {
+            return ['Manuais.deleted IS' => null];
+        }
+        if (!empty($perfil['jedi']) || !empty($perfil['padauan'])) {
+            $acessos = [];
+            if (!empty($perfil['jedi'])) {
+                $acessos[] = 'J';
+            }
+            if (!empty($perfil['padauan'])) {
+                $acessos[] = 'P';
+            }
+            $condicoesAcesso = [];
+            foreach ($acessos as $acesso) {
+                $condicoesAcesso[] = ['Manuais.acesso LIKE' => '%' . $acesso . '%'];
+            }
+            return [
+                'OR' => [
+                    ['Manuais.restrito' => 0],
+                    [
+                        'Manuais.restrito' => 1,
+                        'OR' => $condicoesAcesso,
+                    ],
+                ],
+            ];
+        }
+
+        return ['Manuais.restrito' => 0];
     }
 
     //ok
@@ -234,6 +357,7 @@ class IndexController extends AppController
             'finalizadas'  => 0,
             'total'        => 0,
             'homologacaoPendente' => 0,
+            'homologacaoPendencia' => 0,
             'homologacaoTotal' => 0,
             'cancel'       => 0,
             'subst'        => 0,
@@ -272,6 +396,8 @@ class IndexController extends AppController
                     $dashboard['homologacaoPendente'] += $qtd;
                 } elseif ($statusHomologacao === 'S') {
                     $dashboard['aceito'] += $qtd;
+                } elseif ($statusHomologacao === 'P') {
+                    $dashboard['homologacaoPendencia'] += $qtd;
                 } elseif ($statusHomologacao === 'N') {
                     $dashboard['recusado'] += $qtd;
                 }

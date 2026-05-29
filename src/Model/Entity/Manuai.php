@@ -16,6 +16,7 @@ use Cake\ORM\Entity;
  * @property \Cake\I18n\DateTime|null $modified
  * @property string|null $nome
  * @property int|null $restrito
+ * @property string|null $acesso
  *
  * @property \App\Model\Entity\Usuario $usuario
  */
@@ -38,6 +39,7 @@ class Manuai extends Entity
         'modified' => true,
         'nome' => true,
         'restrito' => true,
+        'acesso' => true,
         'usuario' => true,
     ];
 }

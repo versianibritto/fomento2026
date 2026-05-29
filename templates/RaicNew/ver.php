@@ -54,8 +54,8 @@ $dataApresentacaoRaicViewIso = $dataApresentacaoRaicView?->format('Y-m-d');
 $podeAgendarApresentacao = $podeGerenciarApresentacao && $dataApresentacaoRaicView === null;
 $podeReagendarApresentacao = $podeGerenciarApresentacao
     && $dataApresentacaoRaicView !== null
-    && $dataApresentacaoRaicViewIso > $hojeRaicViewIso;
-$mensagemAgendamentoRaicView = "O agendamento da apresentação pode ser feito pela Gestão de Fomento ou pela Coordenação da unidade da RAIC.\n\nQuando a RAIC ainda não tiver data marcada, o agendamento fica disponível.\n\nSe já houver uma data definida, o reagendamento só pode ser feito até a véspera.\n\nNo dia da apresentação, não é mais possível reagendar.";
+    && $dataApresentacaoRaicViewIso >= $hojeRaicViewIso;
+$mensagemAgendamentoRaicView = "O agendamento da apresentação pode ser feito pela Gestão de Fomento ou pela Coordenação da unidade da RAIC.\n\nQuando a RAIC ainda não tiver data marcada, o agendamento fica disponível.\n\nSe já houver uma data definida, o reagendamento pode ser feito até o próprio dia da apresentação.\n\nApós a data agendada, não é mais possível reagendar.";
 $podeEditarRaic = (int)($raic->deleted ?? 0) === 0;
 $tipoBolsaCodigo = strtoupper((string)($raic->tipo_bolsa ?? ''));
 $editalTexto = 'Não informado';
@@ -419,7 +419,7 @@ if ($tipoBolsaCodigo === 'R') {
                                 || in_array((string)($raic->unidade_id ?? ''), $unidadesJedi, true);
                             $podeReagendarPorData = true;
                             if (!empty($raic->data_apresentacao) && $raic->data_apresentacao instanceof \DateTimeInterface) {
-                                $podeReagendarPorData = $raic->data_apresentacao->format('Y-m-d') > date('Y-m-d') || $identityAtualTi;
+                                $podeReagendarPorData = $raic->data_apresentacao->format('Y-m-d') >= date('Y-m-d') || $identityAtualTi;
                             }
                             $podeVerNotas = $identityAtualYoda
                                 || in_array($identityAtualId, [1, 8088], true)
@@ -456,7 +456,7 @@ if ($tipoBolsaCodigo === 'R') {
                                         $avaliado = !$deletado && (string)($b->situacao ?? '') === 'F';
                                         $dataCadastro = $b->created ?? null;
                                         $dataCadastroTexto = $dataCadastro && method_exists($dataCadastro, 'i18nFormat')
-                                            ? $dataCadastro->i18nFormat('dd/MM/yyyy HH:mm')
+                                            ? $dataCadastro->subHours(3)->i18nFormat('dd/MM/yyyy HH:mm')
                                             : 'Não informado';
                                         $usuarioCadastro = trim((string)($b->criador->nome ?? ''));
                                         if ($usuarioCadastro === '') {
@@ -464,7 +464,7 @@ if ($tipoBolsaCodigo === 'R') {
                                         }
                                         $dataExclusao = $b->deletado_em ?? null;
                                         $dataExclusaoTexto = $dataExclusao && method_exists($dataExclusao, 'i18nFormat')
-                                            ? $dataExclusao->i18nFormat('dd/MM/yyyy HH:mm')
+                                            ? $dataExclusao->subHours(3)->i18nFormat('dd/MM/yyyy HH:mm')
                                             : 'Não informado';
                                         $usuarioExclusao = trim((string)($b->deletador->nome ?? ''));
                                         if ($usuarioExclusao === '') {

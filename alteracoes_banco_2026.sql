@@ -1952,3 +1952,6 @@ ALTER TABLE `avaliador_bolsistas` ADD COLUMN `nota_sumula_bolsista` DOUBLE(5,2) 
 
 ALTER TABLE `avaliations_sumulas` ADD COLUMN `bolsista` TINYINT(1) NULL AFTER `quantidade_avaliada`;
 
+ALTER TABLE `projeto_bolsistas` CHANGE COLUMN `homologado` `homologado` ENUM('S', 'N', 'P') NULL DEFAULT NULL ;
+
+ALTER TABLE `manuais` ADD COLUMN `acesso` VARCHAR(45) NULL AFTER `restrito`;

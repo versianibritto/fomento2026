@@ -1,3 +1,12 @@
+<?php
+$this->Paginator->options([
+    'url' => [
+        'action' => 'resultado',
+        '?' => ['ref' => $token ?? $this->request->getQuery('ref')],
+    ],
+]);
+?>
+
 <h3>Resultado da Busca de Usuários</h3>
 
 <style>
@@ -138,9 +147,12 @@
     </div>
 
     <div class="mt-3 d-flex justify-content-center">
-        <?= $this->Paginator->numbers([
-            'class' => 'pagination',
-            'modulus' => 5
-        ]) ?>
+        <ul class="pagination mb-0">
+            <?= $this->Paginator->prev('<') ?>
+            <?= $this->Paginator->numbers([
+                'modulus' => 5,
+            ]) ?>
+            <?= $this->Paginator->next('>') ?>
+        </ul>
     </div>
 <?php endif; ?>

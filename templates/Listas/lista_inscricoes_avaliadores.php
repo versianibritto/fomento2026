@@ -328,6 +328,9 @@
                                 if ($homologadoValor === 'S') {
                                     $homologadoTexto = 'Homologado: Sim (S)';
                                     $homologadoClasse = 'success';
+                                } elseif ($homologadoValor === 'P') {
+                                    $homologadoTexto = 'Homologado: com pendência (P)';
+                                    $homologadoClasse = 'warning text-dark';
                                 } elseif ($homologadoValor === 'N') {
                                     $homologadoTexto = 'Homologado: Não (N)';
                                     $homologadoClasse = 'danger';

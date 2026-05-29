@@ -205,11 +205,13 @@
                             <?php } ?>
                         </a>
                     </li>
-                    <li class="sidebar-item">
-                        <a href="/raic-new/painel" class="sidebar-link <?=(($this->request->getParam('controller') == 'RaicNew' && $this->request->getParam('action') == 'painel') ? 'active' : '')?>">
-                            Raic
-                        </a>
-                    </li>
+                    <?php if (empty($usuario_logado['padauan'])): ?>
+                        <li class="sidebar-item">
+                            <a href="/raic-new/painel" class="sidebar-link <?=(($this->request->getParam('controller') == 'RaicNew' && $this->request->getParam('action') == 'painel') ? 'active' : '')?>">
+                                Raic
+                            </a>
+                        </li>
+                    <?php endif; ?>
                     
                     <li class="sidebar-item">
                         <a href="/avaliadores/avaliacoes" class="sidebar-link <?=(($this->request->getParam('controller') == 'Avaliadores' && $this->request->getParam('action') == 'avaliacoes') ? 'active' : '')?>">
@@ -248,6 +250,7 @@
                                 </a>
                             </li>
                         <?php } ?>
+                        
                     <?php } ?>
                     <!--
                     <li class="sidebar-item">
@@ -256,6 +259,11 @@
                         </a>
                     </li>
                     -->
+                    <li class="sidebar-item">
+                        <a href="/index/manuais-lista" class="sidebar-link <?=(($this->request->getParam('controller') == 'Index' && $this->request->getParam('action') == 'manuaisLista') ? 'active' : '')?>">
+                            Manuais
+                        </a>
+                    </li>
                     
                     <?php
                     if($usuario_logado['yoda'] || $usuario_logado['jedi']!=null || $usuario_logado['padauan']!=null) {
@@ -295,41 +303,45 @@
                     </li>
                   
                     <?php
-                        $raicAdminAberto = (
-                            ($this->request->getParam('controller') == 'Avaliadores' && $this->request->getParam('action') == 'cadastroRaic')
-                            || ($this->request->getParam('controller') == 'Listas' && in_array($this->request->getParam('action'), ['listaAvaliadoresRaic', 'buscaRaic', 'resultadoRaic'], true))
-                            || ($this->request->getParam('controller') == 'RaicNew' && $this->request->getParam('action') == 'voluntarias')
-                        );
+                        $temPadauan = !empty($usuario_logado['padauan']);
+                        $podeVerMenuRaic = !empty($usuario_logado['yoda']) || (!empty($usuario_logado['jedi']) && !$temPadauan);
                     ?>
-                    <li class="sidebar-item <?= $raicAdminAberto ? 'active' : '' ?>">
-                        <a data-bs-target="#menu-raic-admin" data-bs-toggle="collapse" class="sidebar-link sidebar-expansivel <?= $raicAdminAberto ? '' : 'collapsed' ?>" href="#">
-                            <i class="fa fa-folder"></i> RAIC <i class="fa fa-chevron-right sidebar-expansivel-indicador"></i>
-                        </a>
-                        <ul id="menu-raic-admin" class="sidebar-dropdown sidebar-subpanel list-unstyled collapse <?= $raicAdminAberto ? 'show' : '' ?>" data-bs-parent="#sidebar">
-                            <li class="sidebar-item">
-                                <a href="/avaliadores/cadastro-raic" class="sidebar-link <?=(($this->request->getParam('controller') == 'Avaliadores' && $this->request->getParam('action') == 'cadastroRaic') ? 'active' : '')?>">
-                                   Cadastro Massivo Avaliadores RAIC
-                                </a>
-                            </li>
-                            <li class="sidebar-item">
-                                <a href="/listas/lista-avaliadores-raic" class="sidebar-link <?=(($this->request->getParam('controller') == 'Listas' && $this->request->getParam('action') == 'listaAvaliadoresRaic') ? 'active' : '')?>">
-                                   Lista de Avaliadores RAIC
-                                </a>
-                            </li>
-                            <li class="sidebar-item">
-                                <a href="/raic-new/voluntarias" class="sidebar-link <?=(($this->request->getParam('controller') == 'RaicNew' && $this->request->getParam('action') == 'voluntarias') ? 'active' : '')?>">
-                                   Cadastro da Raic
-                                </a>
-                            </li>
-                            <?php if (!empty($usuario_logado['yoda']) || !empty($usuario_logado['jedi'])): ?>
+                    <?php if ($podeVerMenuRaic): ?>
+                        <?php
+                            $raicAdminAberto = (
+                                ($this->request->getParam('controller') == 'Avaliadores' && $this->request->getParam('action') == 'cadastroRaic')
+                                || ($this->request->getParam('controller') == 'Listas' && in_array($this->request->getParam('action'), ['listaAvaliadoresRaic', 'buscaRaic', 'resultadoRaic'], true))
+                                || ($this->request->getParam('controller') == 'RaicNew' && $this->request->getParam('action') == 'voluntarias')
+                            );
+                        ?>
+                        <li class="sidebar-item <?= $raicAdminAberto ? 'active' : '' ?>">
+                            <a data-bs-target="#menu-raic-admin" data-bs-toggle="collapse" class="sidebar-link sidebar-expansivel <?= $raicAdminAberto ? '' : 'collapsed' ?>" href="#">
+                                <i class="fa fa-folder"></i> RAIC <i class="fa fa-chevron-right sidebar-expansivel-indicador"></i>
+                            </a>
+                            <ul id="menu-raic-admin" class="sidebar-dropdown sidebar-subpanel list-unstyled collapse <?= $raicAdminAberto ? 'show' : '' ?>" data-bs-parent="#sidebar">
+                                <li class="sidebar-item">
+                                    <a href="/avaliadores/cadastro-raic" class="sidebar-link <?=(($this->request->getParam('controller') == 'Avaliadores' && $this->request->getParam('action') == 'cadastroRaic') ? 'active' : '')?>">
+                                       Cadastro Massivo Avaliadores RAIC
+                                    </a>
+                                </li>
+                                <li class="sidebar-item">
+                                    <a href="/listas/lista-avaliadores-raic" class="sidebar-link <?=(($this->request->getParam('controller') == 'Listas' && $this->request->getParam('action') == 'listaAvaliadoresRaic') ? 'active' : '')?>">
+                                       Lista de Avaliadores RAIC
+                                    </a>
+                                </li>
+                                <li class="sidebar-item">
+                                    <a href="/raic-new/voluntarias" class="sidebar-link <?=(($this->request->getParam('controller') == 'RaicNew' && $this->request->getParam('action') == 'voluntarias') ? 'active' : '')?>">
+                                       Cadastro da Raic
+                                    </a>
+                                </li>
                                 <li class="sidebar-item">
                                     <a href="/listas/busca-raic" class="sidebar-link <?=(($this->request->getParam('controller') == 'Listas' && in_array($this->request->getParam('action'), ['buscaRaic', 'resultadoRaic'], true)) ? 'active' : '')?>">
                                         Listagem Raic
                                     </a>
                                 </li>
-                            <?php endif; ?>
-                        </ul>
-                    </li>
+                            </ul>
+                        </li>
+                    <?php endif; ?>
                     
                     
                                       

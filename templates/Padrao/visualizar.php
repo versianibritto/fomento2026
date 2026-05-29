@@ -23,9 +23,9 @@
  */
 $naoInformado = '<span class="badge border border-danger text-danger bg-transparent fw-normal">Não informado</span>';
 $filhosMap = [
-    '0' => 'não possui filhos, ou sao maiores de 5 anos',
-    '1' => 'Possui um filho menor de 5 anos',
-    '2' => 'Possui mais de um filho menor de 5 anos',
+    '0' => 'não possui filhos, ou sao maiores de 8 anos',
+    '1' => 'Possui um filho menor de 8 anos',
+    '2' => 'Possui mais de um filho menor de 8 anos',
 ];
 $origemAtual = strtoupper((string)($origemAtual ?? ($inscricao->origem ?? '')));
 $ehYoda = !empty($this->request->getAttribute('identity')['yoda']);
@@ -96,6 +96,50 @@ $formatarDataHoraAnexo = static function ($valor): string {
 
     $ts = strtotime((string)$valor);
     return $ts ? date('d/m/Y H:i', $ts) : 'Não informado';
+};
+$anexosSumulaPorTipo = [];
+foreach ((array)($anexosPorBloco['O'] ?? []) as $anexoSumula) {
+    $tipoIdSumula = (int)($anexoSumula['tipo_id'] ?? 0);
+    if ($tipoIdSumula <= 0) {
+        continue;
+    }
+    if (
+        !isset($anexosSumulaPorTipo[$tipoIdSumula])
+        || (empty($anexosSumulaPorTipo[$tipoIdSumula]['arquivo']) && !empty($anexoSumula['arquivo']))
+    ) {
+        $anexosSumulaPorTipo[$tipoIdSumula] = $anexoSumula;
+    }
+}
+$renderAnexoSumula = static function (?array $anexo, bool $exigido, string $tipoNomeFallback) use ($formatarDataHoraAnexo): string {
+    $tipoNome = !empty($anexo['tipo_nome']) ? h((string)$anexo['tipo_nome']) : h($tipoNomeFallback);
+    if (empty($anexo) || empty($anexo['arquivo'])) {
+        if (!$exigido) {
+            return '<div class="sumula-anexo-status">'
+                . '<span class="sumula-anexo-status-tipo">' . $tipoNome . '</span>'
+                . '<span class="badge border border-secondary text-secondary bg-transparent fw-normal">Não se aplica</span>'
+                . '</div>';
+        }
+
+        return '<div class="sumula-anexo-status">'
+            . '<span class="sumula-anexo-status-tipo">' . $tipoNome . '</span>'
+            . '<span class="badge border border-danger text-danger bg-transparent fw-normal">Anexo exigido, mas não imputado</span>'
+            . '</div>';
+    }
+
+    $arquivo = (string)$anexo['arquivo'];
+    $usuarioNome = !empty($anexo['usuario_nome']) ? h((string)$anexo['usuario_nome']) : 'Não informado';
+    $created = h($formatarDataHoraAnexo($anexo['created'] ?? null));
+
+    return '<div class="sumula-anexo-inline">'
+        . '<div class="sumula-anexo-info">'
+        . '<span class="sumula-anexo-label">' . $tipoNome . '</span>'
+        . '<span class="sumula-anexo-arquivo">' . h($arquivo) . '</span>'
+        . '<span class="sumula-anexo-meta">Incluído por ' . $usuarioNome . ' em ' . $created . '</span>'
+        . '</div>'
+        . '<a href="/uploads/anexos/' . h($arquivo) . '" target="_blank" class="btn btn-light border btn-sm py-0 px-2" title="Download">'
+        . '<i class="fa fa-download"></i>'
+        . '</a>'
+        . '</div>';
 };
 ?>
 <style>
@@ -198,8 +242,68 @@ $formatarDataHoraAnexo = static function ($valor): string {
         padding: 0.75rem;
         margin-bottom: 1rem;
     }
-    .sumula-campos p:last-child {
-        margin-bottom: 0;
+    .sumula-campo-item {
+        align-items: center;
+        padding: 0.45rem 0;
+        border-bottom: 1px solid #e9ecef;
+    }
+    .sumula-campo-item:last-child {
+        border-bottom: 0;
+        padding-bottom: 0;
+    }
+    .sumula-campo-valor {
+        min-width: 0;
+    }
+    .sumula-campo-anexo {
+        min-width: 0;
+    }
+    .sumula-anexo-inline {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.5rem;
+        min-width: 0;
+    }
+    .sumula-anexo-info {
+        min-width: 0;
+    }
+    .sumula-anexo-label,
+    .sumula-anexo-arquivo,
+    .sumula-anexo-meta,
+    .sumula-anexo-status-tipo {
+        display: block;
+    }
+    .sumula-anexo-label,
+    .sumula-anexo-status-tipo {
+        color: #495057;
+        font-size: 0.78rem;
+        font-weight: 600;
+    }
+    .sumula-anexo-status {
+        display: inline-flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.15rem;
+        max-width: 100%;
+    }
+    .sumula-anexo-arquivo {
+        color: #6c757d;
+        font-size: 0.8rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .sumula-anexo-meta {
+        color: #6c757d;
+        font-size: 0.72rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    @media (max-width: 767.98px) {
+        .sumula-anexo-inline {
+            justify-content: flex-start;
+        }
     }
     .sumula-separador {
         margin: 1rem 0 0.75rem;
@@ -266,6 +370,10 @@ $formatarDataHoraAnexo = static function ($valor): string {
         background: #fef2f2;
         border-color: #fca5a5;
     }
+    .homologacao-status-card.status-homologado-pendencia {
+        background: #fffbeb;
+        border-color: #fcd34d;
+    }
     .homologacao-status-card.status-nao-verificado {
         background: #f8fafc;
         border-color: #cbd5e1;
@@ -291,26 +399,32 @@ $formatarDataHoraAnexo = static function ($valor): string {
         $homologadoAtualTela = strtoupper((string)($inscricao->homologado ?? ''));
         $homologadoTextoTela = match ($homologadoAtualTela) {
             'S' => 'Sim',
+            'P' => 'Homologado com pendência',
             'N' => 'Não',
             default => 'Não verificado',
         };
         $homologadoBadgeTela = match ($homologadoAtualTela) {
             'S' => 'bg-success',
+            'P' => 'bg-warning text-dark',
             'N' => 'bg-danger',
             default => 'bg-secondary',
         };
         $homologadoStatusCardClasseTela = match ($homologadoAtualTela) {
             'S' => 'status-homologado',
+            'P' => 'status-homologado-pendencia',
             'N' => 'status-nao-homologado',
             default => 'status-nao-verificado',
         };
         $homologadoDataTextoTela = $formatarDataHoraAnexo($inscricao->homologado_data ?? null);
         $homologadoUsuarioTextoTela = trim((string)($inscricao->homologador->nome ?? ''));
         $homologadoJustificativaTextoTela = trim((string)($inscricao->homologado_justificativa ?? ''));
-        $podeAlterarResultado = empty($inscricao->deleted)
-            && in_array($faseAtual, [4, 8, 9, 10], true)
-            && in_array($homologadoAtualTela, ['S', 'N'], true);
         $origemTela = strtoupper((string)($inscricao->origem ?? ''));
+        $resultadoJaLancadoTela = trim((string)($inscricao->resultado ?? '')) !== '';
+        $labelAcaoResultadoTela = $resultadoJaLancadoTela ? 'Alterar Resultado' : 'Lançar Resultado';
+        $podeAlterarResultado = empty($inscricao->deleted)
+            && in_array($origemTela, ['N', 'R'], true)
+            && in_array($faseAtual, [4, 8, 9, 10], true)
+            && in_array($homologadoAtualTela, ['S', 'N', 'P'], true);
         $ehOrientadorTela = !empty($identityTela->id) && (int)$identityTela->id === (int)($inscricao->orientador ?? 0);
         $podeDesistirProcesso = !$isRenovacao
             && $origemTela === 'N'
@@ -653,30 +767,52 @@ $formatarDataHoraAnexo = static function ($valor): string {
                         <?php if ($mostrarFilhosOrientadora): ?>
                             <?php $filhosKey = $inscricao->filhos_menor !== null ? (string)$inscricao->filhos_menor : ''; ?>
                         <?php endif; ?>
+                        <?php
+                            $anexoFilhosExigido = $mostrarFilhosOrientadora && (int)($inscricao->filhos_menor ?? 0) > 0;
+                            $anexoDiplomaDoutoradoExigido = false;
+                            $anexoRecemServidorExigido = (int)($inscricao->recem_servidor ?? 0) === 1;
+                        ?>
                         <div class="sumula-campos">
                             <?php if ($mostrarFilhosOrientadora): ?>
-                                <p>
-                                    <strong><?= h($rotuloOrientadora) ?>, possui filhos menores de 5 anos?</strong>
-                                    <?= isset($filhosMap[$filhosKey]) ? h($filhosMap[$filhosKey]) : $naoInformado ?>
-                                </p>
+                                <div class="row g-2 sumula-campo-item">
+                                    <div class="col-md-6 sumula-campo-valor">
+                                        <strong><?= h($rotuloOrientadora) ?>, possui filhos menores de 8 anos?</strong>
+                                        <?= isset($filhosMap[$filhosKey]) ? h($filhosMap[$filhosKey]) : $naoInformado ?>
+                                    </div>
+                                    <div class="col-md-6 sumula-campo-anexo">
+                                        <?= $renderAnexoSumula($anexosSumulaPorTipo[27] ?? null, $anexoFilhosExigido, 'Certidão de Nascimento (Filhos Orientadora)') ?>
+                                    </div>
+                                </div>
                             <?php endif; ?>
-                            <p>
-                                <strong>Ano de conclusão do doutorado:</strong>
-                                <?= $inscricao->ano_doutorado !== null && $inscricao->ano_doutorado !== '' ? h((string)$inscricao->ano_doutorado) : $naoInformado ?>
-                            </p>
-                            <p>
-                                <strong>Você ingressou na Fiocruz por meio dos concursos de 2016 e 2024?</strong>
-                                <?php
-                                    $recemServidorValor = $inscricao->recem_servidor;
-                                    if ((string)$recemServidorValor === '1') {
-                                        echo 'Sim, incluirei o anexo do DO';
-                                    } elseif ((string)$recemServidorValor === '0') {
-                                        echo 'Não';
-                                    } else {
-                                        echo $naoInformado;
-                                    }
-                                ?>
-                            </p>
+                            <div class="row g-2 sumula-campo-item">
+                                <div class="col-md-6 sumula-campo-valor">
+                                    <strong>Ano de conclusão do doutorado:</strong>
+                                    <?= $inscricao->ano_doutorado !== null && $inscricao->ano_doutorado !== '' ? h((string)$inscricao->ano_doutorado) : $naoInformado ?>
+                                </div>
+                                <div class="col-md-6 sumula-campo-anexo">
+                                    <?php /*
+                                    <?= $renderAnexoSumula($anexosSumulaPorTipo[28] ?? null, $anexoDiplomaDoutoradoExigido, 'Diploma de doutorado (recém doutor)') ?>
+                                    */ ?>
+                                </div>
+                            </div>
+                            <div class="row g-2 sumula-campo-item">
+                                <div class="col-md-6 sumula-campo-valor">
+                                    <strong>Você ingressou na Fiocruz por meio dos concursos de 2016 e 2024?</strong>
+                                    <?php
+                                        $recemServidorValor = $inscricao->recem_servidor;
+                                        if ((string)$recemServidorValor === '1') {
+                                            echo 'Sim, incluirei o anexo do DO';
+                                        } elseif ((string)$recemServidorValor === '0') {
+                                            echo 'Não';
+                                        } else {
+                                            echo $naoInformado;
+                                        }
+                                    ?>
+                                </div>
+                                <div class="col-md-6 sumula-campo-anexo">
+                                    <?= $renderAnexoSumula($anexosSumulaPorTipo[29] ?? null, $anexoRecemServidorExigido, 'Cópia do DO (recém concursados)') ?>
+                                </div>
+                            </div>
                         </div>
                         <hr class="sumula-separador">
                         <h6 class="mb-2">Itens de Súmula</h6>
@@ -704,34 +840,6 @@ $formatarDataHoraAnexo = static function ($valor): string {
                                     </tbody>
                                 </table>
                             </div>
-                        <?php endif; ?>
-                        <hr>
-                        <h6 class="mb-2">Anexos da Súmula</h6>
-                        <?php if (empty($anexosPorBloco['O'])): ?>
-                            <p><span class="badge bg-danger">Nenhum anexo encontrado</span></p>
-                        <?php else: ?>
-                            <ul class="anexos-lista">
-                                <?php foreach ($anexosPorBloco['O'] as $anexo): ?>
-                                    <li>
-                                        <div class="anexo-titulo">
-                                            <span class="anexo-tipo"><?= h($anexo['tipo_nome']) ?></span>
-                                            <span class="anexo-arquivo"><?= !empty($anexo['arquivo']) ? h($anexo['arquivo']) : 'Não informado' ?></span>
-                                            <span class="anexo-meta">
-                                                Incluído por <?= !empty($anexo['usuario_nome']) ? h($anexo['usuario_nome']) : 'Não informado' ?>
-                                                em
-                                                <?= h($formatarDataHoraAnexo($anexo['created'] ?? null)) ?>
-                                            </span>
-                                        </div>
-                                        <?php if (!empty($anexo['arquivo'])): ?>
-                                            <a href="/uploads/anexos/<?= h($anexo['arquivo']) ?>" target="_blank" class="btn btn-light border btn-sm py-0 px-2" title="Download">
-                                                <i class="fa fa-download"></i>
-                                            </a>
-                                        <?php else: ?>
-                                            <span class="badge border border-danger text-danger bg-transparent fw-normal">Não informado</span>
-                                        <?php endif; ?>
-                                    </li>
-                                <?php endforeach; ?>
-                            </ul>
                         <?php endif; ?>
                     </div>
                 <?php endif; ?>
@@ -1366,17 +1474,17 @@ $formatarDataHoraAnexo = static function ($valor): string {
                                     <div class="col-md-4">
                                         <?php if ($podeAlterarResultado): ?>
                                             <?= $this->Html->link(
-                                                'Alterar Resultado',
+                                                $labelAcaoResultadoTela,
                                                 ['controller' => 'Padrao', 'action' => 'addresultado', (int)$inscricao->id],
                                                 ['class' => 'btn btn-outline-primary w-100']
                                             ) ?>
                                         <?php else: ?>
-                                            <button type="button" class="btn btn-outline-secondary w-100" disabled>Alterar Resultado</button>
+                                            <button type="button" class="btn btn-outline-secondary w-100" disabled><?= h($labelAcaoResultadoTela) ?></button>
                                         <?php endif; ?>
                                     </div>
                                     <div class="col-md-8">
                                         <p class="mb-1 text-muted">
-                                            <strong class="text-body">Homologação: <?= h($homologadoAtualTela === 'S' ? 'Homologada' : ($homologadoAtualTela === 'N' ? 'Não homologada' : 'Não definida')) ?></strong>
+                                            <strong class="text-body">Homologação: <?= h($homologadoAtualTela === 'S' ? 'Homologada' : ($homologadoAtualTela === 'P' ? 'Homologada com pendência' : ($homologadoAtualTela === 'N' ? 'Não homologada' : 'Não definida'))) ?></strong>
                                         </p>
                                         <p class="mb-0 text-muted">
                                             <?php if ($homologadoAtualTela === ''): ?>

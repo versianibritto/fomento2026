@@ -31,12 +31,28 @@ $textoBotao = $isEdicao ? 'Salvar alterações' : 'Cadastrar manual';
                         'class' => 'form-select',
                     ]) ?>
                 </div>
+                <div class="col-12" id="manual-acesso-bloco">
+                    <?= $this->Form->control('acesso', [
+                        'label' => 'Acesso',
+                        'type' => 'select',
+                        'multiple' => 'checkbox',
+                        'options' => $acessosManual ?? [],
+                        'value' => !empty($manual->acesso) ? array_filter(array_map('trim', explode(',', (string)$manual->acesso))) : [],
+                    ]) ?>
+                    <div class="form-text">
+                        Obrigatório apenas quando Restrito = Sim. O campo será gravado como letras separadas por vírgula: T para TI, Y para Yoda, J para Jedi e P para Padauan.
+                    </div>
+                    <div class="invalid-feedback d-block d-none" id="manual-acesso-erro">
+                        Informe ao menos um tipo de acesso quando o manual for restrito.
+                    </div>
+                </div>
                 <div class="col-md-8">
                     <?php if (empty($manual->arquivo)): ?>
                         <?= $this->Form->control('arquivo', [
                             'label' => 'Anexo',
                             'type' => 'file',
                             'class' => 'form-control',
+                            'required' => true,
                         ]) ?>
                     <?php else: ?>
                         <label class="form-label d-block">Anexo</label>
@@ -83,9 +99,40 @@ $textoBotao = $isEdicao ? 'Salvar alterações' : 'Cadastrar manual';
 </style>
 <script>
 (function () {
+    const restritoSelect = document.getElementById('restrito');
+    const acessoBloco = document.getElementById('manual-acesso-bloco');
+    const acessoErro = document.getElementById('manual-acesso-erro');
+    const acessoChecks = Array.from(document.querySelectorAll('input[name="acesso[]"]'));
     const arquivoInput = document.getElementById('manual-arquivo');
     const nomeAnexo = document.getElementById('manual-anexo-nome');
     const ajudaAnexo = document.getElementById('manual-anexo-ajuda');
+
+    if (restritoSelect && acessoBloco) {
+        const atualizarAcesso = function () {
+            const restrito = restritoSelect.value === '1';
+            acessoBloco.classList.toggle('d-none', !restrito);
+            if (!restrito && acessoErro) {
+                acessoErro.classList.add('d-none');
+            }
+        };
+        restritoSelect.addEventListener('change', atualizarAcesso);
+        atualizarAcesso();
+    }
+
+    if (restritoSelect && acessoErro && acessoChecks.length > 0) {
+        const atualizarErroAcesso = function () {
+            const restrito = restritoSelect.value === '1';
+            const algumAcesso = acessoChecks.some(function (checkbox) {
+                return checkbox.checked;
+            });
+            acessoErro.classList.toggle('d-none', !restrito || algumAcesso);
+        };
+        restritoSelect.addEventListener('change', atualizarErroAcesso);
+        acessoChecks.forEach(function (checkbox) {
+            checkbox.addEventListener('change', atualizarErroAcesso);
+        });
+        atualizarErroAcesso();
+    }
 
     if (arquivoInput && nomeAnexo && ajudaAnexo) {
         arquivoInput.addEventListener('change', function () {

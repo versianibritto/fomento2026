@@ -723,8 +723,9 @@ class GestaoController extends AppController
         $programas = $this->fetchTable('Programas')->find('list', ['limit' => 200])->toArray();
         $statusHomologacaoOptions = [
             '' => 'Todos',
-            'P' => 'Não verificadas',
+            'A' => 'Não verificadas',
             'S' => 'Homologadas',
+            'P' => 'Homologadas com pendência',
             'N' => 'Não homologadas',
         ];
 
@@ -735,7 +736,7 @@ class GestaoController extends AppController
     {
         $programaId = (int)($this->request->getQuery('programa_id') ?? 0);
         $homologadoParam = trim((string)($this->request->getQuery('homologado') ?? ''));
-        $homologado = in_array($homologadoParam, ['', 'P', 'S', 'N'], true) ? $homologadoParam : '';
+        $homologado = in_array($homologadoParam, ['', 'A', 'P', 'S', 'N'], true) ? $homologadoParam : '';
         $orientadorNome = trim((string)($this->request->getQuery('orientador_nome') ?? ''));
         $agora = FrozenTime::now();
         $conditions = [
@@ -749,6 +750,8 @@ class GestaoController extends AppController
         } elseif ($homologado === 'N') {
             $conditions['ProjetoBolsistas.homologado'] = 'N';
         } elseif ($homologado === 'P') {
+            $conditions['ProjetoBolsistas.homologado'] = 'P';
+        } elseif ($homologado === 'A') {
             $conditions['ProjetoBolsistas.homologado IS'] = null;
         }
 
@@ -865,8 +868,9 @@ class GestaoController extends AppController
             foreach ($rows as $item) {
                 $statusHomologacao = match ((string)($item->homologado ?? '')) {
                     'S' => 'Homologada',
+                    'P' => 'Homologada com pendência',
                     'N' => 'Não homologada',
-                    default => 'Pendente',
+                    default => 'Não verificada',
                 };
 
                 $exportRows[] = [
@@ -917,8 +921,9 @@ class GestaoController extends AppController
         }
         $statusHomologacaoOptions = [
             '' => 'Todos',
-            'P' => 'Não verificadas',
+            'A' => 'Não verificadas',
             'S' => 'Homologadas',
+            'P' => 'Homologadas com pendência',
             'N' => 'Não homologadas',
         ];
         $this->set(compact('inscricoes', 'programas', 'programaId', 'homologado', 'orientadorNome', 'statusHomologacaoOptions'));
@@ -951,6 +956,7 @@ class GestaoController extends AppController
         $statusHomologacaoAtual = trim((string)($inscricao->homologado ?? ''));
         $exigeConfirmacaoReavaliacao = $statusHomologacaoAtual !== '';
         $motivoNaoHomologacao = trim((string)($this->request->getData('motivo_nao_homologacao') ?? ''));
+        $motivoHomologacaoPendencia = trim((string)($this->request->getData('motivo_homologacao_pendencia') ?? ''));
         $identity = $this->getIdentityAtual();
         $usuarioLogadoId = 0;
         if (is_array($identity)) {
@@ -1051,6 +1057,34 @@ class GestaoController extends AppController
                             $e,
                             'Erro no Sistema - não homologar inscrição',
                             'Não foi possível registrar a não homologação da inscrição.'
+                        );
+                    }
+                }
+            } elseif ($acaoHomologacao === 'homologar_pendencia') {
+                if (mb_strlen($motivoHomologacaoPendencia) < 20) {
+                    $this->Flash->error('Informe a pendência da homologação com pelo menos 20 caracteres.');
+                } else {
+                    try {
+                        $tblProjetoBolsistas->getConnection()->transactional(function () use ($tblProjetoBolsistas, $inscricao, $faseOriginal, $motivoHomologacaoPendencia, $usuarioLogadoId) {
+                            $inscricao->homologado = 'P';
+                            $inscricao->homologado_data = FrozenTime::now();
+                            $inscricao->homologado_por = $usuarioLogadoId > 0 ? $usuarioLogadoId : null;
+                            $inscricao->homologado_justificativa = $motivoHomologacaoPendencia;
+                            $tblProjetoBolsistas->saveOrFail($inscricao);
+                            $this->historico(
+                                (int)$inscricao->id,
+                                $faseOriginal,
+                                $faseOriginal,
+                                'Inscrição homologada com pendência devido a: ' . $motivoHomologacaoPendencia
+                            );
+                        });
+                        $this->Flash->success('Homologação com pendência registrada com sucesso.');
+                        return $this->redirect(['controller' => 'Gestao', 'action' => 'listahomologacao']);
+                    } catch (\Throwable $e) {
+                        $this->flashFriendlyException(
+                            $e,
+                            'Erro no Sistema - homologar inscrição com pendência',
+                            'Não foi possível registrar a homologação com pendência da inscrição.'
                         );
                     }
                 }
@@ -1607,9 +1641,460 @@ class GestaoController extends AppController
             'coorientadorObrigatorioServidor',
             'errosCoorientador',
             'motivoNaoHomologacao',
+            'motivoHomologacaoPendencia',
             'homologacaoPermitida',
             'exigeConfirmacaoReavaliacao'
         ));
+    }
+
+    public function editarCampoHomologacao($id, $campo)
+    {
+        if (!$this->ehYoda()) {
+            $this->Flash->error('Somente perfil yoda pode alterar este campo na homologação.');
+            return $this->redirect(['controller' => 'Gestao', 'action' => 'telahomologacao', (int)$id]);
+        }
+
+        $campo = strtolower(trim((string)$campo));
+        if (!in_array($campo, ['primeiro_periodo', 'cota'], true)) {
+            $this->Flash->error('Campo inválido para alteração.');
+            return $this->redirect(['controller' => 'Gestao', 'action' => 'telahomologacao', (int)$id]);
+        }
+
+        $tblProjetoBolsistas = $this->fetchTable('ProjetoBolsistas');
+        $inscricao = $tblProjetoBolsistas->find()
+            ->contain(['Editais' => ['Programas'], 'Bolsistas', 'Orientadores', 'Fases'])
+            ->where(['ProjetoBolsistas.id' => (int)$id])
+            ->first();
+
+        if (!$inscricao) {
+            $this->Flash->error('Inscrição não localizada.');
+            return $this->redirect(['controller' => 'Gestao', 'action' => 'listahomologacao']);
+        }
+
+        $homologado = strtoupper(trim((string)($inscricao->homologado ?? '')));
+        if ($inscricao->deleted !== null) {
+            $this->Flash->error('Inscrições deletadas não podem ser alteradas neste fluxo.');
+            return $this->redirect(['controller' => 'Gestao', 'action' => 'telahomologacao', (int)$inscricao->id]);
+        }
+        if ($campo === 'primeiro_periodo' && (int)($inscricao->editai->programa_id ?? 0) === 1) {
+            $this->Flash->error('Primeiro período não se aplica a inscrições do programa PDJ.');
+            return $this->redirect(['controller' => 'Gestao', 'action' => 'telahomologacao', (int)$inscricao->id]);
+        }
+        if (!in_array((int)($inscricao->fase_id ?? 0), [4, 15], true)) {
+            $this->Flash->error('Esta alteração só é permitida para inscrições nas fases Finalizada ou Substituição.');
+            return $this->redirect(['controller' => 'Gestao', 'action' => 'telahomologacao', (int)$inscricao->id]);
+        }
+        if ($homologado === 'S') {
+            $this->Flash->error('Inscrições já homologadas não podem ser alteradas neste fluxo.');
+            return $this->redirect(['controller' => 'Gestao', 'action' => 'telahomologacao', (int)$inscricao->id]);
+        }
+
+        $cotas = $this->cotasDisponiveisPorPrograma((int)($inscricao->editai->programa_id ?? 0));
+        $valorAtual = $campo === 'primeiro_periodo'
+            ? ($inscricao->primeiro_periodo !== null ? (string)(int)$inscricao->primeiro_periodo : '')
+            : strtoupper(trim((string)($inscricao->cota ?? '')));
+        $valorInformado = (string)$valorAtual;
+        $justificativa = '';
+        $erros = [];
+
+        if ($this->request->is(['post', 'put', 'patch'])) {
+            $dados = (array)$this->request->getData();
+            $valorInformado = strtoupper(trim((string)($dados[$campo] ?? '')));
+            $justificativa = trim((string)($dados['justificativa'] ?? ''));
+
+            if ($campo === 'primeiro_periodo' && !in_array($valorInformado, ['0', '1'], true)) {
+                $erros[] = 'Informe se é primeiro período.';
+            }
+            if ($campo === 'cota' && !array_key_exists($valorInformado, $cotas)) {
+                $erros[] = 'Informe uma cota válida.';
+            }
+            if ($justificativa === '') {
+                $erros[] = 'Informe a justificativa da alteração.';
+            }
+        }
+
+        $anexosNecessarios = $this->anexosBolsistaHomologacaoPorCampo($inscricao, $campo, $valorInformado);
+        if ($campo === 'cota' && $valorAtual !== '' && $valorInformado !== '' && $valorAtual !== $valorInformado) {
+            $anexosOriginais = $this->anexosBolsistaHomologacaoPorCampo($inscricao, $campo, $valorAtual);
+            $tiposOriginaisObrigatorios = array_map(
+                static fn($anexo) => (int)$anexo['tipo_id'],
+                array_filter($anexosOriginais, static fn($anexo) => !empty($anexo['obrigatorio']))
+            );
+            $tiposNovosObrigatorios = array_map(
+                static fn($anexo) => (int)$anexo['tipo_id'],
+                array_filter($anexosNecessarios, static fn($anexo) => !empty($anexo['obrigatorio']))
+            );
+            $tiposExigemNovoUpload = array_values(array_intersect($tiposOriginaisObrigatorios, $tiposNovosObrigatorios));
+            foreach ($anexosNecessarios as &$anexoNecessario) {
+                if (in_array((int)$anexoNecessario['tipo_id'], $tiposExigemNovoUpload, true)) {
+                    $anexoNecessario['exigir_novo_upload'] = true;
+                }
+            }
+            unset($anexoNecessario);
+        }
+
+        if ($this->request->is(['post', 'put', 'patch']) && empty($erros)) {
+            $uploads = (array)($this->request->getData('anexos') ?? []);
+            $uploadsParaSalvar = [];
+            $bloqueouAnexoCotaGeral = false;
+            $bloqueouAnexoObrigatorio = false;
+            if ($campo === 'cota' && $valorInformado === 'G') {
+                foreach ($uploads as $upload) {
+                    if (
+                        is_object($upload)
+                        && method_exists($upload, 'getClientFilename')
+                        && $upload->getClientFilename() !== ''
+                    ) {
+                        $erros[] = 'Cota Geral não permite gravação de anexo.';
+                        $bloqueouAnexoCotaGeral = true;
+                        break;
+                    }
+                }
+            }
+            foreach ($anexosNecessarios as $anexo) {
+                if (!empty($erros)) {
+                    break;
+                }
+                $anexoObrigatorio = !empty($anexo['obrigatorio']);
+                if (!$anexoObrigatorio) {
+                    continue;
+                }
+                $tipoId = (int)$anexo['tipo_id'];
+                $upload = $uploads[$tipoId] ?? null;
+                $temUpload = is_object($upload)
+                    && method_exists($upload, 'getClientFilename')
+                    && $upload->getClientFilename() !== '';
+                if ($temUpload) {
+                    $uploadsParaSalvar[$tipoId] = $upload;
+                    continue;
+                }
+                if (!empty($anexo['exigir_novo_upload'])) {
+                    $erros[] = 'Informe um novo anexo obrigatório para a nova cota: ' . (string)$anexo['tipo_nome'] . '.';
+                    $bloqueouAnexoObrigatorio = true;
+                    continue;
+                }
+                if ((string)($anexo['arquivo'] ?? '') === '') {
+                    $erros[] = 'Informe o anexo obrigatório: ' . (string)$anexo['tipo_nome'] . '.';
+                    $bloqueouAnexoObrigatorio = true;
+                }
+            }
+            if ($bloqueouAnexoCotaGeral) {
+                $this->Flash->error('A alteração não foi registrada, pois Cota Geral não permite gravação de anexo.');
+            } elseif ($bloqueouAnexoObrigatorio) {
+                $this->Flash->error('A alteração não foi registrada, pois é exigido anexo para esta condição.');
+            }
+
+            if (empty($erros)) {
+                $rotuloCampo = $campo === 'primeiro_periodo' ? 'Primeiro período' : 'Cota';
+                $valorAntigoTexto = $this->rotuloValorCampoHomologacao($campo, $valorAtual, $cotas);
+                $valorNovoTexto = $this->rotuloValorCampoHomologacao($campo, $valorInformado, $cotas);
+                $tiposControlados = $this->tiposAnexoControleCampoHomologacao($campo);
+                $tiposNecessariosIds = array_map(
+                    static fn($anexo) => (int)$anexo['tipo_id'],
+                    array_filter($anexosNecessarios, static fn($anexo) => !empty($anexo['obrigatorio']))
+                );
+                $tiposRemoverIds = array_values(array_diff(array_keys($tiposControlados), $tiposNecessariosIds));
+                $anexosRemovidosArquivos = [];
+                if (!empty($tiposRemoverIds)) {
+                    $anexosRemoverAtivos = $this->fetchTable('Anexos')->find()
+                        ->select(['anexos_tipo_id', 'anexo'])
+                        ->where([
+                            'projeto_bolsista_id' => (int)$inscricao->id,
+                            'anexos_tipo_id IN' => $tiposRemoverIds,
+                            'OR' => [
+                                'deleted IS' => null,
+                                'deleted' => 0,
+                            ],
+                        ])
+                        ->orderBy(['Anexos.id' => 'DESC'])
+                        ->enableHydration(false)
+                        ->all()
+                        ->toList();
+                    $tiposRemoverIds = [];
+                    foreach ($anexosRemoverAtivos as $anexoRemover) {
+                        $tipoId = (int)($anexoRemover['anexos_tipo_id'] ?? 0);
+                        if ($tipoId <= 0 || isset($anexosRemovidosArquivos[$tipoId])) {
+                            continue;
+                        }
+                        $arquivo = trim((string)($anexoRemover['anexo'] ?? ''));
+                        $tipoNome = (string)($tiposControlados[$tipoId] ?? ('Tipo ' . $tipoId));
+                        $anexosRemovidosArquivos[$tipoId] = $arquivo !== ''
+                            ? $tipoNome . ' (' . $arquivo . ')'
+                            : $tipoNome;
+                        $tiposRemoverIds[] = $tipoId;
+                    }
+                }
+                $tiposRemoverIds = array_values(array_unique($tiposRemoverIds));
+                $anexosRemovidos = array_values($anexosRemovidosArquivos);
+                $anexosAtualizados = [];
+                foreach (array_keys($uploadsParaSalvar) as $tipoId) {
+                    foreach ($anexosNecessarios as $anexo) {
+                        if ((int)$anexo['tipo_id'] === (int)$tipoId) {
+                            $anexosAtualizados[] = (string)$anexo['tipo_nome'];
+                            break;
+                        }
+                    }
+                }
+
+                try {
+                    $tblProjetoBolsistas->getConnection()->transactional(function () use (
+                        $tblProjetoBolsistas,
+                        $inscricao,
+                        $campo,
+                        $valorInformado,
+                        $valorAntigoTexto,
+                        $valorNovoTexto,
+                        $rotuloCampo,
+                        $justificativa,
+                        $uploadsParaSalvar,
+                        $anexosAtualizados,
+                        $tiposRemoverIds,
+                        $anexosRemovidos
+                    ) {
+                        if ($campo === 'primeiro_periodo') {
+                            $inscricao->primeiro_periodo = (int)$valorInformado;
+                        } else {
+                            $inscricao->cota = $valorInformado;
+                        }
+                        $tblProjetoBolsistas->saveOrFail($inscricao);
+
+                        if (!empty($tiposRemoverIds)) {
+                            $this->fetchTable('Anexos')->updateAll(
+                                ['deleted' => date('Y-m-d H:i:s')],
+                                [
+                                    'projeto_bolsista_id' => (int)$inscricao->id,
+                                    'anexos_tipo_id IN' => $tiposRemoverIds,
+                                    'OR' => [
+                                        'deleted IS' => null,
+                                        'deleted' => 0,
+                                    ],
+                                ]
+                            );
+                        }
+
+                        if (!empty($uploadsParaSalvar)) {
+                            $this->fetchTable('Anexos')->updateAll(
+                                ['deleted' => date('Y-m-d H:i:s')],
+                                [
+                                    'projeto_bolsista_id' => (int)$inscricao->id,
+                                    'anexos_tipo_id IN' => array_keys($uploadsParaSalvar),
+                                    'OR' => [
+                                        'deleted IS' => null,
+                                        'deleted' => 0,
+                                    ],
+                                ]
+                            );
+                            $ok = $this->anexarInscricao(
+                                $uploadsParaSalvar,
+                                $inscricao->projeto_id !== null ? (int)$inscricao->projeto_id : null,
+                                (int)$inscricao->id,
+                                null,
+                                true
+                            );
+                            if (!$ok) {
+                                throw new \RuntimeException('Falha ao salvar anexos.');
+                            }
+                        }
+
+                        $historico = $rotuloCampo . ' alterado pela homologação. Valor anterior: '
+                            . $valorAntigoTexto . '. Valor novo: ' . $valorNovoTexto
+                            . '. Justificativa: ' . $justificativa;
+                        if (!empty($anexosAtualizados)) {
+                            $historico .= '. Anexos atualizados: ' . implode(', ', $anexosAtualizados);
+                        }
+                        if (!empty($anexosRemovidos)) {
+                            $historico .= '. Anexos removidos por não serem mais obrigatórios: ' . implode(', ', $anexosRemovidos);
+                        }
+                        $this->historico(
+                            (int)$inscricao->id,
+                            (int)$inscricao->fase_id,
+                            (int)$inscricao->fase_id,
+                            $historico,
+                            true
+                        );
+                    });
+
+                    $this->Flash->success('Campo atualizado com sucesso.');
+                    return $this->redirect(['controller' => 'Gestao', 'action' => 'telahomologacao', (int)$inscricao->id]);
+                } catch (\Throwable $e) {
+                    $this->flashFriendlyException(
+                        $e,
+                        'Erro no Sistema - alterar campo da homologação',
+                        'Não foi possível atualizar o campo.'
+                    );
+                }
+            }
+        }
+
+        $tituloCampo = $campo === 'primeiro_periodo' ? 'Primeiro período' : 'Cota';
+        $opcoesCampo = $campo === 'primeiro_periodo'
+            ? ['1' => 'Sim', '0' => 'Não']
+            : $cotas;
+
+        $this->set(compact(
+            'inscricao',
+            'campo',
+            'tituloCampo',
+            'opcoesCampo',
+            'valorAtual',
+            'valorInformado',
+            'justificativa',
+            'anexosNecessarios',
+            'erros'
+        ));
+    }
+
+    private function cotasDisponiveisPorPrograma(int $programaId): array
+    {
+        if ($programaId === 9) {
+            return ['I' => 'Pessoas Indígenas'];
+        }
+
+        return [
+            'G' => 'Geral',
+            'I' => 'Pessoas Indígenas',
+            'N' => 'Pessoas Negras (Pretos/Pardos)',
+            'T' => 'Pessoas Trans',
+            'D' => 'Pessoas com deficiência',
+        ];
+    }
+
+    private function rotuloValorCampoHomologacao(string $campo, string $valor, array $cotas): string
+    {
+        if ($valor === '') {
+            return 'Não informado';
+        }
+        if ($campo === 'primeiro_periodo') {
+            return $valor === '1' ? 'Sim' : 'Não';
+        }
+
+        return $cotas[$valor] ?? $valor;
+    }
+
+    private function tiposAnexoControleCampoHomologacao(string $campo): array
+    {
+        if ($campo === 'primeiro_periodo') {
+            $tipo = $this->fetchTable('AnexosTipos')->find()
+                ->select(['id', 'nome'])
+                ->where([
+                    'AnexosTipos.id' => 16,
+                    'AnexosTipos.deleted' => 0,
+                ])
+                ->first();
+
+            return $tipo ? [(int)$tipo->id => (string)$tipo->nome] : [];
+        }
+
+        $tipos = $this->fetchTable('AnexosTipos')->find()
+            ->select(['id', 'nome'])
+            ->where([
+                'AnexosTipos.deleted' => 0,
+                'AnexosTipos.bloco' => 'B',
+                'AnexosTipos.cota IS NOT' => null,
+                'AnexosTipos.cota <>' => '',
+            ])
+            ->orderBy(['AnexosTipos.id' => 'ASC'])
+            ->all();
+
+        $resultado = [];
+        foreach ($tipos as $tipo) {
+            $resultado[(int)$tipo->id] = (string)$tipo->nome;
+        }
+
+        return $resultado;
+    }
+
+    private function anexosBolsistaHomologacaoPorCampo($inscricao, string $campo, string $valor): array
+    {
+        $tipos = $this->fetchTable('AnexosTipos')->find()
+            ->select(['id', 'nome', 'cota'])
+            ->where([
+                'AnexosTipos.deleted' => 0,
+                'AnexosTipos.bloco' => 'B',
+            ])
+            ->orderBy(['AnexosTipos.id' => 'ASC'])
+            ->all();
+
+        $tiposRelacionados = [];
+        $tiposObrigatoriosIds = [];
+        foreach ($tipos as $tipo) {
+            $tipoId = (int)$tipo->id;
+            if ($campo === 'primeiro_periodo') {
+                if ($tipoId === 16) {
+                    $tiposRelacionados[$tipoId] = $tipo;
+                    if ($valor === '0') {
+                        $tiposObrigatoriosIds[] = $tipoId;
+                    }
+                }
+                continue;
+            }
+
+            $cotaRegra = strtoupper(trim((string)($tipo->cota ?? '')));
+            if ($cotaRegra === '') {
+                continue;
+            }
+            $cotasRegra = array_values(array_filter(array_map('trim', explode(',', $cotaRegra))));
+            $tiposRelacionados[$tipoId] = $tipo;
+            if ($valor !== '' && in_array($valor, $cotasRegra, true)) {
+                $tiposObrigatoriosIds[] = $tipoId;
+            }
+        }
+
+        if (empty($tiposRelacionados)) {
+            return [];
+        }
+
+        $anexosMap = [];
+        $anexosAtivos = $this->fetchTable('Anexos')->find()
+            ->select(['anexos_tipo_id', 'anexo', 'usuario_id', 'created'])
+            ->contain([
+                'Usuarios' => function ($q) {
+                    return $q->select(['id', 'nome']);
+                },
+            ])
+            ->where([
+                'Anexos.projeto_bolsista_id' => (int)$inscricao->id,
+                'Anexos.anexos_tipo_id IN' => array_keys($tiposRelacionados),
+                'OR' => [
+                    'Anexos.deleted IS' => null,
+                    'Anexos.deleted' => 0,
+                ],
+            ])
+            ->orderBy(['Anexos.id' => 'DESC'])
+            ->all();
+
+        foreach ($anexosAtivos as $anexo) {
+            $tipoId = (int)($anexo->anexos_tipo_id ?? 0);
+            if ($tipoId <= 0 || isset($anexosMap[$tipoId]) || (string)($anexo->anexo ?? '') === '') {
+                continue;
+            }
+            $anexosMap[$tipoId] = [
+                'arquivo' => (string)$anexo->anexo,
+                'usuario_nome' => trim((string)($anexo->usuario->nome ?? '')),
+                'data_inclusao' => $anexo->created ?? null,
+            ];
+        }
+
+        $anexos = [];
+        foreach ($tiposRelacionados as $tipoId => $tipo) {
+            $obrigatorio = in_array((int)$tipoId, $tiposObrigatoriosIds, true);
+            if (
+                !$obrigatorio
+                && (string)($anexosMap[$tipoId]['arquivo'] ?? '') === ''
+            ) {
+                continue;
+            }
+            $anexos[] = [
+                'tipo_id' => (int)$tipoId,
+                'tipo_nome' => (string)$tipo->nome,
+                'arquivo' => (string)($anexosMap[$tipoId]['arquivo'] ?? ''),
+                'usuario_nome' => (string)($anexosMap[$tipoId]['usuario_nome'] ?? ''),
+                'data_inclusao' => $anexosMap[$tipoId]['data_inclusao'] ?? null,
+                'obrigatorio' => $obrigatorio,
+            ];
+        }
+
+        return $anexos;
     }
 
     public function confirmacao($id)
@@ -1786,8 +2271,26 @@ class GestaoController extends AppController
                 continue;
             }
 
-            if ((string)($item->homologado ?? '') !== 'S') {
-                $recusadas[] = ['id' => $id, 'motivo' => 'Inscrição não homologada.'];
+            if ((int)($item->fase_id ?? 0) !== 4) {
+                $recusadas[] = ['id' => $id, 'motivo' => 'A alteração de resultado só é permitida na fase Finalizada.'];
+                continue;
+            }
+
+            $statusHomologacao = strtoupper(trim((string)($item->homologado ?? '')));
+            if ($statusHomologacao === '') {
+                $recusadas[] = ['id' => $id, 'motivo' => 'Inscrição ainda não passou pela homologação.'];
+                continue;
+            }
+            if ($statusHomologacao === 'N' && $resultado !== 'R') {
+                $recusadas[] = ['id' => $id, 'motivo' => 'Inscrição não homologada só permite lançamento de resultado Reprovado.'];
+                continue;
+            }
+            if ($statusHomologacao === 'P' && $resultado !== 'R') {
+                $recusadas[] = ['id' => $id, 'motivo' => 'Inscrição homologada com pendência só permite lançamento de resultado Reprovado.'];
+                continue;
+            }
+            if (!in_array($statusHomologacao, ['S', 'N', 'P'], true)) {
+                $recusadas[] = ['id' => $id, 'motivo' => 'Situação de homologação inválida para lançamento de resultado.'];
                 continue;
             }
 

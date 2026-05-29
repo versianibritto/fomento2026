@@ -12,6 +12,18 @@ class RaicNewController extends AppController
     {
         parent::beforeFilter($event);
         $this->viewBuilder()->setLayout('admin');
+
+        $identity = $this->request->getAttribute('identity');
+        $ehTi = in_array((int)($identity['id'] ?? 0), [1, 8088], true);
+        $ehPadauan = !$ehTi
+            && empty($identity['yoda'])
+            && trim((string)($identity['jedi'] ?? '')) === ''
+            && trim((string)($identity['padauan'] ?? '')) !== '';
+
+        if ($identity && $ehPadauan) {
+            $this->Flash->error('Área restrita. Seu perfil permite acesso apenas às listagens administrativas autorizadas.');
+            return $this->redirect(['controller' => 'Index', 'action' => 'dashboard']);
+        }
     }
 
     public function painel()
@@ -186,8 +198,8 @@ class RaicNewController extends AppController
         $jaAgendada = !empty($raic->data_apresentacao);
         if ($jaAgendada && $raic->data_apresentacao instanceof \Cake\I18n\FrozenDate) {
             $dataJaAgendada = $raic->data_apresentacao->format('Y-m-d');
-            if ($dataJaAgendada <= $agora->format('Y-m-d') && !$ehTi) {
-                $this->Flash->error('A apresentação já passou ou ocorre hoje. Entre Em contato com a Gestão.');
+            if ($dataJaAgendada < $agora->format('Y-m-d') && !$ehTi) {
+                $this->Flash->error('A apresentação já passou. Entre em contato com a Gestão.');
                 return $this->redirect(['controller' => 'RaicNew', 'action' => 'ver', $raic->id]);
             }
         }

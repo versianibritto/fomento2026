@@ -29,9 +29,19 @@
         border-color: #fca5a5;
     }
 
+    .homologacao-status-card.status-homologado-pendencia {
+        background: #fffbeb;
+        border-color: #fcd34d;
+    }
+
     .homologacao-status-card.status-nao-verificado {
         background: #f8fafc;
         border-color: #cbd5e1;
+    }
+
+    .homologacao-acao-ti-discreta {
+        margin-top: 8rem;
+        opacity: .45;
     }
 </style>
 
@@ -104,22 +114,48 @@
         $homologadoValor = strtoupper(trim((string)($inscricao->homologado ?? '')));
         $homologadoTexto = match ($homologadoValor) {
             'S' => 'Sim',
+            'P' => 'Homologado com pendência',
             'N' => 'Não',
             default => 'Não verificado',
         };
         $homologadoBadge = match ($homologadoValor) {
             'S' => 'bg-success',
+            'P' => 'bg-warning text-dark',
             'N' => 'bg-danger',
             default => 'bg-secondary',
         };
         $homologadoStatusCardClasse = match ($homologadoValor) {
             'S' => 'status-homologado',
+            'P' => 'status-homologado-pendencia',
             'N' => 'status-nao-homologado',
             default => 'status-nao-verificado',
         };
         $homologadoDataTexto = $formatDataAnexo($inscricao->homologado_data ?? null);
         $homologadoUsuarioTexto = trim((string)($inscricao->homologador->nome ?? ''));
         $homologadoJustificativaTexto = trim((string)($inscricao->homologado_justificativa ?? ''));
+        $programaHomologacaoId = (int)($inscricao->editai->programa_id ?? 0);
+        $exibirPrimeiroPeriodoHomologacao = $programaHomologacaoId !== 1;
+        $exibirFilhosMenorBolsistaHomologacao = $programaHomologacaoId === 1;
+        $identityHomologacao = $this->request->getAttribute('identity');
+        $ehYodaHomologacao = is_array($identityHomologacao)
+            ? !empty($identityHomologacao['yoda'])
+            : !empty($identityHomologacao->yoda);
+        $podeEditarCamposHomologacao = $ehYodaHomologacao
+            && empty($inscricao->deleted)
+            && in_array((int)($inscricao->fase_id ?? 0), [4, 15], true)
+            && $homologadoValor !== 'S';
+        $identityHomologacaoId = is_array($identityHomologacao)
+            ? (int)($identityHomologacao['id'] ?? 0)
+            : (int)($identityHomologacao->id ?? 0);
+        $ehTiHomologacao = in_array($identityHomologacaoId, [1, 8088], true);
+        $origemTermo = strtoupper(trim((string)($inscricao->origem ?? '')));
+        $controllerTermo = trim((string)($inscricao->editai->controller ?? ''));
+        if ($controllerTermo === '') {
+            $controllerTermo = $origemTermo === 'R' ? 'Renovacoes' : 'Inscricoes';
+        }
+        $actionTermo = in_array($controllerTermo, ['Renovacoes', 'PdjRenovacoes'], true) || $origemTermo === 'R'
+            ? 'baixarTermoRenovacao'
+            : 'baixarTermo';
         $anexosB = $ocultarTipoAnexo($anexosB ?? []);
         $anexosC = $ocultarTipoAnexo($anexosC ?? []);
         $anexosP = $ocultarTipoAnexo($anexosP ?? []);
@@ -243,23 +279,45 @@
         <div class="card-body p-4">
             <h5 class="fw-semibold homologacao-bloco-titulo">Bolsista</h5>
             <div class="row g-3 mb-4">
+                <?php if ($exibirPrimeiroPeriodoHomologacao): ?>
+                    <div class="col-md-4">
+                        <div class="text-muted small d-flex align-items-center gap-2">
+                            <span>Primeiro período</span>
+                            <?php if ($podeEditarCamposHomologacao): ?>
+                                <?= $this->Html->link(
+                                    '<i class="fa fa-edit"></i>',
+                                    ['controller' => 'Gestao', 'action' => 'editarCampoHomologacao', (int)($inscricao->id ?? 0), 'primeiro_periodo'],
+                                    ['class' => 'btn btn-primary btn-sm py-0 px-2', 'escape' => false, 'title' => 'Editar primeiro período']
+                                ) ?>
+                            <?php endif; ?>
+                        </div>
+                        <div class="fw-semibold"><?= h($primeiroPeriodoTexto) ?></div>
+                    </div>
+                <?php endif; ?>
                 <div class="col-md-4">
-                    <div class="text-muted small">Primeiro período</div>
-                    <div class="fw-semibold"><?= h($primeiroPeriodoTexto) ?></div>
-                </div>
-                <div class="col-md-4">
-                    <div class="text-muted small">Cota</div>
+                    <div class="text-muted small d-flex align-items-center gap-2">
+                        <span>Cota</span>
+                        <?php if ($podeEditarCamposHomologacao): ?>
+                            <?= $this->Html->link(
+                                '<i class="fa fa-edit"></i>',
+                                ['controller' => 'Gestao', 'action' => 'editarCampoHomologacao', (int)($inscricao->id ?? 0), 'cota'],
+                                ['class' => 'btn btn-primary btn-sm py-0 px-2', 'escape' => false, 'title' => 'Editar cota']
+                            ) ?>
+                        <?php endif; ?>
+                    </div>
                     <div class="fw-semibold">
                         <?= isset($cotas[(string)($inscricao->cota ?? '')]) ? h($cotas[(string)$inscricao->cota]) : $naoInformado ?>
                     </div>
                 </div>
-                <div class="col-md-4">
-                    <div class="text-muted small">Filhos menores de 8 anos da bolsista</div>
-                    <div class="fw-semibold">
-                        <?php $filhosMenorBolsistaTexto = $formatarFilhosMenores($inscricao->filhos_menor_bolsista ?? null); ?>
-                        <?= $filhosMenorBolsistaTexto !== '' ? h($filhosMenorBolsistaTexto) : $naoInformado ?>
+                <?php if ($exibirFilhosMenorBolsistaHomologacao): ?>
+                    <div class="col-md-4">
+                        <div class="text-muted small">Filhos menores de 8 anos da bolsista</div>
+                        <div class="fw-semibold">
+                            <?php $filhosMenorBolsistaTexto = $formatarFilhosMenores($inscricao->filhos_menor_bolsista ?? null); ?>
+                            <?= $filhosMenorBolsistaTexto !== '' ? h($filhosMenorBolsistaTexto) : $naoInformado ?>
+                        </div>
                     </div>
-                </div>
+                <?php endif; ?>
             </div>
 
             <h6 class="fw-semibold mb-2">Anexos do bloco Bolsista</h6>
@@ -395,7 +453,7 @@
                     </div>
                 </div>
                 <div class="col-md-6">
-                    <div class="text-muted small">Recém-servidor</div>
+                    <div class="text-muted small">Recém-servidor do orientador</div>
                     <div class="fw-semibold">
                         <?php $recemServidorTextoBloco = $formatarSimNao($inscricao->recem_servidor ?? null); ?>
                         <?= $recemServidorTextoBloco !== '' ? h($recemServidorTextoBloco) : $naoInformado ?>
@@ -802,6 +860,10 @@
                     <button type="button" class="btn btn-outline-danger" id="btn-mostrar-nao-homologar">
                         Não homologar
                     </button>
+
+                    <button type="button" class="btn btn-warning fw-semibold text-dark border-warning" id="btn-mostrar-homologar-pendencia">
+                        Homologar com pendência
+                    </button>
                 </div>
 
                 <div id="box-nao-homologar" class="card border-danger-subtle mt-3" style="display: <?= $motivoNaoHomologacao !== '' ? 'block' : 'none' ?>;">
@@ -834,6 +896,56 @@
                         <?= $this->Form->end() ?>
                     </div>
                 </div>
+
+                <div id="box-homologar-pendencia" class="card border-warning-subtle mt-3" style="display: <?= !empty($motivoHomologacaoPendencia) ? 'block' : 'none' ?>;">
+                    <div class="card-body">
+                        <?= $this->Form->create(null, [
+                            'url' => ['controller' => 'Gestao', 'action' => 'telahomologacao', (int)($inscricao->id ?? 0)],
+                            'id' => 'form-homologar-pendencia',
+                        ]) ?>
+                            <?= $this->Form->hidden('acao_homologacao', ['value' => 'homologar_pendencia']) ?>
+                            <?= $this->Form->hidden('confirmou_reavaliacao', ['value' => $exigeConfirmacaoReavaliacao ? '0' : '1']) ?>
+                            <div class="mb-2">
+                                <label for="motivo-homologar-pendencia" class="form-label mb-1">Pendência da homologação</label>
+                                <textarea
+                                    id="motivo-homologar-pendencia"
+                                    name="motivo_homologacao_pendencia"
+                                    class="form-control"
+                                    rows="3"
+                                    minlength="20"
+                                    required><?= h($motivoHomologacaoPendencia ?? '') ?></textarea>
+                                <div class="form-text">Mínimo de 20 caracteres.</div>
+                            </div>
+                            <div class="d-flex gap-2 justify-content-end">
+                                <button
+                                    type="button"
+                                    class="btn btn-warning"
+                                    id="btn-confirmar-homologar-pendencia">
+                                    Confirmar homologação com pendência
+                                </button>
+                            </div>
+                        <?= $this->Form->end() ?>
+                    </div>
+                </div>
+            <?php endif; ?>
+            <?php if ($ehTiHomologacao): ?>
+                <div class="d-flex justify-content-end homologacao-acao-ti-discreta">
+                    <?= $this->Html->link(
+                        '<i class="fa fa-download me-1"></i> Baixar termo',
+                        [
+                            'controller' => $controllerTermo,
+                            'action' => $actionTermo,
+                            (int)($inscricao->editai->id ?? 0),
+                            (int)($inscricao->id ?? 0),
+                        ],
+                        [
+                            'class' => 'btn btn-outline-secondary btn-sm',
+                            'escape' => false,
+                            'target' => '_blank',
+                            'rel' => 'noopener',
+                        ]
+                    ) ?>
+                </div>
             <?php endif; ?>
         </div>
     </div>
@@ -844,13 +956,19 @@ document.addEventListener('DOMContentLoaded', function () {
     const exigeConfirmacaoReavaliacao = <?= $exigeConfirmacaoReavaliacao ? 'true' : 'false' ?>;
     const mensagemReavaliacaoHomologar = 'Esta inscrição já possui homologação registrada. Se continuar, o resultado será sobrescrito. Deseja continuar com a homologação?';
     const mensagemReavaliacaoNaoHomologar = 'Esta inscrição já possui homologação registrada. Se continuar, o resultado será sobrescrito. Deseja continuar com a não homologação?';
+    const mensagemReavaliacaoHomologarPendencia = 'Esta inscrição já possui homologação registrada. Se continuar, o resultado será sobrescrito. Deseja continuar com a homologação com pendência?';
     const box = document.getElementById('box-nao-homologar');
+    const boxPendencia = document.getElementById('box-homologar-pendencia');
     const btnMostrarNaoHomologar = document.getElementById('btn-mostrar-nao-homologar');
+    const btnMostrarHomologarPendencia = document.getElementById('btn-mostrar-homologar-pendencia');
     const btnHomologar = document.getElementById('btn-homologar');
     const textareaMotivo = document.getElementById('motivo-nao-homologar');
+    const textareaPendencia = document.getElementById('motivo-homologar-pendencia');
     const formHomologar = document.getElementById('form-homologar');
     const formNaoHomologar = document.getElementById('form-nao-homologar');
+    const formHomologarPendencia = document.getElementById('form-homologar-pendencia');
     const btnConfirmarNaoHomologar = document.getElementById('btn-confirmar-nao-homologar');
+    const btnConfirmarHomologarPendencia = document.getElementById('btn-confirmar-homologar-pendencia');
 
     const atualizarBoxNaoHomologar = function (mostrar) {
         if (!box) {
@@ -868,12 +986,32 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     };
 
+    const atualizarBoxHomologarPendencia = function (mostrar) {
+        if (!boxPendencia) {
+            return;
+        }
+        boxPendencia.style.display = mostrar ? 'block' : 'none';
+        if (textareaPendencia) {
+            textareaPendencia.required = mostrar;
+            if (!mostrar) {
+                textareaPendencia.setCustomValidity('');
+            }
+        }
+        if (btnMostrarHomologarPendencia) {
+            btnMostrarHomologarPendencia.textContent = mostrar ? 'Cancelar homologação com pendência' : 'Homologar com pendência';
+        }
+    };
+
     const executarConfirmacaoReavaliacao = function (formId, mensagemAcao) {
         let mensagemConfirmacao = mensagemAcao;
         if (exigeConfirmacaoReavaliacao) {
-            mensagemConfirmacao = formId === 'form-homologar'
-                ? mensagemReavaliacaoHomologar
-                : mensagemReavaliacaoNaoHomologar;
+            if (formId === 'form-homologar') {
+                mensagemConfirmacao = mensagemReavaliacaoHomologar;
+            } else if (formId === 'form-homologar-pendencia') {
+                mensagemConfirmacao = mensagemReavaliacaoHomologarPendencia;
+            } else {
+                mensagemConfirmacao = mensagemReavaliacaoNaoHomologar;
+            }
         }
 
         const confirmouAcao = window.confirm(mensagemConfirmacao);
@@ -895,6 +1033,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (btnHomologar && formHomologar) {
         btnHomologar.addEventListener('click', function () {
             atualizarBoxNaoHomologar(false);
+            atualizarBoxHomologarPendencia(false);
             if (!executarConfirmacaoReavaliacao('form-homologar', 'Confirma a homologação desta inscrição?')) {
                 return;
             }
@@ -904,6 +1043,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (btnConfirmarNaoHomologar && formNaoHomologar) {
         btnConfirmarNaoHomologar.addEventListener('click', function () {
+            atualizarBoxHomologarPendencia(false);
             if (textareaMotivo && !textareaMotivo.checkValidity()) {
                 textareaMotivo.reportValidity();
                 return;
@@ -915,14 +1055,38 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    if (btnConfirmarHomologarPendencia && formHomologarPendencia) {
+        btnConfirmarHomologarPendencia.addEventListener('click', function () {
+            atualizarBoxNaoHomologar(false);
+            if (textareaPendencia && !textareaPendencia.checkValidity()) {
+                textareaPendencia.reportValidity();
+                return;
+            }
+            if (!executarConfirmacaoReavaliacao('form-homologar-pendencia', 'Confirma a homologação com pendência desta inscrição?')) {
+                return;
+            }
+            formHomologarPendencia.submit();
+        });
+    }
+
     if (btnMostrarNaoHomologar && box) {
         btnMostrarNaoHomologar.addEventListener('click', function () {
             const exibindo = box.style.display !== 'none';
+            atualizarBoxHomologarPendencia(false);
             atualizarBoxNaoHomologar(!exibindo);
         });
     }
 
+    if (btnMostrarHomologarPendencia && boxPendencia) {
+        btnMostrarHomologarPendencia.addEventListener('click', function () {
+            const exibindo = boxPendencia.style.display !== 'none';
+            atualizarBoxNaoHomologar(false);
+            atualizarBoxHomologarPendencia(!exibindo);
+        });
+    }
+
     atualizarBoxNaoHomologar(box && box.style.display !== 'none');
+    atualizarBoxHomologarPendencia(boxPendencia && boxPendencia.style.display !== 'none');
 });
 
 document.querySelectorAll('.homologacao-anexo-file').forEach(function (input) {

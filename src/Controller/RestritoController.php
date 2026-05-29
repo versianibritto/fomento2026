@@ -1384,7 +1384,19 @@ class RestritoController extends AppController
 
         if ($this->request->is(['post', 'put', 'patch'])) {
             $dados = $this->request->getData();
+            $dados['restrito'] = (int)($dados['restrito'] ?? 0);
+            $dados['acesso'] = $dados['restrito'] === 1 ? $this->normalizarAcessoManual($dados['acesso'] ?? null) : null;
+            if ($dados['restrito'] === 1 && $dados['acesso'] === null) {
+                $manual->setError('acesso', ['_empty' => 'Informe ao menos um tipo de acesso quando o manual for restrito.']);
+                $this->Flash->error('Informe ao menos um tipo de acesso quando o manual for restrito.');
+                $acessosManual = $this->opcoesAcessoManual();
+                $this->set(compact('manual', 'isEdicao', 'acessosManual'));
+                return;
+            }
             $dados = $this->handleUpload($dados, 'arquivo', 'editais');
+            if (empty($manual->arquivo) && empty($dados['arquivo'])) {
+                $dados['arquivo'] = '';
+            }
             $identity = $this->request->getAttribute('identity');
             if (!empty($identity->id)) {
                 $dados['usuario_id'] = (int)$identity->id;
@@ -1401,7 +1413,8 @@ class RestritoController extends AppController
             $this->Flash->error('Não foi possível salvar o manual.');
         }
 
-        $this->set(compact('manual', 'isEdicao'));
+        $acessosManual = $this->opcoesAcessoManual();
+        $this->set(compact('manual', 'isEdicao', 'acessosManual'));
     }
 
     public function manuaisLista($limpar = false)
@@ -1446,9 +1459,36 @@ class RestritoController extends AppController
                 return $this->redirect(['action' => 'manuaisLista']);
             }
 
+            if ($acao === 'reativar') {
+                $idReativar = (int)($dados['id'] ?? 0);
+                if ($idReativar <= 0) {
+                    $this->Flash->error('Registro inválido para reativação.');
+                    return $this->redirect(['action' => 'manuaisLista']);
+                }
+
+                $registro = $tblManuais->find()
+                    ->where([
+                        'Manuais.id' => $idReativar,
+                        'Manuais.deleted IS NOT' => null,
+                    ])
+                    ->first();
+                if (!$registro) {
+                    $this->Flash->error('Manual não encontrado para reativação.');
+                    return $this->redirect(['action' => 'manuaisLista']);
+                }
+                $registro->deleted = null;
+                if ($tblManuais->save($registro)) {
+                    $this->Flash->success('Manual reativado com sucesso.');
+                } else {
+                    $this->Flash->error('Não foi possível reativar o manual.');
+                }
+                return $this->redirect(['action' => 'manuaisLista']);
+            }
+
             $filtros = [
                 'nome' => trim((string)($dados['nome'] ?? '')),
                 'restrito' => (string)($dados['restrito'] ?? ''),
+                'acesso' => $this->normalizarAcessoManual($dados['acesso'] ?? null),
                 'status' => (string)($dados['status'] ?? 'A'),
             ];
             $session->write('restrito_manuais_filtros', $filtros);
@@ -1463,6 +1503,9 @@ class RestritoController extends AppController
         if (($filtros['restrito'] ?? '') !== '') {
             $where['Manuais.restrito'] = (int)$filtros['restrito'];
         }
+        if (($filtros['acesso'] ?? '') !== '') {
+            $where['Manuais.acesso LIKE'] = '%' . $filtros['acesso'] . '%';
+        }
         $status = (string)($filtros['status'] ?? 'A');
         if ($status === 'A') {
             $where['Manuais.deleted IS'] = null;
@@ -1476,7 +1519,34 @@ class RestritoController extends AppController
             ->orderBy(['Manuais.id' => 'DESC']);
 
         $manuais = $this->paginate($query, ['limit' => 15]);
-        $this->set(compact('manuais', 'filtros'));
+        $acessosManual = $this->opcoesAcessoManual();
+        $this->set(compact('manuais', 'filtros', 'acessosManual'));
+    }
+
+    private function opcoesAcessoManual(): array
+    {
+        return [
+            'T' => 'TI',
+            'Y' => 'Yoda',
+            'J' => 'Jedi',
+            'P' => 'Padauan',
+        ];
+    }
+
+    private function normalizarAcessoManual($acesso): ?string
+    {
+        $valores = is_array($acesso) ? $acesso : explode(',', (string)$acesso);
+        $permitidos = array_keys($this->opcoesAcessoManual());
+        $normalizados = [];
+
+        foreach ($valores as $valor) {
+            $valor = strtoupper(trim((string)$valor));
+            if ($valor !== '' && in_array($valor, $permitidos, true) && !in_array($valor, $normalizados, true)) {
+                $normalizados[] = $valor;
+            }
+        }
+
+        return $normalizados === [] ? null : implode(',', $normalizados);
     }
 
     public function mensagens($id = null)

@@ -63,7 +63,8 @@ class ManuaisTable extends Table
         $validator
             ->scalar('arquivo')
             ->maxLength('arquivo', 45)
-            ->allowEmptyString('arquivo');
+            ->requirePresence('arquivo', 'create')
+            ->notEmptyString('arquivo', 'Informe o anexo do manual.');
 
         $validator
             ->integer('usuario_id')
@@ -80,6 +81,23 @@ class ManuaisTable extends Table
 
         $validator
             ->allowEmptyString('restrito');
+
+        $validator
+            ->scalar('acesso')
+            ->maxLength('acesso', 45)
+            ->allowEmptyString('acesso', null, function ($context) {
+                return (int)($context['data']['restrito'] ?? 0) !== 1;
+            })
+            ->notEmptyString('acesso', 'Informe ao menos um tipo de acesso quando o manual for restrito.', function ($context) {
+                return (int)($context['data']['restrito'] ?? 0) === 1;
+            })
+            ->add('acesso', 'validFormat', [
+                'rule' => function ($value) {
+                    $value = trim((string)$value);
+                    return $value === '' || (bool)preg_match('/^[TYJP](,[TYJP])*$/', $value);
+                },
+                'message' => 'Informe apenas os acessos T, Y, J e P separados por vírgula.',
+            ]);
 
         return $validator;
     }

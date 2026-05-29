@@ -1009,13 +1009,14 @@ class PdjInscricoesController extends AppController
         [$context, $inscricao] = [$loaded['context'], $loaded['inscricao']];
         $edital = $context['edital'];
         $identity = $context['identity'];
+        $ehTI = $this->ehTi();
 
-        if ((int)$inscricao->fase_id !== 5) {
+        if ((int)$inscricao->fase_id !== 5 && !$ehTI) {
             $this->Flash->error('O termo só pode ser baixado quando a inscrição estiver na fase 5.');
             return $this->redirect(['action' => 'gerarTermo', (int)$edital->id, (int)$inscricao->id]);
         }
 
-        $geracaoTopo = 'Termo gerado em ' . date('d/m/Y H:i:s', strtotime('-3 hours')) . ' por ' . (string)($identity->nome ?? 'Usuário');
+        $geracaoTopo = 'Termo gerado em ' . date('d/m/Y H:i:s') . ' por ' . (string)($identity->nome ?? 'Usuário');
         $htmlPdf = $this->montarHtmlTermoPdj($edital, $inscricao, $geracaoTopo);
         $htmlExport = $this->montarHtmlTermoPdj($edital, $inscricao, $geracaoTopo);
 
@@ -1090,7 +1091,7 @@ class PdjInscricoesController extends AppController
             $this->Flash->error('Acesso negado. Somente o orientador pode alterar a inscrição PDJ.');
             return ['redirect' => $this->redirect(['controller' => 'Index', 'action' => 'index'])];
         }
-        if (!in_array((int)$inscricao->fase_id, [1, 3, 5], true)) {
+        if (!in_array((int)$inscricao->fase_id, [1, 3, 5], true) && !$ehTI) {
             $this->Flash->error('Inscrição PDJ indisponível para edição nesta fase.');
             return ['redirect' => $this->redirect(['controller' => 'Index', 'action' => 'index'])];
         }
@@ -1753,7 +1754,7 @@ class PdjInscricoesController extends AppController
         $nomeEditalCabecalho = $esc($edital->nome ?? 'PIBIC');
         $textoGeracaoCabecalho = trim((string)$textoRodapeGeracao) !== ''
             ? (string)$textoRodapeGeracao
-            : ('Termo gerado em ' . date('d/m/Y H:i:s', strtotime('-3 hours')) . ' por Usuario');
+            : ('Termo gerado em ' . date('d/m/Y H:i:s') . ' por Usuario');
         $textoGeracaoCabecalhoHtml = $esc($textoGeracaoCabecalho);
         if (preg_match('/^Termo gerado em (.+) por (.+)$/u', $textoGeracaoCabecalho, $partesGeracao) === 1) {
             $textoGeracaoCabecalhoHtml = 'Termo gerado em <strong>' . $esc($partesGeracao[1]) . '</strong> por <strong>' . $esc($partesGeracao[2]) . '</strong>';
