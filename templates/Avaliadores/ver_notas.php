@@ -165,14 +165,14 @@ $colunaResumo = $tipo === 'J' ? 'col-md-3' : 'col-md-4';
                     </div>
                 </div>
                 <div class="<?= h($colunaResumo) ?>">
-                    <div class="border rounded p-3 h-100">
+                    <div class="border rounded p-3 h-100 <?= $sumulaNaoSeAplica ? 'bg-warning bg-opacity-10' : '' ?>">
                         <div class="text-muted small text-uppercase">Súmula do orientador</div>
                         <div class="h3 mb-0"><?= h($notaSumulaTexto) ?></div>
                     </div>
                 </div>
                 <?php if ($tipo === 'J'): ?>
                     <div class="<?= h($colunaResumo) ?>">
-                        <div class="border rounded p-3 h-100">
+                        <div class="border rounded p-3 h-100 <?= $sumulaNaoSeAplica ? 'bg-warning bg-opacity-10' : '' ?>">
                             <div class="text-muted small text-uppercase">Súmula do bolsista</div>
                             <div class="h3 mb-0"><?= h($notaSumulaBolsistaTexto) ?></div>
                         </div>
@@ -255,21 +255,39 @@ $colunaResumo = $tipo === 'J' ? 'col-md-3' : 'col-md-4';
 
             <div class="row g-3 mt-1">
                 <div class="col-md-4">
-                    <div class="border rounded p-3 h-100">
+                    <div class="border rounded p-3 h-100 <?= in_array($tipo, ['V', 'Z'], true) ? 'bg-warning bg-opacity-10' : '' ?>">
                         <div class="text-muted small">Parecer do Comitê de Ética</div>
-                        <div><?= h($parecerMap[(string)($avaliacao->parecer ?? '')] ?? 'Não informado') ?></div>
+                        <div>
+                            <?php if (in_array($tipo, ['V', 'Z'], true)): ?>
+                                <span class="text-danger fw-semibold"><?= h('Não se aplica a este tipo de avaliação') ?></span>
+                            <?php else: ?>
+                                <?= h($parecerMap[(string)($avaliacao->parecer ?? '')] ?? 'Não informado') ?>
+                            <?php endif; ?>
+                        </div>
                     </div>
                 </div>
                 <div class="col-md-4">
-                    <div class="border rounded p-3 h-100">
+                    <div class="border rounded p-3 h-100 <?= !in_array($origemEdital, ['R', 'V'], true) ? 'bg-warning bg-opacity-10' : '' ?>">
                         <div class="text-muted small">Destacou-se?</div>
-                        <div><?= $avaliacao->destaque === null ? 'Não informado' : ((int)$avaliacao->destaque === 1 ? 'Sim' : 'Não') ?></div>
+                        <div>
+                            <?php if (!in_array($origemEdital, ['R', 'V'], true)): ?>
+                                <span class="text-danger fw-semibold"><?= h('Não se aplica a este tipo de avaliação') ?></span>
+                            <?php else: ?>
+                                <?= $avaliacao->destaque === null ? 'Não informado' : ((int)$avaliacao->destaque === 1 ? 'Sim' : 'Não') ?>
+                            <?php endif; ?>
+                        </div>
                     </div>
                 </div>
                 <div class="col-md-4">
-                    <div class="border rounded p-3 h-100">
+                    <div class="border rounded p-3 h-100 <?= !in_array($origemEdital, ['R', 'V'], true) ? 'bg-warning bg-opacity-10' : '' ?>">
                         <div class="text-muted small">Indicação ao Prêmio Destaque CNPq</div>
-                        <div><?= $avaliacao->indicado_premio_capes === null ? 'Não informado' : ((int)$avaliacao->indicado_premio_capes === 1 ? 'Sim' : 'Não') ?></div>
+                        <div>
+                            <?php if (!in_array($origemEdital, ['R', 'V'], true)): ?>
+                                <span class="text-danger fw-semibold"><?= h('Não se aplica a este tipo de avaliação') ?></span>
+                            <?php else: ?>
+                                <?= $avaliacao->indicado_premio_capes === null ? 'Não informado' : ((int)$avaliacao->indicado_premio_capes === 1 ? 'Sim' : 'Não') ?>
+                            <?php endif; ?>
+                        </div>
                     </div>
                 </div>
             </div>

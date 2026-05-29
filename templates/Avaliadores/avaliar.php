@@ -217,24 +217,26 @@ $observacaoSumulasPendente = !empty($avaliarSumulas)
                                 <?php endif; ?>
                             </td>
                         </tr>
-                        <tr>
-                            <td colspan="4">O orientador anexou o Parecer do Comitê de Ética em Pesquisa?</td>
-                            <td>
-                                <?= $this->Form->control('parecer', [
-                                    'label' => false,
-                                    'options' => [
-                                        'I' => 'Não se aplica',
-                                        'N' => 'É necessário mas não anexou',
-                                        'S' => 'Anexou',
-                                    ],
-                                    'empty' => '- Selecione -',
-                                    'class' => 'form-control' . ($parecerPendente ? ' is-invalid' : ''),
-                                ]) ?>
-                                <?php if ($parecerPendente): ?>
-                                    <div class="invalid-feedback d-block">Informe a situação do parecer.</div>
-                                <?php endif; ?>
-                            </td>
-                        </tr>
+                        <?php if (!in_array($tipo, ['V', 'Z'], true)): ?>
+                            <tr>
+                                <td colspan="4">O orientador anexou o Parecer do Comitê de Ética em Pesquisa?</td>
+                                <td>
+                                    <?= $this->Form->control('parecer', [
+                                        'label' => false,
+                                        'options' => [
+                                            'I' => 'Não se aplica',
+                                            'N' => 'É necessário mas não anexou',
+                                            'S' => 'Anexou',
+                                        ],
+                                        'empty' => '- Selecione -',
+                                        'class' => 'form-control' . ($parecerPendente ? ' is-invalid' : ''),
+                                    ]) ?>
+                                    <?php if ($parecerPendente): ?>
+                                        <div class="invalid-feedback d-block">Informe a situação do parecer.</div>
+                                    <?php endif; ?>
+                                </td>
+                            </tr>
+                        <?php endif; ?>
                         <?php if ($origemExigeDestaque): ?>
                             <tr>
                                 <td colspan="2">

@@ -335,6 +335,7 @@ class AvaliadoresController extends AppController
         $sumulasAvaliacaoBlocos = $this->carregarBlocosSumulasAvaliacao($avaliacao);
         $avaliarSumulas = $sumulasAvaliacaoBlocos !== [];
         $sumulasAvaliacao = $sumulasAvaliacaoBlocos[0]['linhas'] ?? [];
+        $tipo = (string)($avaliacao->tipo ?? '');
         if ($this->request->is('post') && (string)$this->request->getData('_voltar_lancamento', '') !== '1') {
             $erros = $this->validarLancamentoAvaliacao($questoesLista, (array)$this->request->getData('q', []));
             foreach ($sumulasAvaliacaoBlocos as $blocoSumula) {
@@ -350,7 +351,7 @@ class AvaliadoresController extends AppController
             if ($avaliarSumulas && trim((string)$this->request->getData('observacao_sumulas', '')) === '') {
                 $erros[] = 'Informe as observações da súmula.';
             }
-            if ((string)$this->request->getData('parecer', '') === '') {
+            if (!in_array($tipo, ['V', 'Z'], true) && (string)$this->request->getData('parecer', '') === '') {
                 $erros[] = 'Informe a situação do parecer do Comitê de Ética.';
             }
             if (in_array((string)($avaliacao->editai->origem ?? ''), ['R', 'V'], true)) {
@@ -925,7 +926,8 @@ class AvaliadoresController extends AppController
         $notas = (array)$this->request->getData('q', []);
         $observacaoQuesitos = trim((string)$this->request->getData('observacao_avaliador', ''));
         $observacaoSumulas = trim((string)$this->request->getData('observacao_sumulas', ''));
-        $parecer = (string)$this->request->getData('parecer', '');
+        $tipo = (string)($avaliacao->tipo ?? '');
+        $parecer = in_array($tipo, ['V', 'Z'], true) ? null : (string)$this->request->getData('parecer', '');
         $destaque = $this->request->getData('destaque');
         $indicadoPremioCapes = $this->request->getData('indicado_premio_capes');
 
